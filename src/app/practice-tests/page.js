@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase';
 import PublicShell from '@/components/PublicShell';
 
 const SUBJECTS = ['All Subjects', 'Physics', 'Chemistry', 'Biology', 'Mathematics', 'English', 'Urdu', 'Pakistan Studies', 'Islamiat', 'Computer'];
 const CLASSES  = ['All Classes', '9th', '10th', '11th', '12th'];
 
 export default function PracticeTestsPage() {
-  const supabase = createClient();
+  
   const [tests, setTests]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [subject, setSubject]       = useState('All Subjects');

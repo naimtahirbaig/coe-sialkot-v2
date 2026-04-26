@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase';
 import PublicShell from '@/components/PublicShell';
 
 export default function NoticeBoardPage() {
-  const supabase = createClient();
+  
   const [notices, setNotices]   = useState([]);
   const [loading, setLoading]   = useState(true);
   const [expanded, setExpanded] = useState(null);

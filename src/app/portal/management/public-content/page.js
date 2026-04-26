@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase';
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -57,7 +57,7 @@ const Textarea = ({ label, ...props }) => (
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function PublicContentManager() {
-  const supabase = createClient();
+  
   const [tab, setTab] = useState('resources');
 
   return (

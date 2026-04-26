@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase';
 import PublicShell from '@/components/PublicShell';
 
 const CATEGORIES = [
@@ -13,7 +13,7 @@ const CATEGORIES = [
 const CLASSES = ['All Classes', '9th', '10th', '11th', '12th'];
 
 export default function StudentResourcesPage() {
-  const supabase = createClient();
+  
   const [resources, setResources] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [category, setCategory]   = useState('all');
