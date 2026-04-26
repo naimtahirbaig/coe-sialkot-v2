@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { createClient } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -195,10 +195,16 @@ function ResourcesManager({ supabase }) {
             <option value="past_papers">📝 Past Papers</option>
             <option value="datesheets">📅 Datesheets</option>
           </Select>
-          <Input label="Subject" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. Physics" />
+          <Select label="Subject" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
+            <option value="">Select Subject</option>
+            <option>Physics</option><option>Chemistry</option><option>Biology</option><option>Mathematics</option>
+            <option>English</option><option>Urdu</option><option>Pakistan Studies</option><option>Islamiat</option>
+            <option>Computer</option><option>Tarjuma Tul Qur'an</option><option>Fine Arts</option>
+            <option>History</option><option>Geography</option>
+          </Select>
           <Select label="Class" value={form.class} onChange={e => setForm(f => ({ ...f, class: e.target.value }))}>
             <option value="">All Classes</option>
-            <option>9th</option><option>10th</option><option>11th</option><option>12th</option>
+            <option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option>
           </Select>
           <div style={{ gridColumn: '1/-1' }}>
             <Textarea label="Description (optional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description..." />
@@ -404,10 +410,16 @@ function TestsManager({ supabase }) {
           <div style={{ gridColumn: '1/-1' }}>
             <Input label="Title *" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Physics Ch.1 MCQs" />
           </div>
-          <Input label="Subject" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. Physics" />
+          <Select label="Subject" value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}>
+            <option value="">Select Subject</option>
+            <option>Physics</option><option>Chemistry</option><option>Biology</option><option>Mathematics</option>
+            <option>English</option><option>Urdu</option><option>Pakistan Studies</option><option>Islamiat</option>
+            <option>Computer</option><option>Tarjuma Tul Qur'an</option><option>Fine Arts</option>
+            <option>History</option><option>Geography</option>
+          </Select>
           <Select label="Class" value={form.class} onChange={e => setForm(f => ({ ...f, class: e.target.value }))}>
             <option value="">All Classes</option>
-            <option>9th</option><option>10th</option><option>11th</option><option>12th</option>
+            <option>6th</option><option>7th</option><option>8th</option><option>9th</option><option>10th</option>
           </Select>
           <div style={{ gridColumn: '1/-1' }}>
             <Textarea label="Description (optional)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description of the test..." />
