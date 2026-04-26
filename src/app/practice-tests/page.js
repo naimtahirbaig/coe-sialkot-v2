@@ -41,7 +41,6 @@ export default function PracticeTestsPage() {
   const [loading, setLoading]       = useState(true);
   const [subject, setSubject]       = useState('All Subjects');
   const [classFilter, setClass]     = useState('All Classes');
-  const [activeTest, setActiveTest] = useState(null);
 
   useEffect(() => {
     async function fetchTests() {
@@ -67,56 +66,6 @@ export default function PracticeTestsPage() {
       subtitle="Interactive quizzes and practice tests — sharpen your exam skills"
       accent="#a78bfa"
     >
-
-      {/* ── Full-screen Quiz Viewer ── */}
-      {activeTest && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
-          background: '#0f172a', display: 'flex', flexDirection: 'column',
-        }}>
-          <div style={{
-            background: '#1e293b', borderBottom: '1px solid #334155',
-            padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>🧪</span>
-              <span style={{ color: '#f1f5f9', fontWeight: 700, fontSize: 15 }}>{activeTest.title}</span>
-              {activeTest.subject && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700,
-                  background: (SUBJECT_COLORS[activeTest.subject] || DEFAULT_COLOR).bg,
-                  color: (SUBJECT_COLORS[activeTest.subject] || DEFAULT_COLOR).text,
-                  border: `1px solid ${(SUBJECT_COLORS[activeTest.subject] || DEFAULT_COLOR).border}`,
-                  padding: '2px 10px', borderRadius: 20,
-                }}>
-                  {activeTest.subject}
-                </span>
-              )}
-              {activeTest.class && (
-                <span style={{ fontSize: 12, color: '#64748b' }}>Class {activeTest.class}</span>
-              )}
-            </div>
-            <button onClick={() => setActiveTest(null)} style={{
-              background: '#334155', color: '#f1f5f9', border: 'none',
-              borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontWeight: 700, fontSize: 13,
-            }}>
-              ✕ Close
-            </button>
-          </div>
-
-          {activeTest.file_url ? (
-            <iframe src={activeTest.file_url} style={{ flex: 1, border: 'none', background: '#0C0A2E' }}
-              title={activeTest.title} />
-          ) : activeTest.html_content ? (
-            <iframe srcDoc={activeTest.html_content} style={{ flex: 1, border: 'none', background: '#0C0A2E' }}
-              title={activeTest.title} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
-          ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 16 }}>
-              No content available for this test.
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Filters ── */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 28 }}>
@@ -175,12 +124,21 @@ export default function PracticeTestsPage() {
                   Added {new Date(t.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </div>
 
-                <button onClick={() => setActiveTest(t)} style={{
-                  background: '#f59e0b', color: '#0f172a', border: 'none', borderRadius: 8,
-                  padding: '10px', cursor: 'pointer', fontWeight: 800, fontSize: 14,
-                }}>
+                <a
+                  href={t.file_url || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'block', textAlign: 'center',
+                    background: '#f59e0b', color: '#0f172a',
+                    border: 'none', borderRadius: 8,
+                    padding: '10px', cursor: 'pointer',
+                    fontWeight: 800, fontSize: 14,
+                    textDecoration: 'none',
+                  }}
+                >
                   🚀 Start Test
-                </button>
+                </a>
               </div>
             );
           })}
