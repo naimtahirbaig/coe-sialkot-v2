@@ -43,6 +43,7 @@ const NAV_CONFIG = {
       ]},
       { label: 'Academics', items: [
         { key: 'exams', label: 'Exams & Results', path: '/portal/management/exams' },
+        { key: 'lesson-plans', label: 'Lesson Plans', path: '/portal/management/lesson-plans' },
       ]},
       { label: 'Operations', items: [
         { key: 'messages', label: 'Messages', path: '/portal/management/messages' },
@@ -61,6 +62,7 @@ const NAV_CONFIG = {
         { key: 'gradebook', label: 'Gradebook', path: '/portal/teacher/gradebook' },
         { key: 'assignments', label: 'Assignments', path: '/portal/teacher/assignments' },
         { key: 'attendance', label: 'Attendance', path: '/portal/teacher/attendance' },
+        { key: 'timetable', label: 'Timetable', path: '/portal/teacher/timetable' },
       ]},
       { label: 'Other', items: [
         { key: 'messages', label: 'Messages', path: '/portal/teacher/messages' },
@@ -79,6 +81,7 @@ const NAV_CONFIG = {
         { key: 'assignments', label: 'Assignments', path: '/portal/student/assignments' },
         { key: 'exams', label: 'Exams & Results', path: '/portal/student/exams' },
         { key: 'schedule', label: 'Schedule', path: '/portal/student/schedule' },
+        { key: 'timetable', label: 'Timetable', path: '/portal/student/timetable' },
       ]},
       { label: 'Campus', items: [
         { key: 'library', label: 'Library', path: '/portal/student/library' },
@@ -96,6 +99,7 @@ const NAV_CONFIG = {
         { key: 'academics', label: 'Academics', path: '/portal/parent/academics' },
         { key: 'attendance', label: 'Attendance', path: '/portal/parent/attendance' },
         { key: 'assignments', label: 'Assignments', path: '/portal/parent/assignments' },
+        { key: 'timetable', label: 'Timetable', path: '/portal/parent/timetable' },
       ]},
       { label: 'Communication', items: [
         { key: 'messages', label: 'Messages', path: '/portal/parent/messages' },
