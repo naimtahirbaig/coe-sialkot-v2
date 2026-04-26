@@ -105,11 +105,11 @@ export default function PracticeTestsPage() {
           </div>
 
           {activeTest.file_url ? (
-            <iframe src={activeTest.file_url} style={{ flex: 1, border: 'none', background: '#fff' }}
-              title={activeTest.title} sandbox="allow-scripts allow-same-origin allow-forms" />
+            <iframe src={activeTest.file_url} style={{ flex: 1, border: 'none', background: '#0C0A2E' }}
+              title={activeTest.title} />
           ) : activeTest.html_content ? (
-            <iframe srcDoc={activeTest.html_content} style={{ flex: 1, border: 'none', background: '#fff' }}
-              title={activeTest.title} sandbox="allow-scripts allow-same-origin allow-forms" />
+            <iframe srcDoc={activeTest.html_content} style={{ flex: 1, border: 'none', background: '#0C0A2E' }}
+              title={activeTest.title} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: 16 }}>
               No content available for this test.
