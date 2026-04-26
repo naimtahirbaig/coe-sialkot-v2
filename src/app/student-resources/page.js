@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import PublicShell from '@/components/PublicShell';
+import Link from 'next/link';
 
 const CATEGORIES = [
   { key: 'all',         label: 'All',         icon: '📂' },
@@ -206,9 +207,18 @@ export default function StudentResourcesPage() {
                   {r.class && <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Class {r.class}</span>}
                 </div>
 
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', lineHeight: 1.4 }}>
-                  {r.title}
-                </div>
+                {r.slug ? (
+                  <Link
+                    href={`/student-resources/${r.class}/${(r.subject||'general').toLowerCase().replace(/[\s']+/g,'-')}/${r.slug}`}
+                    style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', lineHeight: 1.4, textDecoration: 'none', display: 'block' }}
+                  >
+                    <span style={{ borderBottom: '1px dashed #334155' }}>{r.title}</span> <span style={{ color: '#f59e0b', fontSize: 13 }}>↗</span>
+                  </Link>
+                ) : (
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#f1f5f9', lineHeight: 1.4 }}>
+                    {r.title}
+                  </div>
+                )}
 
                 {r.subject && <div style={{ fontSize: 13, color: '#64748b' }}>📖 {r.subject}</div>}
 
