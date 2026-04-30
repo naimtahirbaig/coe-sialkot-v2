@@ -1,6 +1,7 @@
 // src/app/admin/test-students/page.js
 'use client';
 import { useState, useEffect } from 'react';
+import AdminAuth from '@/components/AdminAuth';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -30,7 +31,7 @@ const INP = { width:'100%', padding:'0.65rem 0.9rem', border:`1px solid ${border
 const TD  = { padding:'0.75rem 1rem', color:cream, fontSize:'0.85rem', borderBottom:`1px solid ${border}` };
 const TH  = { padding:'0.65rem 1rem', color:textSec, fontWeight:600, fontSize:'0.78rem', textTransform:'uppercase', letterSpacing:'0.5px', background:navyDeep, textAlign:'left', borderBottom:`1px solid ${border}` };
 
-export default function AdminTestStudents() {
+function AdminTestStudentsInner() {
   const [students, setStudents] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -206,5 +207,14 @@ export default function AdminTestStudents() {
 
       <div style={{ height:4, background:gold }} />
     </div>
+  );
+}
+
+
+export default function AdminTestStudents() {
+  return (
+    <AdminAuth>
+      <AdminTestStudentsInner />
+    </AdminAuth>
   );
 }

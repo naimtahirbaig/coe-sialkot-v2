@@ -1,6 +1,7 @@
 // src/app/admin/online-tests/page.js
 'use client';
 import { useState, useEffect } from 'react';
+import AdminAuth from '@/components/AdminAuth';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -31,7 +32,7 @@ const draftTx  = '#f0b060';
 const LBL = { display:'block', fontWeight:600, fontSize:'0.78rem', color:textSec, marginBottom:'0.35rem', textTransform:'uppercase', letterSpacing:'0.5px' };
 const INP = { width:'100%', padding:'0.65rem 0.9rem', border:`1px solid ${borderLt}`, borderRadius:6, fontSize:'0.9rem', boxSizing:'border-box', background:navyDeep, color:cream };
 
-export default function AdminOnlineTests() {
+function AdminOnlineTestsInner() {
   const [tests,         setTests]         = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [creating,      setCreating]      = useState(false);
@@ -284,5 +285,14 @@ export default function AdminOnlineTests() {
 
       <div style={{ height:4, background:gold }} />
     </div>
+  );
+}
+
+
+export default function AdminOnlineTests() {
+  return (
+    <AdminAuth>
+      <AdminOnlineTestsInner />
+    </AdminAuth>
   );
 }
