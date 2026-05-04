@@ -1,5 +1,4 @@
-// src/app/admin/exams/page.js
-// v3 — fixed print result sheet
+// src/app/admin/exams/page.js  build:1777898924
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
@@ -445,7 +444,15 @@ function AdminExamsInner() {
             </div>
 
             {results.length>0&&(
-              <>
+              <div id="print-area">
+                {/* Print-only header */}
+                <div className="print-only" style={{display:'none'}}>
+                  <div style={{textAlign:'center',borderBottom:'3px solid #0E1F3D',paddingBottom:'8px',marginBottom:'12px'}}>
+                    <div style={{fontSize:'18px',fontWeight:900,color:'#0E1F3D',textTransform:'uppercase',letterSpacing:'1px'}}>Centre of Excellence — Boys Sialkot</div>
+                    <div style={{fontSize:'12px',color:'#555',marginTop:'2px'}}>Class {selClass} · {selSection} Section · Result Sheet</div>
+                  </div>
+                </div>
+
                 {/* Lock status bar */}
                 {lockedSubjects.length>0&&(
                   <div style={{background:W.redBg,border:`1px solid ${W.redBd}`,borderRadius:10,padding:'1rem 1.5rem',marginBottom:'1.25rem',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'0.75rem'}}>
@@ -486,8 +493,8 @@ function AdminExamsInner() {
                 </div>
 
                 {/* Action buttons */}
-                <div style={{display:'flex',gap:'0.75rem',marginBottom:'1.25rem',flexWrap:'wrap'}}>
-                  <button onClick={()=>printResultSheet()} style={{background:W.card,color:W.navy,border:`1.5px solid ${W.navy}`,borderRadius:8,padding:'0.55rem 1.2rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:600}}>🖨️ Print Result Sheet</button>
+                <div className="no-print" style={{display:'flex',gap:'0.75rem',marginBottom:'1.25rem',flexWrap:'wrap'}}>
+                  <button onClick={()=>window.print()} style={{background:W.card,color:W.navy,border:`1.5px solid ${W.navy}`,borderRadius:8,padding:'0.55rem 1.2rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:600}}>🖨️ Print Result Sheet</button>
                   <button onClick={printAll} style={{background:W.navy,color:'#fff',border:'none',borderRadius:8,padding:'0.55rem 1.4rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:700}}>📋 Print All Cards ({results.length})</button>
                 </div>
 
@@ -555,7 +562,7 @@ function AdminExamsInner() {
                     </tbody>
                   </table>
                 </div>
-              </>
+              </div>
             )}
           </div>
         )}
@@ -587,7 +594,24 @@ function AdminExamsInner() {
         )}
       </div>
       <div style={{height:4,background:`linear-gradient(90deg,${W.gold},${W.navy})`,marginTop:'2rem'}}/>
-      <style>{`@media print{button{display:none!important}}`}</style>
+            <style>{`
+        .print-only { display: none !important; }
+        @media print {
+          /* Hide everything by default */
+          body * { visibility: hidden !important; }
+          /* Show only the result printable area */
+          #print-area, #print-area * { visibility: visible !important; }
+          #print-area { position: absolute !important; left: 0 !important; top: 0 !important; width: 100% !important; padding: 8mm !important; background: #fff !important; }
+          /* Show print-only elements */
+          .print-only { display: block !important; }
+          /* Ensure backgrounds print */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          /* Hide unwanted elements */
+          button, nav, .no-print { display: none !important; visibility: hidden !important; }
+          /* Page setup */
+          @page { size: A4 landscape; margin: 6mm; }
+        }
+      `}</style>
     </div>
   );
 }
