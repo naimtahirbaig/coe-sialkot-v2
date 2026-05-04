@@ -261,8 +261,60 @@ function AdminExamsInner() {
     const top3=[...results].filter(r=>r.pct!==null).sort((a,b)=>b.pct-a.pct).slice(0,3);
     const html=results.map(s=>buildCard(s,s.examName,top3)).join('');
     const w=window.open('','_blank');
-    w.document.write(`<html><head><style>@media print{.page{page-break-after:always}}</style></head><body>${html}</body></html>`);
+    w.document.write('<html><head><style>@media print{.page{page-break-after:always}}</style></head><body>'+html+'</body></html>');
     w.document.close();setTimeout(()=>w.print(),800);
+  }
+
+  function printResultSheet(){
+    if(!results.length)return;
+    const examName=results[0]?.examName||'';
+    const sorted=[...results].sort((a,b)=>(b.pct||0)-(a.pct||0));
+    const GC=(g)=>({'A+':'#16a34a','A':'#15803d','B':'#ca8a04','C':'#d97706','D':'#dc2626','E':'#991b1b','F':'#7f1d1d','Ab':'#9ca3af'}[g]||'#333');
+    const subHdrs=SUBJECTS.map(s=>'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060;text-align:center">'+SDISPLAY[s].split(' ')[0]+'<br/><span style=\'font-size:8px;opacity:0.7\'>Ob/Mx/%/Gr</span></th>').join('');
+    const rows=sorted.map((r,i)=>{
+      const subs=SUBJECTS.map(sub=>{
+        const m=r.subjectMap[sub];
+        if(!m)return '<td style="padding:4px 5px;border:1px solid #e5e7eb;text-align:center;font-size:10px;color:#ccc">—</td>';
+        const p=m.absent?null:m.total>0?Math.round(m.obt/m.total*100):null;
+        const g=m.absent?'Ab':getGrade(p);
+        const c=GC(g);
+        const inner=m.absent?'<span style="color:#9ca3af">Ab</span>':m.obt!==null?'<b>'+m.obt+'</b>/<span style="color:#aaa">'+m.total+'</span><br/><span style="color:'+c+';font-weight:700">'+p+'%/'+g+'</span>':'<span style="color:#ccc">—</span>';
+        return '<td style="padding:4px 5px;border:1px solid #e5e7eb;text-align:center;font-size:10px">'+inner+'</td>';
+      }).join('');
+      const passed2=results.filter(r=>r.pct!==null&&r.pct>=40).length;
+      const failed2=results.filter(r=>r.pct!==null&&r.pct<40).length;
+      return '<tr style="background:'+(i%2===0?'#fff':'#f9fafb')+'"><td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center;font-size:10px;color:'+(r.position<=3?'#d97706':'#aaa')+';font-weight:'+(r.position<=3?700:400)+'">'+(r.position||'—')+'</td><td style="padding:4px 6px;border:1px solid #e5e7eb;font-size:10px"><code style="background:#f3f4f6;padding:1px 3px;border-radius:2px;color:#0E1F3D">'+r.roll_no+'</code></td><td style="padding:4px 6px;border:1px solid #e5e7eb;font-size:11px;font-weight:500">'+r.name+'</td><td style="padding:4px 6px;border:1px solid #e5e7eb;font-size:10px;color:#666">'+(r.father_name||'—')+'</td>'+subs+'<td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center;font-size:10px;font-weight:600">'+r.totalObt+'/'+r.totalMax+'</td><td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center;font-size:11px;font-weight:700">'+(r.pct!==null?r.pct+'%':'—')+'</td><td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center;font-size:12px;font-weight:700;color:'+GC(r.grade)+'">'+r.grade+'</td></tr>';
+    }).join('');
+    const dist=['A+','A','B','C','D','E','F'].map(g=>{const c=results.filter(r=>r.grade===g).length;return c>0?'<span style="border:1px solid #ddd;padding:1px 7px;border-radius:10px;font-size:10px;margin-right:4px"><b>'+g+'</b>: '+c+'</span>':'';}).join('');
+    const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Result Sheet</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;padding:8mm}table{width:100%;border-collapse:collapse}@media print{body{padding:4mm}}</style></head><body>'
+      +'<div style="display:flex;align-items:center;border-bottom:3px solid #0E1F3D;padding-bottom:8px;margin-bottom:10px">'
+      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror="this.style.display='none'"/>'
+      +'<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#0E1F3D;text-transform:uppercase;letter-spacing:1px">Centre of Excellence — Boys Sialkot</div>'
+      +'<div style="font-size:12px;color:#555;margin-top:2px">'+examName+' · Class '+selClass+' · '+selSection+' Section</div></div>'
+      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror="this.style.display='none'"/></div>'
+      +'<div style="display:flex;gap:16px;margin-bottom:8px;font-size:11px;color:#555">'
+      +'<span>Students: <b>'+results.length+'</b></span>'
+      +'<span>Passed: <b style="color:#16a34a">'+results.filter(r=>r.pct!==null&&r.pct>=40).length+'</b></span>'
+      +'<span>Failed: <b style="color:#dc2626">'+results.filter(r=>r.pct!==null&&r.pct<40).length+'</b></span>'
+      +'<span>Avg: <b style="color:#d97706">'+(results.filter(r=>r.pct!==null).length>0?(results.filter(r=>r.pct!==null).reduce((s,r)=>s+(r.pct||0),0)/results.filter(r=>r.pct!==null).length).toFixed(1)+'%':'—')+'</b></span>'
+      +'<span style="margin-left:auto">'+dist+'</span></div>'
+      +'<table><thead><tr>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060">Pos</th>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060;text-align:left">Roll No</th>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060;text-align:left">Name</th>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060;text-align:left">Father</th>'
+      +subHdrs
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060">Total</th>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060">%</th>'
+      +'<th style="padding:5px 6px;background:#0E1F3D;color:#fff;font-size:10px;border:1px solid #1a3060">Grade</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<div style="margin-top:12px;display:flex;justify-content:space-between;font-size:9px;color:#aaa;border-top:1px solid #eee;padding-top:6px">'
+      +'<span>Generated: '+new Date().toLocaleString()+'</span><span>COE Sialkot Examination Portal</span></div>'
+      +'</body></html>';
+    const w=window.open('','_blank');
+    w.document.write(html);
+    w.document.close();
+    setTimeout(()=>w.print(),600);
   }
 
   const passed=results.filter(r=>r.pct!==null&&r.pct>=40).length;
@@ -434,7 +486,7 @@ function AdminExamsInner() {
 
                 {/* Action buttons */}
                 <div style={{display:'flex',gap:'0.75rem',marginBottom:'1.25rem',flexWrap:'wrap'}}>
-                  <button onClick={()=>window.print()} style={{background:W.card,color:W.navy,border:`1.5px solid ${W.navy}`,borderRadius:8,padding:'0.55rem 1.2rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:600}}>🖨️ Print Result Sheet</button>
+                  <button onClick={()=>printResultSheet()} style={{background:W.card,color:W.navy,border:`1.5px solid ${W.navy}`,borderRadius:8,padding:'0.55rem 1.2rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:600}}>🖨️ Print Result Sheet</button>
                   <button onClick={printAll} style={{background:W.navy,color:'#fff',border:'none',borderRadius:8,padding:'0.55rem 1.4rem',cursor:'pointer',fontSize:'0.82rem',fontWeight:700}}>📋 Print All Cards ({results.length})</button>
                 </div>
 
