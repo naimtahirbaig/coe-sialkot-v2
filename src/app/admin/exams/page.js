@@ -115,9 +115,9 @@ table{width:100%;border-collapse:collapse;margin-bottom:6px}
 <div class="page">
 <div class="band"></div>
 <div class="hdr">
-  <img src="/logo.png" class="logo" onerror="this.style.display='none'"/>
+  <img src="/logo.png" class="logo" onerror=\"this.style.display=\'none\'\"/>
   <div class="sc"><h1>Center of Excellence</h1><h2>BOYS SIALKOT</h2></div>
-  <img src="/logo.png" class="logo" onerror="this.style.display='none'"/>
+  <img src="/logo.png" class="logo" onerror=\"this.style.display=\'none\'\"/>
 </div>
 <div class="badge"><h3>PROGRESS REPORT CARD</h3><p>${examName}</p></div>
 <div class="igrid">
@@ -288,10 +288,10 @@ function AdminExamsInner() {
     const dist=['A+','A','B','C','D','E','F'].map(g=>{const c=results.filter(r=>r.grade===g).length;return c>0?'<span style="border:1px solid #ddd;padding:1px 7px;border-radius:10px;font-size:10px;margin-right:4px"><b>'+g+'</b>: '+c+'</span>':'';}).join('');
     const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Result Sheet</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Georgia,serif;padding:8mm}table{width:100%;border-collapse:collapse}@media print{body{padding:4mm}}</style></head><body>'
       +'<div style="display:flex;align-items:center;border-bottom:3px solid #0E1F3D;padding-bottom:8px;margin-bottom:10px">'
-      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror="this.style.display='none'"/>'
+      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror=\"this.style.display=\'none\'\"/>'
       +'<div style="text-align:center;flex:1"><div style="font-size:18px;font-weight:900;color:#0E1F3D;text-transform:uppercase;letter-spacing:1px">Centre of Excellence — Boys Sialkot</div>'
       +'<div style="font-size:12px;color:#555;margin-top:2px">'+examName+' · Class '+selClass+' · '+selSection+' Section</div></div>'
-      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror="this.style.display='none'"/></div>'
+      +'<img src="https://www.coesialkot.com/logo.png" style="width:50px;height:50px;object-fit:contain" onerror=\"this.style.display=\'none\'\"/></div>'
       +'<div style="display:flex;gap:16px;margin-bottom:8px;font-size:11px;color:#555">'
       +'<span>Students: <b>'+results.length+'</b></span>'
       +'<span>Passed: <b style="color:#16a34a">'+results.filter(r=>r.pct!==null&&r.pct>=40).length+'</b></span>'
