@@ -82,7 +82,6 @@ export default function PaperTemplatePage() {
   const [submittedAt, setSubmittedAt] = useState(null);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
-  const [existingPaperInfo, setExistingPaperInfo] = useState(null);
 
   const isLocked = status === 'submitted';
   const current  = versions[activeVersion];
@@ -92,31 +91,7 @@ export default function PaperTemplatePage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Detect (don't auto-apply) existing papers
-  const detectExisting = useCallback(async () => {
-    const { testName, className, section, subject } = meta;
-    if (!testName || !className || !section || !subject) {
-      setExistingPaperInfo(null);
-      return;
-    }
-    try {
-      const { data, error } = await supabase
-        .from('exam_papers')
-        .select('id, status, submitted_at, teacher_name, updated_at')
-        .eq('test_name', testName)
-        .eq('class_name', className)
-        .eq('section', section)
-        .eq('subject', subject)
-        .maybeSingle();
-      if (error) throw error;
-      setExistingPaperInfo(data || null);
-    } catch (err) {
-      console.error('Detect failed:', err);
-      setExistingPaperInfo(null);
-    }
-  }, [meta.testName, meta.className, meta.section, meta.subject]);
-
-  const loadExistingPaper = async () => {
+  const loadExisting = useCallback(async () => {
     const { testName, className, section, subject } = meta;
     if (!testName || !className || !section || !subject) return;
     setLoading(true);
@@ -129,15 +104,19 @@ export default function PaperTemplatePage() {
         .eq('section', section)
         .eq('subject', subject)
         .maybeSingle();
+
       if (error) throw error;
+
       if (data) {
         setPaperId(data.id);
         setStatus(data.status);
         setSubmittedAt(data.submitted_at);
         if (data.meta) setMeta((m) => ({ ...m, ...data.meta }));
         if (data.versions) setVersions(data.versions);
-        setExistingPaperInfo(null);
-        showToast('success', 'Existing paper loaded.');
+      } else {
+        setPaperId(null);
+        setStatus('draft');
+        setSubmittedAt(null);
       }
     } catch (err) {
       console.error('Load failed:', err);
@@ -145,14 +124,10 @@ export default function PaperTemplatePage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const dismissExistingBanner = () => {
-    setExistingPaperInfo(null);
-  };
+  }, [meta.testName, meta.className, meta.section, meta.subject]);
 
   useEffect(() => {
-    detectExisting();
+    loadExisting();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meta.testName, meta.className, meta.section, meta.subject]);
 
@@ -739,39 +714,6 @@ export default function PaperTemplatePage() {
                 style={{ ...s.btn, ...s.btnPrimary }}
                 onClick={handlePrint}
               >⎙ Print</button>
-            </div>
-          )}
-
-          {!isLocked && existingPaperInfo && !paperId && (
-            <div style={{
-              background: '#fff8e1', border: `2px solid ${GOLD}`, borderRadius: 10,
-              padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center',
-              gap: 12, color: NAVY,
-            }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', background: GOLD, color: NAVY,
-                display: 'grid', placeItems: 'center', fontSize: 22, flexShrink: 0,
-              }}>📂</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 2 }}>
-                  An existing paper was found for this combination
-                </div>
-                <div style={{ fontSize: 12, color: '#555' }}>
-                  {meta.subject} · Class {meta.className} ({meta.section}) ·
-                  {' '}{existingPaperInfo.status === 'submitted' ? '🔒 Submitted' : '✎ Draft'}
-                  {existingPaperInfo.teacher_name && ` by ${existingPaperInfo.teacher_name}`} ·
-                  Last updated {new Date(existingPaperInfo.updated_at).toLocaleString()}
-                </div>
-              </div>
-              <button
-                style={{ ...s.btn, ...s.btnPrimary }}
-                onClick={loadExistingPaper}
-                disabled={loading}
-              >📂 Load It</button>
-              <button
-                style={{ ...s.btn, background: 'transparent', color: NAVY, border: `1px solid ${NAVY}` }}
-                onClick={dismissExistingBanner}
-              >Start Fresh</button>
             </div>
           )}
 
