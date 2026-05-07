@@ -5,3 +5,7 @@ node_modules
 .vercel
 .DS_Store
 **/.DS_Store
+
+# Dev/install scripts
+*.sh
+*.backup
