@@ -434,7 +434,7 @@
 </div>
 
 <script>
-const QUESTION_BANK = [
+const QUESTIONS = [
   {q:"Before the arrival of the British, which traders used to visit India for the purpose of trade?", o:["Portuguese traders","Arab traders","Dutch traders","Spanish traders"], a:1},
   {q:"On which date did the British East India Company come to the subcontinent for trade at the port of Surat?", o:["May 20, 1498 CE","August 24, 1608 CE","January 2, 1757 CE","June 23, 1757 CE"], a:1},
   {q:"The arrival of Vasco Da Gama in Calicut, which opened a sea route from Europe to East Asia, took place in:", o:["1498 CE","1600 CE","1608 CE","1612 CE"], a:0},
@@ -467,33 +467,9 @@ const QUESTION_BANK = [
   {q:"Queen Victoria, whose proclamation was read out by Lord Canning at Allahabad, remained Queen from 1837 CE to:", o:["1852 CE","1858 CE","1901 CE","1919 CE"], a:2},
 ];
 
-const TOTAL_Q = QUESTION_BANK.length;
+const TOTAL_Q = QUESTIONS.length;
 const PER_Q_SECONDS = 90;
 const OVERALL_SECONDS = 50 * 60;
-
-// Fisher-Yates shuffle (returns a new shuffled array, does not mutate input)
-function shuffleArray(arr){
-  const a = arr.slice();
-  for(let i = a.length - 1; i > 0; i--){
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-// Builds a fresh randomized copy of the question bank: question order shuffled,
-// and each question's own options shuffled, with the correct-answer index remapped.
-function buildShuffledQuestions(){
-  const shuffledQuestions = shuffleArray(QUESTION_BANK);
-  return shuffledQuestions.map(item => {
-    const optionIndices = shuffleArray(item.o.map((_, i) => i));
-    const newOptions = optionIndices.map(i => item.o[i]);
-    const newCorrectIndex = optionIndices.indexOf(item.a);
-    return { q: item.q, o: newOptions, a: newCorrectIndex };
-  });
-}
-
-let QUESTIONS = buildShuffledQuestions();
 
 let currentIndex = 0;
 let answers = new Array(TOTAL_Q).fill(null); // null = not attempted / timed out, else option index
@@ -518,8 +494,6 @@ nameInput.addEventListener('input', () => {
 });
 
 startBtn.addEventListener('click', () => {
-  QUESTIONS = buildShuffledQuestions();
-  answers = new Array(TOTAL_Q).fill(null);
   startScreen.style.display = 'none';
   quizScreen.style.display = 'block';
   startOverallTimer();
