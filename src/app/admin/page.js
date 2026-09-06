@@ -30,6 +30,13 @@ const CARDS = [
     desc: 'Manage 938 students across all classes and sections.',
     accent: NAVY,
   },
+  {
+    href: '/admin/warning-letter',
+    icon: '\u26a0\ufe0f',
+    title: 'Warning Letter',
+    desc: 'Fill and issue a student disciplinary warning letter, then save it as PDF.',
+    accent: GOLD,
+  },
 ];
 
 function AdminHomeInner() {
