@@ -224,9 +224,7 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
       <div class="cam-txt">
         <b id="camHead">Camera check required</b>
         <span id="camMsg">This is a proctored test. Your camera must stay on for the whole paper, and five photographs of you will be taken at random moments and printed on your result card so your teacher can verify who sat the test. The photos stay on this device — nothing is uploaded anywhere.</span>
-        <div class="help" id="camHelp">
-          If the camera cannot start, the page is probably being opened straight from a folder. Ask your teacher to serve the folder locally, for example with <code>python -m http.server</code>, and then open <code>http://localhost:8000</code>.
-        </div>
+        <div class="help" id="camHelp"></div>
       </div>
       <video id="preview" autoplay muted playsinline></video>
     </div>
@@ -350,7 +348,7 @@ $("btnCam").addEventListener("click",startCamera);
 function startCamera(){
   $("setupErr").textContent="";
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    camFail("This browser cannot reach the camera from here.");return;
+    camFail("This browser cannot reach the camera from here.","Open the test in Chrome or Safari. Browsers built into apps such as Facebook, Instagram or Messenger often cannot use the camera. Use the menu and choose Open in browser.");return;
   }
   $("btnCam").disabled=true;$("btnCam").textContent="Starting camera…";
   navigator.mediaDevices.getUserMedia({video:{width:640,height:480},audio:false})
@@ -365,20 +363,33 @@ function startCamera(){
       s.getVideoTracks()[0].addEventListener("ended",function(){camDropped=true;});
    })
    .catch(function(e){
-      var m=(e&&e.name==="NotAllowedError")
-        ?"Camera permission was refused, so the test cannot be started. Allow the camera in your browser and press the button again."
-        :(e&&e.name==="NotFoundError")
-        ?"No camera was found on this device. The test cannot be started without one."
-        :"The camera could not be started ("+((e&&e.name)||"unknown")+"). The test cannot begin.";
-      camFail(m);
+      var n=(e&&e.name)||"unknown", m, h;
+      if(n==="NotAllowedError"){
+        m="The camera was not allowed, so the test cannot start.";
+        h="If no permission box appeared, the camera was blocked earlier and the browser will not ask again. In Chrome, tap the icon just to the left of the web address, choose Permissions, set Camera to Allow, then reload this page. On iPhone, open Settings, Safari, Camera, and set it to Allow.";
+      } else if(n==="NotReadableError"||n==="AbortError"){
+        m="The camera is busy and could not be opened.";
+        h="Another app or another browser tab is already using the camera. Close WhatsApp, Zoom, the camera app and any other open tabs, then press Try camera again.";
+      } else if(n==="NotFoundError"||n==="OverconstrainedError"){
+        m="No usable camera was found on this device.";
+        h="If this device does have a camera, close any app that may be holding it and try again. Otherwise ask your teacher to let you sit the test on another device.";
+      } else if(n==="SecurityError"||location.protocol==="file:"){
+        m="The camera cannot be reached from here.";
+        h="This page must be opened over the internet, not from a folder on the device. Open it again from the link your teacher shared.";
+      } else {
+        m="The camera could not be started ("+n+").";
+        h="Close any other app that may be using the camera, then press Try camera again. If it still will not start, open the test in Chrome or Safari instead.";
+      }
+      camFail(m,h);
    });
 }
-function camFail(msg){
+function camFail(msg,hint){
   camOK=false;
   $("camDot").className="cam-dot off";
-  $("camHead").textContent="Camera blocked — test locked";
+  $("camHead").textContent="Camera blocked \u2014 test locked";
   $("camMsg").textContent=msg;
-  $("camHelp").className="help show";
+  $("camHelp").textContent=hint||"";
+  $("camHelp").className=hint?"help show":"help";
   $("btnCam").disabled=false;$("btnCam").textContent="Try camera again";
   $("btnStart").disabled=true;
 }

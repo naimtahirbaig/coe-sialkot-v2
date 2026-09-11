@@ -328,10 +328,29 @@ btnCam.addEventListener('click', async function(){
     btnCam.disabled = true;
     btnStart.disabled = false;
   } catch (e) {
+    var n = (e && e.name) || 'unknown', m, h;
+    if (n === 'NotAllowedError') {
+      m = 'The camera was not allowed, so the test cannot start.';
+      h = 'If no permission box appeared, the camera was blocked earlier and the browser will not ask again. In Chrome, tap the icon just to the left of the web address, choose Permissions, set Camera to Allow, then reload this page. On iPhone, open Settings, Safari, Camera, and set it to Allow.';
+    } else if (n === 'NotReadableError' || n === 'AbortError') {
+      m = 'The camera is busy and could not be opened.';
+      h = 'Another app or another browser tab is already using the camera. Close WhatsApp, Zoom, the camera app and any other open tabs, then press Try camera again.';
+    } else if (n === 'NotFoundError' || n === 'OverconstrainedError') {
+      m = 'No usable camera was found on this device.';
+      h = 'If this device does have a camera, close any app that may be holding it and try again. Otherwise ask your teacher to let you sit the test on another device.';
+    } else if (n === 'SecurityError' || location.protocol === 'file:') {
+      m = 'The camera cannot be reached from here.';
+      h = 'This page must be opened over the internet, not from a folder on the device. Open it again from the link your teacher shared.';
+    } else {
+      m = 'The camera could not be started (' + n + ').';
+      h = 'Close any other app that may be using the camera, then press Try camera again. If it still will not start, open the test in Chrome or Safari instead.';
+    }
     camDot.className = 'cam-dot off';
-    camHead.textContent = 'Camera permission was not granted';
-    camMsg.textContent = 'This test cannot start without camera access. Please allow the camera permission in your browser and try again.';
-    setupErr.textContent = 'Camera error: ' + (e && e.message ? e.message : e);
+    camHead.textContent = 'Camera blocked \u2014 test locked';
+    camMsg.textContent = m;
+    setupErr.textContent = h;
+    btnCam.textContent = 'Try camera again';
+    btnCam.disabled = false;
     btnStart.disabled = true;
   }
 });
