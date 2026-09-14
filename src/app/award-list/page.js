@@ -208,6 +208,10 @@ export default function AwardListPage() {
             placeholder="Enter PIN"
             value={pin}
             onChange={(e) => setPin(e.target.value)}
+            name="award-list-pin"
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
             className="rounded-lg px-4 py-3 sm:py-2.5 w-full sm:w-44 text-base sm:text-sm text-white placeholder-white/40 border outline-none"
             style={{ background: NAVY, borderColor: "#ffffff26" }}
           />

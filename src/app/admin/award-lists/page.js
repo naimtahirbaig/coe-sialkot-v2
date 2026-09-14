@@ -144,6 +144,10 @@ export default function AdminAwardListsPage() {
           placeholder="Admin password"
           value={adminPassword}
           onChange={(e) => setAdminPassword(e.target.value)}
+          name="award-list-admin"
+          autoComplete="off"
+          data-1p-ignore
+          data-lpignore="true"
           className="rounded-lg px-4 py-2.5 w-64 text-white placeholder-white/40 border outline-none transition mb-5"
           style={{ background: NAVY, borderColor: "#ffffff26" }}
           onFocus={(e) => (e.target.style.borderColor = GOLD)}
