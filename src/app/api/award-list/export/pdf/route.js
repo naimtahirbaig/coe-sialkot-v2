@@ -1,7 +1,17 @@
 import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardListConfig";
+
+// PDFKit's built-in "Helvetica" standard font relies on Node's internal
+// package-import resolution (#standard-fonts/Helvetica), which breaks when
+// Next.js bundles this route for Vercel's serverless runtime (works fine
+// in local dev, 404/500s in production). Embedding a real TTF font instead
+// sidesteps that code path entirely and works reliably on Vercel.
+const FONT_REGULAR = fs.readFileSync(path.join(process.cwd(), "public", "fonts", "DejaVuSans.ttf"));
+const FONT_BOLD = fs.readFileSync(path.join(process.cwd(), "public", "fonts", "DejaVuSans-Bold.ttf"));
 
 // GET /api/award-list/export/pdf?codes=6-Jinnah,7-Iqbal&adminPassword=...
 // One (or more, paginated) landscape page(s) per section.
@@ -19,6 +29,8 @@ export async function GET(req) {
 
   const supabase = getSupabaseAdmin();
   const doc = new PDFDocument({ layout: "landscape", size: "A4", margin: 24 });
+  doc.registerFont("Body", FONT_REGULAR);
+  doc.registerFont("Body-Bold", FONT_BOLD);
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", resolve));
@@ -94,7 +106,7 @@ export async function GET(req) {
 
     if (i > 0) doc.addPage();
 
-    doc.fontSize(11).font("Helvetica-Bold").text(
+    doc.fontSize(11).font("Body-Bold").text(
       "GOVERNMENT OF PUNJAB — CENTER OF EXCELLENCE SIALKOT (BOYS)",
       { align: "center" }
     );
@@ -102,7 +114,7 @@ export async function GET(req) {
       `AWARD LIST | Class ${section.class}-${section.section_label} | Session 2026-27`,
       { align: "center" }
     );
-    doc.fontSize(8).font("Helvetica").text(
+    doc.fontSize(8).font("Body").text(
       `Class Incharge: ${section.class_incharge}   |   No. of Students: ${section.student_count}`,
       { align: "center" }
     );
@@ -123,7 +135,7 @@ export async function GET(req) {
       }
       const startY = doc.y; // re-read in case addPage() just reset it
       let x = doc.page.margins.left;
-      doc.font(opts.bold ? "Helvetica-Bold" : "Helvetica").fontSize(6.5);
+      doc.font(opts.bold ? "Body-Bold" : "Body").fontSize(6.5);
       values.forEach((val, idx) => {
         doc.text(String(val ?? ""), x, startY, {
           width: cols[idx].w,
