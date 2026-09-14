@@ -97,7 +97,7 @@ function WarningLetterInner() {
             +
           </button>
           <a
-            href="/staff/warning-letter.html"
+            href="https://www.coesialkot.com/staff/warning-letter.html"
             target="_blank"
             rel="noreferrer"
             style={{ color: '#C9922A', fontSize: 14, marginLeft: 8, whiteSpace: 'nowrap' }}
