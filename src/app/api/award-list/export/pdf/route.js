@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
-import fs from "fs";
-import path from "path";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardListConfig";
+import { FONT_REGULAR, FONT_BOLD } from "@/lib/awardListFonts";
 
-// PDFKit's built-in "Helvetica" standard font relies on Node's internal
-// package-import resolution (#standard-fonts/Helvetica), which breaks when
-// Next.js bundles this route for Vercel's serverless runtime (works fine
-// in local dev, 404/500s in production). Embedding a real TTF font instead
-// sidesteps that code path entirely and works reliably on Vercel.
-const FONT_REGULAR = fs.readFileSync(path.join(process.cwd(), "public", "fonts", "DejaVuSans.ttf"));
-const FONT_BOLD = fs.readFileSync(path.join(process.cwd(), "public", "fonts", "DejaVuSans-Bold.ttf"));
+// PDFKit's built-in "Helvetica" relies on Node internal package-import
+// resolution (#standard-fonts/Helvetica) that breaks under Vercel's
+// serverless bundling. Two things are needed to avoid it entirely:
+//   1. `new PDFDocument({ font: null })` — otherwise PDFKit loads
+//      Helvetica at construction time, before registerFont() can run.
+//   2. Register an embedded TTF and select it explicitly.
+// The fonts are base64-embedded in lib/awardListFonts.js rather than read
+// from disk, so there are no file paths or bundling rules to get wrong.
 
 // GET /api/award-list/export/pdf?codes=6-Jinnah,7-Iqbal&adminPassword=...
 // One (or more, paginated) landscape page(s) per section.
@@ -28,9 +28,10 @@ export async function GET(req) {
   }
 
   const supabase = getSupabaseAdmin();
-  const doc = new PDFDocument({ layout: "landscape", size: "A4", margin: 24 });
+  const doc = new PDFDocument({ font: null, layout: "landscape", size: "A4", margin: 24 });
   doc.registerFont("Body", FONT_REGULAR);
   doc.registerFont("Body-Bold", FONT_BOLD);
+  doc.font("Body");
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", resolve));
