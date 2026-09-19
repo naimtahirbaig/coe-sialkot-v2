@@ -24,6 +24,7 @@ export default function ProformasPage() {
   const [error, setError] = useState("");
   const [tab, setTab] = useState("p1");
   const [auto, setAuto] = useState(true);
+  const [dlClass, setDlClass] = useState("");   // "" = all classes
 
   useEffect(() => {
     fetch("/api/award-list/exams")
@@ -69,9 +70,15 @@ export default function ProformasPage() {
   }, [auto, data, load]);
 
   function download() {
+    const cls = dlClass ? `&class=${encodeURIComponent(dlClass)}` : "";
     window.location.href =
-      `/api/award-list/proformas/export?examId=${encodeURIComponent(examId)}&${authQ()}`;
+      `/api/award-list/proformas/export?examId=${encodeURIComponent(examId)}&${authQ()}${cls}`;
   }
+
+  // Proforma 1 is laid out per class (the template says "of ____ Class"),
+  // so the download is offered per class as well as all at once.
+  const classesPresent = [...new Set((data?.proforma1 || []).map((r) => r.class))]
+    .sort((a, b) => a - b);
 
   const cell = "px-2 py-1.5 border text-center whitespace-nowrap";
   const cellL = "px-2 py-1.5 border text-left whitespace-nowrap";
@@ -140,11 +147,24 @@ export default function ProformasPage() {
             {loading ? "Loading…" : data ? "Refresh" : "Show proformas"}
           </button>
           {data && (
-            <button onClick={download}
-                    className="font-bold px-5 py-2.5 rounded-lg"
-                    style={{ background: "#1DB954", color: NAVY }}>
-              Download Excel
-            </button>
+            <>
+              <div>
+                <label className="block text-[11px] text-white/60 mb-1">Download</label>
+                <select className="rounded-lg px-3 py-2.5 text-white border outline-none"
+                        style={{ background: NAVY, borderColor: "#ffffff26" }}
+                        value={dlClass} onChange={(e) => setDlClass(e.target.value)}>
+                  <option value="">All classes</option>
+                  {classesPresent.map((c) => (
+                    <option key={c} value={c}>Class {c} only</option>
+                  ))}
+                </select>
+              </div>
+              <button onClick={download}
+                      className="font-bold px-5 py-2.5 rounded-lg"
+                      style={{ background: "#1DB954", color: NAVY }}>
+                Download Excel
+              </button>
+            </>
           )}
         </div>
 
@@ -260,6 +280,10 @@ export default function ProformasPage() {
               Built live from the award lists — a section appears here as soon as a teacher saves
               a subject for it, and the figures move as more subjects are entered. Only students
               with at least one mark count as “appeared”.
+              <br />
+              The Excel download matches the official proforma layout: Proforma 1 on one sheet
+              per class, then Proforma 2 on a sheet per subject, with the formulas left live so
+              the totals recalculate if anything is edited by hand.
             </p>
           </>
         )}

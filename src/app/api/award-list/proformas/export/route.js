@@ -1,25 +1,31 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
-import { buildProforma1, buildProforma2, P1_HEADERS, P2_HEADERS } from "@/lib/proformas";
+import { buildProforma1, buildProforma2 } from "@/lib/proformas";
+import { addProforma1Sheet, addProforma2Sheet } from "@/lib/proformaExcel";
 
 const MONTHS = ["January","February","March","April","May","June",
                 "July","August","September","October","November","December"];
+const COE_NAME = "Centre of Excellence Sialkot (Boys)";
 
-// GET /api/award-list/proformas/export?examSlug=…&pin=…
-//                                     ?examId=…&adminPassword=…
+// GET /api/award-list/proformas/export?examId=…&adminPassword=…[&class=6]
+//                                    ?examSlug=…&pin=…
 //
-// One workbook: Proforma 1 on the first sheet, then Proforma 2 on its own
-// sheet per subject — matching the template's note that Proforma 2 is
-// "used subject wise separately".
+// Produces a workbook laid out exactly like the school's own template:
+// Proforma 1 is per class (matching "Result of ______ Class"), and
+// Proforma 2 gets a sheet per subject within that class.
+//
+// With ?class= it covers one class (1 + up to 9 sheets). Without it,
+// every class that has data.
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const examId = searchParams.get("examId");
   const examSlug = searchParams.get("examSlug");
   const pin = searchParams.get("pin");
   const adminPassword = searchParams.get("adminPassword");
+  const onlyClass = searchParams.get("class");
 
   const isAdmin = adminPassword && adminPassword === process.env.ADMIN_PASSWORD;
   const isTeacher = pin && pin === process.env.AWARD_LIST_PIN;
@@ -75,109 +81,53 @@ export async function GET(req) {
   const subjectsBySection = {};
   (sections || []).forEach((s) => (subjectsBySection[s.id] = subjectsForClass(s.class)));
 
-  const active = (sections || []).filter((s) => configBySection[s.id]);
+  let active = (sections || []).filter((s) => configBySection[s.id]);
+  if (onlyClass) active = active.filter((s) => Number(s.class) === Number(onlyClass));
 
-  const p1 = buildProforma1({ sections: active, studentsBySection, configBySection, marksBySection });
-  const p2 = buildProforma2({
-    sections: active, studentsBySection, configBySection,
-    teacherBySection, marksBySection, subjectsBySection,
-  });
+  if (active.length === 0) {
+    return NextResponse.json(
+      { error: "No marks have been saved yet for this exam" + (onlyClass ? ` in Class ${onlyClass}.` : ".") },
+      { status: 404 }
+    );
+  }
 
   const examTitle = `${MONTHS[exam.month - 1]} ${exam.year} — ${exam.name}`;
-  const wb = XLSX.utils.book_new();
+  const classes = [...new Set(active.map((s) => Number(s.class)))].sort((a, b) => a - b);
 
-  const AUTHORITY = "PUNJAB DAANISH SCHOOLS & CENTRES OF EXCELLENCE AUTHORITY";
-  const COE = "Name of COE: Centre of Excellence Sialkot (Boys)";
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Centre of Excellence Sialkot";
+  wb.created = new Date();
 
-  // ---------- Proforma 1 ----------
-  const p1rows = p1.map((r) => [
-    r.sr, r.incharge, r.className, r.appeared, r.passed, r.passPct, r.resultPct,
-    r.avgMarks, r.totalMarks, r.avgPct,
-    r.bands.b90, r.bands.b80, r.bands.b70, r.bands.b60, r.bands.b50, r.bands.b40, r.bands.below40,
-    r.above70, r.below70, r.diff70, r.above70Pct,
-  ]);
+  for (const classNum of classes) {
+    const classSections = active.filter((s) => Number(s.class) === classNum);
 
-  const sum = (f) => p1.reduce((a, r) => a + (f(r) || 0), 0);
-  const gAppeared = sum((r) => r.appeared);
-  const gPassed = sum((r) => r.passed);
-  const gAbove = sum((r) => r.above70);
-  const gBelow = sum((r) => r.below70);
-  const p1total = [
-    "Grand Total", "", "", gAppeared, gPassed,
-    gAppeared ? Math.round((gPassed / gAppeared) * 10000) / 100 : null, "", "", "", "",
-    sum((r) => r.bands.b90), sum((r) => r.bands.b80), sum((r) => r.bands.b70),
-    sum((r) => r.bands.b60), sum((r) => r.bands.b50), sum((r) => r.bands.b40),
-    sum((r) => r.bands.below40),
-    gAbove, gBelow, gAbove - gBelow,
-    gAppeared ? Math.round((gAbove / gAppeared) * 10000) / 100 : null,
-  ];
+    const p1 = buildProforma1({
+      sections: classSections, studentsBySection, configBySection, marksBySection,
+    });
+    addProforma1Sheet(wb, { classNum, examTitle, rows: p1, coeName: COE_NAME });
 
-  const ws1 = XLSX.utils.aoa_to_sheet([
-    [AUTHORITY],
-    [`Proforma 1 — Overall Class / Section wise Result | ${examTitle}`],
-    [COE],
-    [],
-    P1_HEADERS,
-    ...p1rows,
-    p1total,
-  ]);
-  ws1["!cols"] = [
-    { wch: 6 }, { wch: 24 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 9 },
-    { wch: 9 }, { wch: 12 }, { wch: 10 }, { wch: 12 },
-    ...Array(7).fill({ wch: 9 }),
-    { wch: 11 }, { wch: 11 }, { wch: 14 }, { wch: 13 },
-  ];
-  XLSX.utils.book_append_sheet(wb, ws1, "Proforma 1");
+    const p2 = buildProforma2({
+      sections: classSections, studentsBySection, configBySection,
+      teacherBySection, marksBySection, subjectsBySection,
+    });
 
-  // ---------- Proforma 2, one sheet per subject ----------
-  Object.keys(p2).forEach((subject) => {
-    const rows = p2[subject].map((r) => [
-      r.sr, r.teacher, r.className, r.appeared, r.passed, r.passPct, r.resultPct,
-      r.totalMarks, r.avgMarks, r.avgPct,
-      r.bands.b90, r.bands.b80, r.bands.b70, r.bands.b60,
-      r.bands.b50, r.bands.b40, r.bands.b33, r.bands.below33,
-      r.above70, r.below70, r.diff70, r.above70Pct,
-    ]);
+    // Keep the template's subject order rather than whatever came back
+    const ordered = subjectsForClass(classNum).filter((s) => p2[s]?.length);
+    ordered.forEach((subject, i) => {
+      // Sheet names: 31 chars, no / \ ? * [ ] : — and must be unique
+      const short = subject.replace(/[\\/?*\[\]:]/g, "-").slice(0, 18);
+      addProforma2Sheet(wb, {
+        classNum, subject, examTitle, rows: p2[subject], coeName: COE_NAME,
+        sheetName: `P2 ${classNum} ${short}`.slice(0, 31) || `P2 ${classNum}-${i}`,
+      });
+    });
+  }
 
-    const s2 = (f) => p2[subject].reduce((a, r) => a + (f(r) || 0), 0);
-    const a2 = s2((r) => r.appeared);
-    const p2p = s2((r) => r.passed);
-    const ab2 = s2((r) => r.above70);
-    const be2 = s2((r) => r.below70);
-    const total = [
-      "Grand Total", "", "", a2, p2p,
-      a2 ? Math.round((p2p / a2) * 10000) / 100 : null, "", "", "", "",
-      s2((r) => r.bands.b90), s2((r) => r.bands.b80), s2((r) => r.bands.b70),
-      s2((r) => r.bands.b60), s2((r) => r.bands.b50), s2((r) => r.bands.b40),
-      s2((r) => r.bands.b33), s2((r) => r.bands.below33),
-      ab2, be2, ab2 - be2, a2 ? Math.round((ab2 / a2) * 10000) / 100 : null,
-    ];
+  const buf = await wb.xlsx.writeBuffer();
+  const scope = onlyClass ? `Class-${onlyClass}` : "All-Classes";
+  const fname = `Proformas-${scope}-${examTitle.replace(/[^a-zA-Z0-9]+/g, "-")}.xlsx`;
 
-    const ws = XLSX.utils.aoa_to_sheet([
-      [AUTHORITY],
-      [`Proforma 2 — Teachers Result | ${examTitle}`],
-      [`${COE}          Name of Subject: ${subject}`],
-      [],
-      P2_HEADERS,
-      ...rows,
-      total,
-    ]);
-    ws["!cols"] = [
-      { wch: 6 }, { wch: 24 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 9 },
-      { wch: 10 }, { wch: 11 }, { wch: 13 }, { wch: 12 },
-      ...Array(8).fill({ wch: 9 }),
-      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 11 },
-    ];
-
-    // Sheet names: 31 chars max, and / \ ? * [ ] are not allowed
-    const safe = subject.replace(/[\\/?*\[\]:]/g, "-").slice(0, 31);
-    XLSX.utils.book_append_sheet(wb, ws, safe);
-  });
-
-  const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
-  const fname = `proformas-${examTitle.replace(/[^a-zA-Z0-9]+/g, "-")}.xlsx`;
-
-  return new NextResponse(buf, {
+  return new NextResponse(Buffer.from(buf), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${fname}"`,
