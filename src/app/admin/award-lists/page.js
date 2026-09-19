@@ -160,6 +160,10 @@ export default function AdminAwardListsPage() {
         <a href="/admin/exams" className="inline-block text-sm mb-4 underline" style={{ color: GOLD }}>
           &larr; All exams
         </a>
+        <span className="text-white/30 mx-3">|</span>
+        <a href="/proformas" className="inline-block text-sm mb-4 underline" style={{ color: GOLD }}>
+          Proformas &rarr;
+        </a>
         <br />
 
         <input

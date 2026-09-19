@@ -242,6 +242,15 @@ export default function ExamsPage() {
                       </button>
 
                       <a
+                        href={`/proformas`}
+                        className="text-sm rounded-lg px-3 py-1.5 border"
+                        style={{ borderColor: "#ffffff33", color: "#fff" }}
+                        title="Live class-wise and teacher-wise proformas"
+                      >
+                        Proformas →
+                      </a>
+
+                      <a
                         href={`/admin/award-lists?examId=${ex.id}`}
                         className="text-sm rounded-lg px-3 py-1.5 border"
                         style={{ borderColor: "#ffffff33", color: "#fff" }}
