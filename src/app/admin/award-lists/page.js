@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { examLabel } from "@/lib/awardListExams";
 
 const NAVY = "#150F3F";
 const NAVY_LIGHT = "#1F1760";
@@ -13,19 +14,31 @@ export default function AdminAwardListsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const [examId, setExamId] = useState("");
+  const [exam, setExam] = useState(null);
   const [expandedCode, setExpandedCode] = useState("");
   const [subjectRows, setSubjectRows] = useState([]);
   const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   useEffect(() => {
-    refresh();
+    const id = new URLSearchParams(window.location.search).get("examId") || "";
+    setExamId(id);
+    refresh(id);
   }, []);
 
-  function refresh() {
-    fetch("/api/award-list/sections")
+  // Without examId this falls back to the current exam, so opening
+  // /admin/award-lists directly still works.
+  function refresh(id = examId) {
+    const q = id ? `?examId=${encodeURIComponent(id)}` : "";
+    fetch(`/api/award-list/sections${q}`)
       .then((r) => r.json())
-      .then((d) => setSections(d.sections || []));
+      .then((d) => {
+        setSections(d.sections || []);
+        setExam(d.exam || null);
+      });
   }
+
+  const examQ = examId ? `&examId=${encodeURIComponent(examId)}` : "";
 
   function toggle(code) {
     setSelected((prev) => {
@@ -54,7 +67,7 @@ export default function AdminAwardListsPage() {
       const res = await fetch(
         `/api/award-list/admin-subjects?code=${encodeURIComponent(code)}&adminPassword=${encodeURIComponent(
           adminPassword
-        )}`
+        )}${examQ}`
       );
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed to load subjects");
@@ -74,7 +87,7 @@ export default function AdminAwardListsPage() {
       const res = await fetch("/api/award-list/lock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, subject, locked, adminPassword }),
+        body: JSON.stringify({ code, subject, locked, adminPassword, examId: examId || undefined }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
@@ -93,7 +106,7 @@ export default function AdminAwardListsPage() {
       const res = await fetch("/api/award-list/lock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, locked, adminPassword }),
+        body: JSON.stringify({ code, locked, adminPassword, examId: examId || undefined }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Failed");
@@ -113,7 +126,7 @@ export default function AdminAwardListsPage() {
     const codes = Array.from(selected).join(",");
     const url = `/api/award-list/export/${kind}?codes=${encodeURIComponent(
       codes
-    )}&adminPassword=${encodeURIComponent(adminPassword)}`;
+    )}&adminPassword=${encodeURIComponent(adminPassword)}${examQ}`;
     window.location.href = url;
   }
 
@@ -136,8 +149,18 @@ export default function AdminAwardListsPage() {
             <p className="text-xs md:text-sm uppercase tracking-widest mt-0.5" style={{ color: GOLD }}>
               Centre of Excellence Sialkot
             </p>
+            {exam && (
+              <p className="text-sm font-semibold mt-1 text-white/90">
+                {examLabel(exam)}{exam.is_current ? " · current" : ""}
+              </p>
+            )}
           </div>
         </div>
+
+        <a href="/admin/exams" className="inline-block text-sm mb-4 underline" style={{ color: GOLD }}>
+          &larr; All exams
+        </a>
+        <br />
 
         <input
           type="password"

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardListConfig";
+import { resolveExam } from "@/lib/resolveExam";
 import { FONT_REGULAR, FONT_BOLD } from "@/lib/awardListFonts";
 
 // PDFKit's built-in "Helvetica" relies on Node internal package-import
@@ -19,6 +20,8 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const adminPassword = searchParams.get("adminPassword");
   const codes = (searchParams.get("codes") || "").split(",").filter(Boolean);
+  const examId = searchParams.get("examId");
+  const examSlug = searchParams.get("examSlug");
 
   if (adminPassword !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -28,6 +31,12 @@ export async function GET(req) {
   }
 
   const supabase = getSupabaseAdmin();
+
+  const { exam, error: examErr } = await resolveExam(supabase, examId, examSlug);
+  if (examErr) return NextResponse.json({ error: examErr }, { status: 400 });
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const examTitle = `${MONTHS[exam.month - 1]} ${exam.year} — ${exam.name}`;
+
   const doc = new PDFDocument({ font: null, layout: "landscape", size: "A4", margin: 24 });
   doc.registerFont("Body", FONT_REGULAR);
   doc.registerFont("Body-Bold", FONT_BOLD);
@@ -57,11 +66,13 @@ export async function GET(req) {
       supabase
         .from("award_subject_config")
         .select("subject_name, total_marks, teacher_name")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
       supabase
         .from("award_marks")
         .select("student_id, subject_name, marks_obtained")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
     ]);
 
     const subjects = subjectsForClass(section.class);
@@ -112,7 +123,7 @@ export async function GET(req) {
       { align: "center" }
     );
     doc.fontSize(10).text(
-      `AWARD LIST | Class ${section.class}-${section.section_label} | Session 2026-27`,
+      `AWARD LIST | Class ${section.class}-${section.section_label} | ${examTitle}`,
       { align: "center" }
     );
     doc.fontSize(8).font("Body").text(
@@ -189,7 +200,7 @@ export async function GET(req) {
   return new NextResponse(buf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="award-lists-${Date.now()}.pdf"`,
+      "Content-Disposition": `attachment; filename="award-lists-${examTitle.replace(/[^a-zA-Z0-9]+/g, "-")}.pdf"`,
     },
   });
 }

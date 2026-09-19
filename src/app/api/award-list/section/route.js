@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass } from "@/lib/awardListConfig";
+import { resolveExam } from "@/lib/resolveExam";
 
-// GET /api/award-list/section?code=6-Jinnah&pin=1234
-// Returns the roster, subject list, any previously saved "total marks" per
-// subject, and any previously saved per-student marks — so a teacher
-// re-opening the link sees what they already entered.
+// GET /api/award-list/section?code=6-Jinnah&pin=1234[&examId=...]
+// Without examId this uses whichever exam is currently open, which is how
+// the shared /award-list link works for teachers.
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const pin = searchParams.get("pin");
+  const examId = searchParams.get("examId");
+  const examSlug = searchParams.get("examSlug");
 
   if (pin !== process.env.AWARD_LIST_PIN) {
     return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 });
@@ -19,6 +21,9 @@ export async function GET(req) {
   }
 
   const supabase = getSupabaseAdmin();
+
+  const { exam, error: examErr } = await resolveExam(supabase, examId, examSlug);
+  if (examErr) return NextResponse.json({ error: examErr }, { status: 400 });
 
   const { data: section, error: sectionErr } = await supabase
     .from("award_sections")
@@ -40,11 +45,13 @@ export async function GET(req) {
       supabase
         .from("award_subject_config")
         .select("subject_name, total_marks, teacher_name, locked")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
       supabase
         .from("award_marks")
         .select("student_id, subject_name, marks_obtained")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
     ]);
 
   if (studErr) {
@@ -52,6 +59,7 @@ export async function GET(req) {
   }
 
   return NextResponse.json({
+    exam,
     section,
     subjects: subjectsForClass(section.class),
     students,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardListConfig";
+import { resolveExam } from "@/lib/resolveExam";
 
 // GET /api/award-list/export/excel?codes=6-Jinnah,7-Iqbal&adminPassword=...
 // Returns a .xlsx file with one sheet per requested section, matching the
@@ -10,6 +11,8 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const adminPassword = searchParams.get("adminPassword");
   const codes = (searchParams.get("codes") || "").split(",").filter(Boolean);
+  const examId = searchParams.get("examId");
+  const examSlug = searchParams.get("examSlug");
 
   if (adminPassword !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +22,12 @@ export async function GET(req) {
   }
 
   const supabase = getSupabaseAdmin();
+
+  const { exam, error: examErr } = await resolveExam(supabase, examId, examSlug);
+  if (examErr) return NextResponse.json({ error: examErr }, { status: 400 });
   const wb = XLSX.utils.book_new();
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const examTitle = `${MONTHS[exam.month - 1]} ${exam.year} — ${exam.name}`;
 
   for (const code of codes) {
     const { data: section } = await supabase
@@ -38,11 +46,13 @@ export async function GET(req) {
       supabase
         .from("award_subject_config")
         .select("subject_name, total_marks, teacher_name")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
       supabase
         .from("award_marks")
         .select("student_id, subject_name, marks_obtained")
-        .eq("section_id", section.id),
+        .eq("section_id", section.id)
+        .eq("exam_id", exam.id),
     ]);
 
     const subjects = subjectsForClass(section.class);
@@ -71,7 +81,7 @@ export async function GET(req) {
     const totalMarksSum = Object.values(config).reduce((a, b) => a + (Number(b) || 0), 0);
 
     const header1 = ["GOVERNMENT OF PUNJAB — CENTER OF EXCELLENCE SIALKOT (BOYS)"];
-    const header2 = [`AWARD LIST | Class ${section.class}-${section.section_label} | Session 2026-27`];
+    const header2 = [`AWARD LIST | Class ${section.class}-${section.section_label} | ${examTitle}`];
     const header3 = [`Class Incharge: ${section.class_incharge}   |   No. of Students: ${section.student_count}`];
     const colHeaders = [
       "S#", "Roll No", "Student Name", "Father's Name",
@@ -117,7 +127,7 @@ export async function GET(req) {
   return new NextResponse(buf, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="award-lists-${Date.now()}.xlsx"`,
+      "Content-Disposition": `attachment; filename="award-lists-${examTitle.replace(/[^a-zA-Z0-9]+/g, "-")}.xlsx"`,
     },
   });
 }
