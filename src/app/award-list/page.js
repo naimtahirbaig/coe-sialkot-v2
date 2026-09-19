@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { computeTotals, assignPositions } from "@/lib/awardListConfig";
+import { TEACHER_NAMES, OTHER_OPTION } from "@/lib/awardListTeachers";
 
 // Brand palette sampled from the COE / Punjab Daanish Schools logo.
 const NAVY = "#150F3F";
@@ -361,14 +362,11 @@ export default function AwardListPage() {
                       </td>
                       {subjects.map((s) => (
                         <td key={s} className="p-1.5 border-b text-center" style={{ borderColor: `${GOLD}33` }}>
-                          <input
-                            type="text"
-                            placeholder="Your name"
-                            className="w-24 rounded px-1 py-1 text-center text-white border outline-none text-xs disabled:opacity-50"
-                            style={{ background: NAVY, borderColor: `${GOLD}55` }}
+                          <TeacherSelect
+                            compact
                             value={subjectConfig[s]?.teacher_name ?? ""}
                             disabled={subjectConfig[s]?.locked}
-                            onChange={(e) => updateTeacherName(s, e.target.value)}
+                            onChange={(v) => updateTeacherName(s, v)}
                           />
                         </td>
                       ))}
@@ -475,6 +473,79 @@ export default function AwardListPage() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Teacher name picker.
+   A dropdown of known staff, plus "Other…" for anyone not listed
+   (substitutes, new staff). A name already saved but missing from the
+   list is kept and shown as its own option, so editing a subject never
+   silently wipes or changes who was recorded against it.               */
+/* ------------------------------------------------------------------ */
+function TeacherSelect({ value, onChange, disabled, compact = false }) {
+  const NAVY = "#150F3F";
+  const GOLD = "#FCB629";
+  const known = TEACHER_NAMES.includes(value);
+  const [manual, setManual] = useState(false);
+
+  // A saved name that isn't in the list gets its own option so it survives.
+  const extra = value && !known ? [value] : [];
+  const showText = manual || (!!value && !known);
+
+  function handleSelect(v) {
+    if (v === OTHER_OPTION) {
+      setManual(true);
+      onChange("");
+    } else {
+      setManual(false);
+      onChange(v);
+    }
+  }
+
+  const selectStyle = {
+    background: NAVY,
+    borderColor: `${GOLD}55`,
+  };
+
+  return (
+    <div className={compact ? "" : "space-y-2"}>
+      <select
+        className={
+          compact
+            ? "w-32 rounded px-1 py-1 text-white border outline-none text-xs disabled:opacity-50"
+            : "rounded-lg px-3 py-3 w-full text-base text-white border outline-none disabled:opacity-50"
+        }
+        style={selectStyle}
+        value={showText ? OTHER_OPTION : value || ""}
+        disabled={disabled}
+        onChange={(e) => handleSelect(e.target.value)}
+      >
+        <option value="">— Select your name —</option>
+        {[...TEACHER_NAMES, ...extra].map((n) => (
+          <option key={n} value={n}>
+            {n}
+          </option>
+        ))}
+        <option value={OTHER_OPTION}>Other…</option>
+      </select>
+
+      {showText && (
+        <input
+          type="text"
+          placeholder="Type your name"
+          className={
+            compact
+              ? "w-32 mt-1 rounded px-1 py-1 text-center text-white border outline-none text-xs disabled:opacity-50"
+              : "rounded-lg px-3 py-3 w-full text-base text-white border outline-none disabled:opacity-50"
+          }
+          style={selectStyle}
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Focus mode: one subject at a time, names always visible, no sideways
    scrolling. This is what teachers will use on a phone.                */
 /* ------------------------------------------------------------------ */
@@ -538,14 +609,10 @@ function FocusMode({
         </div>
         <div>
           <label className="block text-[11px] mb-1 text-white/60">Your name</label>
-          <input
-            type="text"
-            placeholder="Subject teacher"
-            className="rounded-lg px-3 py-3 w-full text-base text-white border outline-none disabled:opacity-50"
-            style={{ background: NAVY, borderColor: `${GOLD}55` }}
+          <TeacherSelect
             value={cfg.teacher_name ?? ""}
             disabled={locked}
-            onChange={(e) => updateTeacherName(focusSubject, e.target.value)}
+            onChange={(v) => updateTeacherName(focusSubject, v)}
           />
         </div>
       </div>
