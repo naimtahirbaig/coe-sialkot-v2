@@ -8,6 +8,7 @@ const MONTHS = ["January","February","March","April","May","June",
                 "July","August","September","October","November","December"];
 
 // GET /api/award-list/result-cards?code=6-Jinnah&examId=…&adminPassword=…
+//                                                        &pin=…
 //
 // Returns one ready-to-print card per student in the section, plus the
 // class-wide top three. Positions are ranked ACROSS THE WHOLE CLASS
@@ -18,9 +19,14 @@ export async function GET(req) {
   const examId = searchParams.get("examId");
   const examSlug = searchParams.get("examSlug");
   const adminPassword = searchParams.get("adminPassword");
+  const pin = searchParams.get("pin");
 
-  if (adminPassword !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Either the teachers' PIN or the admin password opens this, so the
+  // same page serves staff and the office.
+  const isAdmin = adminPassword && adminPassword === process.env.ADMIN_PASSWORD;
+  const isTeacher = pin && pin === process.env.AWARD_LIST_PIN;
+  if (!isAdmin && !isTeacher) {
+    return NextResponse.json({ error: "Enter the PIN or the admin password." }, { status: 401 });
   }
   if (!code) return NextResponse.json({ error: "Missing section code" }, { status: 400 });
 
@@ -128,6 +134,7 @@ export async function GET(req) {
     });
 
   return NextResponse.json({
+    isAdmin: !!isAdmin,
     exam,
     section: {
       sheet_code: section.sheet_code,

@@ -141,6 +141,8 @@ export default function ProformasPage() {
               ))}
             </select>
           </div>
+          <a href="/result-cards" className="text-sm underline self-center"
+             style={{ color: GOLD }}>Result Cards &rarr;</a>
           <button onClick={() => load()} disabled={!secret || !examId || loading}
                   className="font-bold px-5 py-2.5 rounded-lg disabled:opacity-40"
                   style={{ background: GOLD, color: NAVY }}>
