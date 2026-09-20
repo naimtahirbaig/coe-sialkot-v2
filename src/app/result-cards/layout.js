@@ -7,13 +7,13 @@ export const metadata = {
     description: "Centre of Excellence Sialkot — printable student progress report cards.",
     url: "https://www.coesialkot.com/result-cards",
     siteName: "Centre of Excellence Sialkot",
-    images: [{ url: "https://www.coesialkot.com/og-proformas.png", width: 1200, height: 630 }],
+    images: [{ url: "https://www.coesialkot.com/og-result-cards.png", width: 1200, height: 630 }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Result Cards",
-    images: ["https://www.coesialkot.com/og-proformas.png"],
+    images: ["https://www.coesialkot.com/og-result-cards.png"],
   },
 };
 
