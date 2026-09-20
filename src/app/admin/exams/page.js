@@ -242,6 +242,15 @@ export default function ExamsPage() {
                       </button>
 
                       <a
+                        href={`/admin/result-cards`}
+                        className="text-sm rounded-lg px-3 py-1.5 border"
+                        style={{ borderColor: "#ffffff33", color: "#fff" }}
+                        title="Printable student result cards"
+                      >
+                        Result Cards →
+                      </a>
+
+                      <a
                         href={`/proformas`}
                         className="text-sm rounded-lg px-3 py-1.5 border"
                         style={{ borderColor: "#ffffff33", color: "#fff" }}
