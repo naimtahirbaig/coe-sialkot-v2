@@ -52,6 +52,7 @@ export function buildProforma1({ sections, studentsBySection, configBySection, m
     const config = configBySection[section.id] || {};     // { subject: total_marks }
     const marks = marksBySection[section.id] || {};       // { studentId: { subject: value } }
 
+    // Full paper total, reported in the "Total Marks" column.
     const totalMarks = Object.values(config).reduce((a, b) => a + (Number(b) || 0), 0);
 
     const pcts = [];
@@ -61,8 +62,18 @@ export function buildProforma1({ sections, studentsBySection, configBySection, m
         (sub) => sm[sub] !== null && sm[sub] !== undefined && sm[sub] !== ""
       );
       if (entered.length === 0) return;                   // did not appear
+
       const obtained = entered.reduce((a, sub) => a + Number(sm[sub] || 0), 0);
-      if (totalMarks > 0) pcts.push({ obtained, pct: (obtained / totalMarks) * 100 });
+
+      // Percentage is out of the subjects this student ACTUALLY has marks
+      // in — not every subject that happens to have a total set. Otherwise
+      // a student would be scored as if they had failed every paper a
+      // teacher simply hasn't entered yet, and mid-entry everyone reads 0%.
+      //
+      // A blank therefore means "not entered yet"; enter 0 for a student
+      // who was absent or genuinely scored nothing.
+      const outOf = entered.reduce((a, sub) => a + (Number(config[sub]) || 0), 0);
+      if (outOf > 0) pcts.push({ obtained, pct: (obtained / outOf) * 100 });
     });
 
     const appeared = pcts.length;
@@ -87,7 +98,10 @@ export function buildProforma1({ sections, studentsBySection, configBySection, m
       resultPct: r2(passPct),
       avgMarks: r2(avgMarks),
       totalMarks: totalMarks || null,
-      avgPct: totalMarks && avgMarks !== null ? r2((avgMarks / totalMarks) * 100) : null,
+      // Mean of the students' own percentages. Dividing the average mark
+      // by the full paper total would understate the class whenever some
+      // subjects are still unentered.
+      avgPct: appeared ? r2(pcts.reduce((a, p) => a + p.pct, 0) / appeared) : null,
       bands,
       above70,
       below70,
@@ -145,7 +159,7 @@ export function buildProforma2({ sections, studentsBySection, configBySection, t
         resultPct: r2(passPct),
         totalMarks: total || null,
         avgMarks: r2(avg),
-        avgPct: total && avg !== null ? r2((avg / total) * 100) : null,
+        avgPct: total && avg !== null ? r2((avg / total) * 100) : null,   // single subject: total is exact
         bands,
         above70,
         below70,

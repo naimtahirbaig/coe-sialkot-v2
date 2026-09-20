@@ -30,7 +30,8 @@ export function gradeForPercentage(pct) {
 // obtained/total marks for one student, given per-subject marks + config
 export function computeTotals(marksBySubject, subjectConfig) {
   let obtained = 0;
-  let total = 0;
+  let total = 0;        // full paper total, for display
+  let outOf = 0;        // total of the subjects actually marked
   let anyEntered = false;
   for (const subject of Object.keys(subjectConfig)) {
     const max = Number(subjectConfig[subject] || 0);
@@ -38,13 +39,20 @@ export function computeTotals(marksBySubject, subjectConfig) {
     const val = marksBySubject[subject];
     if (val !== null && val !== undefined && val !== "") {
       obtained += Number(val);
+      outOf += max;
       anyEntered = true;
     }
   }
-  const pct = total > 0 && anyEntered ? (obtained / total) * 100 : null;
+  // Percentage is out of the subjects this student actually has marks in.
+  // Dividing by every configured subject would score a student as having
+  // failed papers no teacher has entered yet, so mid-entry everyone would
+  // read as failing. A blank means "not entered yet"; enter 0 for a
+  // student who was absent or genuinely scored nothing.
+  const pct = outOf > 0 && anyEntered ? (obtained / outOf) * 100 : null;
   return {
     obtained: anyEntered ? obtained : null,
     total,
+    outOf,
     percentage: pct === null ? null : Math.round(pct * 100) / 100,
     grade: pct === null ? "" : gradeForPercentage(pct),
   };
