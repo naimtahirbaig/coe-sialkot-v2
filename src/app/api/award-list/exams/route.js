@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchAll } from "@/lib/fetchAll";
 import { makeSlug, cleanSlug } from "@/lib/awardListExams";
 
 // GET /api/award-list/exams
@@ -19,7 +20,15 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // How many subject-config rows exist per exam (i.e. work started)
-  const { data: cfg } = await supabase.from("award_subject_config").select("exam_id");
+  // Grows with every exam (31 sections × 9 subjects each), so paged.
+  let cfg = [];
+  try {
+    cfg = await fetchAll(() =>
+      supabase.from("award_subject_config").select("id, exam_id").order("id", { ascending: true })
+    );
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
   const counts = {};
   (cfg || []).forEach((c) => (counts[c.exam_id] = (counts[c.exam_id] || 0) + 1));
 

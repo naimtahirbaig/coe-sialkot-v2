@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchAll } from "@/lib/fetchAll";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 import { buildProforma1, buildProforma2 } from "@/lib/proformas";
@@ -31,23 +32,40 @@ export async function GET(req) {
   const { exam, error: examErr } = await resolveExam(supabase, examId, examSlug);
   if (examErr) return NextResponse.json({ error: examErr }, { status: 400 });
 
-  const [{ data: sections }, { data: students }, { data: config }, { data: marks }] =
-    await Promise.all([
-      supabase
-        .from("award_sections")
-        .select("id, class, section_label, section_letter, class_incharge, sheet_code")
-        .order("class", { ascending: true })
-        .order("section_letter", { ascending: true }),
-      supabase.from("award_students").select("id, section_id"),
-      supabase
-        .from("award_subject_config")
-        .select("section_id, subject_name, total_marks, teacher_name")
-        .eq("exam_id", exam.id),
-      supabase
-        .from("award_marks")
-        .select("section_id, student_id, subject_name, marks_obtained")
-        .eq("exam_id", exam.id),
+  // Students and marks both exceed Supabase's 1,000-row page, so they are
+  // read with fetchAll. A plain select would silently drop whole sections.
+  let sections, students, config, marks;
+  try {
+    [sections, students, config, marks] = await Promise.all([
+      fetchAll(() =>
+        supabase
+          .from("award_sections")
+          .select("id, class, section_label, section_letter, class_incharge, sheet_code")
+          .order("class", { ascending: true })
+          .order("section_letter", { ascending: true })
+          .order("id", { ascending: true })
+      ),
+      fetchAll(() =>
+        supabase.from("award_students").select("id, section_id").order("id", { ascending: true })
+      ),
+      fetchAll(() =>
+        supabase
+          .from("award_subject_config")
+          .select("section_id, subject_name, total_marks, teacher_name")
+          .eq("exam_id", exam.id)
+          .order("id", { ascending: true })
+      ),
+      fetchAll(() =>
+        supabase
+          .from("award_marks")
+          .select("section_id, student_id, subject_name, marks_obtained")
+          .eq("exam_id", exam.id)
+          .order("id", { ascending: true })
+      ),
     ]);
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 
   // Group everything by section for the computation
   const studentsBySection = {};

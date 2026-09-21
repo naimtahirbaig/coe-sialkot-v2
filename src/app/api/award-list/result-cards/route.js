@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { fetchAll } from "@/lib/fetchAll";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 import { overallRemark } from "@/lib/resultCardConfig";
@@ -45,18 +46,34 @@ export async function GET(req) {
     .eq("class", section.class);
   const classSectionIds = (classSections || []).map((s) => s.id);
 
-  const [{ data: students }, { data: config }, { data: marks }] = await Promise.all([
-    supabase.from("award_students")
-      .select("id, section_id, s_no, roll_no, student_name, father_name")
-      .in("section_id", classSectionIds)
-      .order("s_no", { ascending: true }),
-    supabase.from("award_subject_config")
-      .select("section_id, subject_name, total_marks")
-      .in("section_id", classSectionIds).eq("exam_id", exam.id),
-    supabase.from("award_marks")
-      .select("section_id, student_id, subject_name, marks_obtained")
-      .in("section_id", classSectionIds).eq("exam_id", exam.id),
-  ]);
+  // A whole class's marks can run to several thousand rows — past
+  // Supabase's 1,000-row page — so these are read with fetchAll.
+  let students, config, marks;
+  try {
+    [students, config, marks] = await Promise.all([
+      fetchAll(() =>
+        supabase.from("award_students")
+          .select("id, section_id, s_no, roll_no, student_name, father_name")
+          .in("section_id", classSectionIds)
+          .order("s_no", { ascending: true })
+          .order("id", { ascending: true })
+      ),
+      fetchAll(() =>
+        supabase.from("award_subject_config")
+          .select("section_id, subject_name, total_marks")
+          .in("section_id", classSectionIds).eq("exam_id", exam.id)
+          .order("id", { ascending: true })
+      ),
+      fetchAll(() =>
+        supabase.from("award_marks")
+          .select("section_id, student_id, subject_name, marks_obtained")
+          .in("section_id", classSectionIds).eq("exam_id", exam.id)
+          .order("id", { ascending: true })
+      ),
+    ]);
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 
   const cfgBySection = {};
   (config || []).forEach((c) => {
