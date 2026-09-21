@@ -87,10 +87,13 @@ export default function ProformasPage() {
   // figures scroll sideways, like the Student column on the award list.
   // Sticky cells need a SOLID background, or the scrolling figures would
   // show through underneath them.
+  // On screen the class/section sits under the name (like father's name
+  // on the award list) so the pinned block stays narrow on phones.
+  // The Excel download is built separately and keeps them as separate
+  // columns, exactly as in the official template.
   const STICKY = [
-    { w: 52, left: 0 },
-    { w: 170, left: 52 },
-    { w: 140, left: 222 },
+    { w: 40, left: 0 },
+    { w: 150, left: 40 },
   ];
   const rowBg = (i) => (i % 2 ? "#140F40" : "#1B1650");
   const stick = (idx, background, head = false) => ({
@@ -102,7 +105,7 @@ export default function ProformasPage() {
     background,
     ...(head ? { top: 0 } : {}),
     // gold edge marks where the pinned block ends
-    ...(idx === 2 ? { boxShadow: `2px 0 0 ${GOLD}66` } : {}),
+    ...(idx === 1 ? { boxShadow: `2px 0 0 ${GOLD}66` } : {}),
   });
   const stickyHead = { position: "sticky", top: 0, zIndex: 20, background: NAVY };
   const nameCell = "px-2 py-1.5 border text-left";   // allowed to wrap
@@ -236,12 +239,15 @@ export default function ProformasPage() {
                 <table className="min-w-full text-xs border-separate" style={{ borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: NAVY }}>
-                      {P1_HEADERS.map((h, idx) => (
-                        <th key={h} className={idx < 3 ? nameCell : cell}
-                            style={idx < 3
+                      {P1_HEADERS.map((h, idx) => idx === 2 ? null : (
+                        <th key={h} className={idx < 2 ? nameCell : cell}
+                            style={idx < 2
                               ? { ...bc, color: GOLD, ...stick(idx, NAVY, true) }
                               : { ...bc, color: GOLD, ...stickyHead }}>
                           {h}
+                          {idx === 1 && (
+                            <span className="block text-[10px] font-normal opacity-70">Class with section</span>
+                          )}
                         </th>
                       ))}
                     </tr>
@@ -250,8 +256,10 @@ export default function ProformasPage() {
                     {data.proforma1.map((r, i) => (
                       <tr key={r.className} style={{ background: rowBg(i) }}>
                         <td className={cell} style={{ ...bc, ...stick(0, rowBg(i)) }}>{r.sr}</td>
-                        <td className={nameCell} style={{ ...bc, ...stick(1, rowBg(i)) }}>{r.incharge}</td>
-                        <td className={nameCell} style={{ ...bc, ...stick(2, rowBg(i)) }}>{r.className}</td>
+                        <td className={nameCell} style={{ ...bc, ...stick(1, rowBg(i)) }}>
+                          <span className="block leading-tight">{r.incharge}</span>
+                          <span className="block text-[10px] text-white/45 leading-tight">{r.className}</span>
+                        </td>
                         <td className={cell} style={bc}>{r.appeared}</td>
                         <td className={cell} style={bc}>{r.passed}</td>
                         <td className={cell} style={bc}>{num(r.passPct)}</td>
@@ -274,12 +282,15 @@ export default function ProformasPage() {
                 <table className="min-w-full text-xs border-separate" style={{ borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: NAVY }}>
-                      {P2_HEADERS.map((h, idx) => (
-                        <th key={h} className={idx < 3 ? nameCell : cell}
-                            style={idx < 3
+                      {P2_HEADERS.map((h, idx) => idx === 2 ? null : (
+                        <th key={h} className={idx < 2 ? nameCell : cell}
+                            style={idx < 2
                               ? { ...bc, color: GOLD, ...stick(idx, NAVY, true) }
                               : { ...bc, color: GOLD, ...stickyHead }}>
                           {h}
+                          {idx === 1 && (
+                            <span className="block text-[10px] font-normal opacity-70">Class with section</span>
+                          )}
                         </th>
                       ))}
                     </tr>
@@ -288,8 +299,10 @@ export default function ProformasPage() {
                     {(data.proforma2[tab] || []).map((r, i) => (
                       <tr key={r.className} style={{ background: rowBg(i) }}>
                         <td className={cell} style={{ ...bc, ...stick(0, rowBg(i)) }}>{r.sr}</td>
-                        <td className={nameCell} style={{ ...bc, ...stick(1, rowBg(i)) }}>{r.teacher}</td>
-                        <td className={nameCell} style={{ ...bc, ...stick(2, rowBg(i)) }}>{r.className}</td>
+                        <td className={nameCell} style={{ ...bc, ...stick(1, rowBg(i)) }}>
+                          <span className="block leading-tight">{r.teacher || "—"}</span>
+                          <span className="block text-[10px] text-white/45 leading-tight">{r.className}</span>
+                        </td>
                         <td className={cell} style={bc}>{r.appeared}</td>
                         <td className={cell} style={bc}>{r.passed}</td>
                         <td className={cell} style={bc}>{num(r.passPct)}</td>
