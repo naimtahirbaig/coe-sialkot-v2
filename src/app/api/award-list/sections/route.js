@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { resolveExam } from "@/lib/resolveExam";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/sections[?examId=...]
 // Public: enough to populate the "pick your section" dropdown. The
 // "in progress" flag is per exam, derived from award_subject_config.

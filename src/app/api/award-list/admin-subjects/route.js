@@ -3,6 +3,11 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/admin-subjects?code=6-Jinnah&adminPassword=...[&examId=...]
 export async function GET(req) {
   const { searchParams } = new URL(req.url);

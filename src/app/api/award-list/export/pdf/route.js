@@ -5,6 +5,11 @@ import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardLis
 import { resolveExam } from "@/lib/resolveExam";
 import { FONT_REGULAR, FONT_BOLD } from "@/lib/awardListFonts";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // PDFKit's built-in "Helvetica" relies on Node internal package-import
 // resolution (#standard-fonts/Helvetica) that breaks under Vercel's
 // serverless bundling. Two things are needed to avoid it entirely:

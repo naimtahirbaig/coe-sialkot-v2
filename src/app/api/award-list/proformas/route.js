@@ -5,6 +5,11 @@ import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 import { buildProforma1, buildProforma2 } from "@/lib/proformas";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/proformas?examSlug=…&pin=…
 //                              ?examId=…&adminPassword=…
 //
@@ -37,28 +42,28 @@ export async function GET(req) {
   let sections, students, config, marks;
   try {
     [sections, students, config, marks] = await Promise.all([
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase
           .from("award_sections")
-          .select("id, class, section_label, section_letter, class_incharge, sheet_code")
+          .select("id, class, section_label, section_letter, class_incharge, sheet_code", opts)
           .order("class", { ascending: true })
           .order("section_letter", { ascending: true })
           .order("id", { ascending: true })
       ),
-      fetchAll(() =>
-        supabase.from("award_students").select("id, section_id").order("id", { ascending: true })
+      fetchAll((opts) =>
+        supabase.from("award_students").select("id, section_id", opts).order("id", { ascending: true })
       ),
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase
           .from("award_subject_config")
-          .select("section_id, subject_name, total_marks, teacher_name")
+          .select("section_id, subject_name, total_marks, teacher_name", opts)
           .eq("exam_id", exam.id)
           .order("id", { ascending: true })
       ),
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase
           .from("award_marks")
-          .select("section_id, student_id, subject_name, marks_obtained")
+          .select("section_id, student_id, subject_name, marks_obtained", opts)
           .eq("exam_id", exam.id)
           .order("id", { ascending: true })
       ),

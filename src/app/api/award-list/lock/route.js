@@ -3,6 +3,11 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // POST { code, subject?, locked, adminPassword, examId? }
 // With `subject`, locks/unlocks that one subject. Without it, every subject
 // in the section. Always scoped to a single exam.
@@ -47,5 +52,17 @@ export async function POST(req) {
     .upsert(rows, { onConflict: "exam_id,section_id,subject_name" });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Individual marks follow the subject. Unlocking reopens every mark so it
+  // can be corrected; locking seals every mark that has a value.
+  let q = supabase.from("award_marks")
+    .update({ locked, locked_at: lockedAt })
+    .eq("exam_id", exam.id)
+    .eq("section_id", section.id)
+    .in("subject_name", subjectsToSet);
+  if (locked) q = q.not("marks_obtained", "is", null);
+  const { error: markErr } = await q;
+  if (markErr) return NextResponse.json({ error: markErr.message }, { status: 500 });
+
   return NextResponse.json({ ok: true });
 }

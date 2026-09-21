@@ -5,7 +5,7 @@ export const metadata = {
   openGraph: {
     title: "Award List — Marks Entry",
     description: "Centre of Excellence Sialkot — enter your section's subject marks online.",
-    url: "https://coesialkot.com/award-list",
+    url: "https://www.coesialkot.com/online-mcqs-award-list-sep2026",
     siteName: "Centre of Excellence Sialkot",
     images: [
       {

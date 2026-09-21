@@ -5,6 +5,11 @@ import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 import { overallRemark } from "@/lib/resultCardConfig";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const MONTHS = ["January","February","March","April","May","June",
                 "July","August","September","October","November","December"];
 
@@ -51,22 +56,22 @@ export async function GET(req) {
   let students, config, marks;
   try {
     [students, config, marks] = await Promise.all([
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase.from("award_students")
-          .select("id, section_id, s_no, roll_no, student_name, father_name")
+          .select("id, section_id, s_no, roll_no, student_name, father_name", opts)
           .in("section_id", classSectionIds)
           .order("s_no", { ascending: true })
           .order("id", { ascending: true })
       ),
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase.from("award_subject_config")
-          .select("section_id, subject_name, total_marks")
+          .select("section_id, subject_name, total_marks", opts)
           .in("section_id", classSectionIds).eq("exam_id", exam.id)
           .order("id", { ascending: true })
       ),
-      fetchAll(() =>
+      fetchAll((opts) =>
         supabase.from("award_marks")
-          .select("section_id, student_id, subject_name, marks_obtained")
+          .select("section_id, student_id, subject_name, marks_obtained", opts)
           .in("section_id", classSectionIds).eq("exam_id", exam.id)
           .order("id", { ascending: true })
       ),

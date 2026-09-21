@@ -3,6 +3,11 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/section?code=6-Jinnah&pin=1234[&examId=...]
 // Without examId this uses whichever exam is currently open, which is how
 // the shared /award-list link works for teachers.
@@ -49,7 +54,7 @@ export async function GET(req) {
         .eq("exam_id", exam.id),
       supabase
         .from("award_marks")
-        .select("student_id, subject_name, marks_obtained")
+        .select("student_id, subject_name, marks_obtained, locked")
         .eq("section_id", section.id)
         .eq("exam_id", exam.id),
     ]);

@@ -35,6 +35,10 @@ export default function AwardListExamPage({ params }) {
   const [students, setStudents] = useState([]);
   const [subjectConfig, setSubjectConfig] = useState({});
   const [marks, setMarks] = useState({});
+  // lockedMarks[studentId][subject] = true once that mark has been saved
+  const [lockedMarks, setLockedMarks] = useState({});
+  // Pending "Are you sure?" confirmation, or null
+  const [confirmSave, setConfirmSave] = useState(null);
 
   const [subjectSaving, setSubjectSaving] = useState({});
   const [subjectError, setSubjectError] = useState({});
@@ -89,12 +93,18 @@ export default function AwardListExamPage({ params }) {
       setSubjectConfig(cfg);
 
       const m = {};
-      (d.students || []).forEach((st) => (m[st.id] = {}));
+      const lk = {};
+      (d.students || []).forEach((st) => { m[st.id] = {}; lk[st.id] = {}; });
       (d.marks || []).forEach((mk) => {
         m[mk.student_id] = m[mk.student_id] || {};
+        lk[mk.student_id] = lk[mk.student_id] || {};
         m[mk.student_id][mk.subject_name] = mk.marks_obtained ?? "";
+        if (mk.locked && mk.marks_obtained !== null && mk.marks_obtained !== undefined) {
+          lk[mk.student_id][mk.subject_name] = true;
+        }
       });
       setMarks(m);
+      setLockedMarks(lk);
       setUnlocked(true);
     } catch (e) {
       setError(e.message);
@@ -127,6 +137,14 @@ export default function AwardListExamPage({ params }) {
     return rows.map((r) => ({ ...r, position: r.obtained !== null ? positions[r.id] : "-" }));
   }, [students, marks, subjectConfig, subjects]);
 
+  function isMarkLocked(studentId, subject) {
+    return !!(lockedMarks[studentId] || {})[subject] || !!subjectConfig[subject]?.locked;
+  }
+  // Once any mark in a subject is saved, its total and teacher are fixed.
+  function subjectStarted(subject) {
+    return students.some((st) => (lockedMarks[st.id] || {})[subject]);
+  }
+
   // How many students still have no mark for a given subject
   function remainingFor(subject) {
     return students.filter((st) => {
@@ -135,15 +153,56 @@ export default function AwardListExamPage({ params }) {
     }).length;
   }
 
+  // Step 1 of saving: check everything, then ask the teacher to confirm.
+  // Validation happens BEFORE the question, so a teacher is never asked
+  // "are you sure?" only for the save to be rejected afterwards.
+  function requestSave(subject) {
+    const cfg = subjectConfig[subject] || {};
+    const started = subjectStarted(subject);
+    const teacher = String(cfg.teacher_name || "").trim();
+    const total = Number(cfg.total_marks);
+    const fail = (msg) => setSubjectError((p) => ({ ...p, [subject]: msg }));
+
+    setSubjectError((p) => ({ ...p, [subject]: "" }));
+    setSubjectSaved((p) => ({ ...p, [subject]: "" }));
+
+    if (!started) {
+      if (cfg.total_marks === "" || !Number.isFinite(total) || total <= 0) {
+        return fail("Enter the total marks for this paper before saving.");
+      }
+      if (!teacher) return fail("Select the subject teacher's name before saving.");
+    }
+
+    let toLock = 0, open = 0, bad = 0;
+    students.forEach((st) => {
+      if (isMarkLocked(st.id, subject)) return;
+      const v = (marks[st.id] || {})[subject];
+      if (v === "" || v === null || v === undefined) { open++; return; }
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < 0 || (Number.isFinite(total) && n > total)) bad++;
+      else toLock++;
+    });
+
+    if (bad) {
+      return fail(`${bad} mark${bad === 1 ? " is" : "s are"} not valid — each must be from 0 to ${total}. Correct ${bad === 1 ? "it" : "them"} before saving.`);
+    }
+    if (!toLock) {
+      return fail("No new marks entered. Fill at least one empty box before saving.");
+    }
+
+    setConfirmSave({ subject, toLock, open, teacher, total, first: !started });
+  }
+
+  // Step 2: the teacher confirmed — save and lock.
   async function handleSaveSubject(subject) {
     const teacherName = (subjectConfig[subject]?.teacher_name || "").trim();
-    if (!teacherName) {
-      setSubjectError((p) => ({ ...p, [subject]: "Enter the subject teacher's name before saving." }));
+    if (!subjectStarted(subject) && !teacherName) {
+      setSubjectError((p) => ({ ...p, [subject]: "Select the subject teacher's name before saving." }));
       return;
     }
     setSubjectSaving((p) => ({ ...p, [subject]: true }));
     setSubjectError((p) => ({ ...p, [subject]: "" }));
-    setSubjectSaved((p) => ({ ...p, [subject]: false }));
+    setSubjectSaved((p) => ({ ...p, [subject]: "" }));
     try {
       const payload = {
         code: selectedCode,
@@ -162,15 +221,32 @@ export default function AwardListExamPage({ params }) {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Save failed");
 
-      setSubjectConfig((prev) => ({ ...prev, [subject]: { ...prev[subject], locked: d.locked } }));
-      setSubjectSaved((p) => ({ ...p, [subject]: true }));
-      if (!d.locked) {
-        const left = remainingFor(subject);
-        setSubjectError((p) => ({
-          ...p,
-          [subject]: `Saved. Still open — ${left} student${left === 1 ? "" : "s"} without a mark.`,
-        }));
-      }
+      // Lock the boxes that were just saved; empty ones stay open.
+      setLockedMarks((prev) => {
+        const next = { ...prev };
+        (d.savedStudentIds || []).forEach((id) => {
+          next[id] = { ...(next[id] || {}), [subject]: true };
+        });
+        return next;
+      });
+      setSubjectConfig((prev) => ({
+        ...prev,
+        [subject]: { ...prev[subject], locked: d.complete,
+                     teacher_name: d.teacher ?? prev[subject]?.teacher_name,
+                     total_marks: d.total ?? prev[subject]?.total_marks },
+      }));
+
+      const who = d.teacher || teacherName;
+      const lines = [
+        d.savedNow > 0
+          ? `✓ ${d.savedNow} mark${d.savedNow === 1 ? "" : "s"} saved and locked by ${who}.`
+          : `No new marks to save — ${who}'s saved marks are already locked.`,
+        d.complete
+          ? `All ${d.students} students done — ${subject} is complete.`
+          : `${d.lockedTotal}/${d.students} locked · ${d.remaining} box${d.remaining === 1 ? "" : "es"} still open.`,
+        "Proformas and result cards are updated.",
+      ];
+      setSubjectSaved((p) => ({ ...p, [subject]: lines.join(" ") }));
     } catch (e) {
       setSubjectError((p) => ({ ...p, [subject]: e.message }));
     } finally {
@@ -305,12 +381,14 @@ export default function AwardListExamPage({ params }) {
                 students={students}
                 marks={marks}
                 updateMark={updateMark}
-                handleSaveSubject={handleSaveSubject}
+                handleSaveSubject={requestSave}
                 subjectSaving={subjectSaving}
                 subjectError={subjectError}
                 subjectSaved={subjectSaved}
                 remainingFor={remainingFor}
                 inputBase={inputBase}
+                isMarkLocked={isMarkLocked}
+                subjectStarted={subjectStarted}
               />
             )}
 
@@ -358,7 +436,8 @@ export default function AwardListExamPage({ params }) {
                             className="w-16 rounded px-1 py-1 text-center text-white border outline-none font-semibold disabled:opacity-50"
                             style={{ background: NAVY, borderColor: `${GOLD}55` }}
                             value={subjectConfig[s]?.total_marks ?? ""}
-                            disabled={subjectConfig[s]?.locked}
+                            disabled={subjectConfig[s]?.locked || subjectStarted(s)}
+                            title={subjectStarted(s) ? "Fixed after the first save" : ""}
                             onChange={(e) => updateTotalMarks(s, e.target.value)}
                           />
                         </td>
@@ -378,7 +457,7 @@ export default function AwardListExamPage({ params }) {
                           <TeacherSelect
                             compact
                             value={subjectConfig[s]?.teacher_name ?? ""}
-                            disabled={subjectConfig[s]?.locked}
+                            disabled={subjectConfig[s]?.locked || subjectStarted(s)}
                             onChange={(v) => updateTeacherName(s, v)}
                           />
                         </td>
@@ -399,7 +478,7 @@ export default function AwardListExamPage({ params }) {
                         return (
                           <td key={s} className="p-1.5 border-b text-center" style={{ borderColor: `${GOLD}33` }}>
                             <button
-                              onClick={() => handleSaveSubject(s)}
+                              onClick={() => requestSave(s)}
                               disabled={locked || saving}
                               className="w-full text-xs font-bold px-2 py-1.5 rounded disabled:cursor-not-allowed"
                               style={
@@ -414,7 +493,7 @@ export default function AwardListExamPage({ params }) {
                               <div className="text-[9px] text-amber-300 mt-1 leading-tight">{subjectError[s]}</div>
                             )}
                             {subjectSaved[s] && !subjectError[s] && (
-                              <div className="text-[9px] text-emerald-300 mt-1">✓ Locked</div>
+                              <div className="text-[9px] text-emerald-300 mt-1 leading-tight">{subjectSaved[s]}</div>
                             )}
                           </td>
                         );
@@ -448,7 +527,8 @@ export default function AwardListExamPage({ params }) {
                                 className="w-14 rounded px-1 py-1 text-center text-white border outline-none disabled:opacity-50"
                                 style={inputBase}
                                 value={(marks[row.id] || {})[s] ?? ""}
-                                disabled={subjectConfig[s]?.locked}
+                                disabled={isMarkLocked(row.id, s)}
+                                title={isMarkLocked(row.id, s) ? "Saved and locked" : ""}
                                 onChange={(e) => updateMark(row.id, s, e.target.value)}
                               />
                             </td>
@@ -480,6 +560,89 @@ export default function AwardListExamPage({ params }) {
             )}
           </>
         )}
+      </div>
+
+      {confirmSave && (
+        <ConfirmSaveDialog
+          info={confirmSave}
+          saving={!!subjectSaving[confirmSave.subject]}
+          onCancel={() => setConfirmSave(null)}
+          onConfirm={async () => {
+            const subj = confirmSave.subject;
+            await handleSaveSubject(subj);
+            setConfirmSave(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* "Are you sure?" before marks are locked.                             */
+/* ------------------------------------------------------------------ */
+function ConfirmSaveDialog({ info, saving, onCancel, onConfirm }) {
+  const NAVY = "#150F3F";
+  const GOLD = "#FCB629";
+  const { subject, toLock, open, teacher, total, first } = info;
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && !saving) onCancel(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [saving, onCancel]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{ background: "rgba(5,4,20,0.72)" }}
+         onClick={() => { if (!saving) onCancel(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="confirm-title"
+           className="w-full max-w-md rounded-2xl border shadow-2xl p-5 sm:p-6 text-white"
+           style={{ background: NAVY, borderColor: `${GOLD}66` }}
+           onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className="text-2xl leading-none">🔒</div>
+          <h2 id="confirm-title" className="text-lg sm:text-xl font-bold leading-snug">
+            Are you sure to save &amp; lock added marks?
+          </h2>
+        </div>
+
+        <div className="rounded-lg border px-4 py-3 mb-4 text-sm space-y-1"
+             style={{ borderColor: "#ffffff1f", background: "#ffffff08" }}>
+          <div><span className="text-white/50">Subject:</span> <b>{subject}</b></div>
+          <div><span className="text-white/50">Teacher:</span> <b>{teacher}</b></div>
+          <div><span className="text-white/50">Total marks:</span> <b>{total}</b></div>
+        </div>
+
+        <ul className="text-sm space-y-2 mb-5">
+          <li>
+            <b style={{ color: GOLD }}>{toLock} mark{toLock === 1 ? "" : "s"}</b> will be saved and
+            locked. Once locked, they cannot be changed — only an admin can unlock them.
+          </li>
+          {open > 0 && (
+            <li className="text-white/70">
+              {open} empty box{open === 1 ? "" : "es"} will stay open to fill later.
+            </li>
+          )}
+          {first && (
+            <li className="text-white/70">
+              The total marks ({total}) and teacher name will also be fixed.
+            </li>
+          )}
+        </ul>
+
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+          <button onClick={onCancel} disabled={saving}
+                  className="px-4 py-3 sm:py-2.5 rounded-lg border font-semibold disabled:opacity-40"
+                  style={{ borderColor: "#ffffff33" }}>
+            No, go back
+          </button>
+          <button onClick={onConfirm} disabled={saving} autoFocus
+                  className="px-5 py-3 sm:py-2.5 rounded-lg font-bold disabled:opacity-60"
+                  style={{ background: GOLD, color: NAVY }}>
+            {saving ? "Saving…" : "Yes, save & lock"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -578,6 +741,8 @@ function FocusMode({
   subjectSaved,
   remainingFor,
   inputBase,
+  isMarkLocked,
+  subjectStarted,
 }) {
   const NAVY = "#150F3F";
   const GOLD = "#FCB629";
@@ -585,6 +750,7 @@ function FocusMode({
   const locked = !!cfg.locked;
   const saving = subjectSaving[focusSubject];
   const left = remainingFor(focusSubject);
+  const started = subjectStarted(focusSubject);
 
   return (
     <div>
@@ -616,7 +782,7 @@ function FocusMode({
             className="rounded-lg px-3 py-3 w-full text-base text-white border outline-none disabled:opacity-50"
             style={{ background: NAVY, borderColor: `${GOLD}55` }}
             value={cfg.total_marks ?? ""}
-            disabled={locked}
+            disabled={locked || started}
             onChange={(e) => updateTotalMarks(focusSubject, e.target.value)}
           />
         </div>
@@ -624,7 +790,7 @@ function FocusMode({
           <label className="block text-[11px] mb-1 text-white/60">Your name</label>
           <TeacherSelect
             value={cfg.teacher_name ?? ""}
-            disabled={locked}
+            disabled={locked || started}
             onChange={(v) => updateTeacherName(focusSubject, v)}
           />
         </div>
@@ -642,15 +808,15 @@ function FocusMode({
       )}
       {subjectSaved[focusSubject] && !subjectError[focusSubject] && (
         <div className="mb-3 px-3 py-2 rounded-lg border text-xs bg-emerald-500/10 border-emerald-500/40 text-emerald-300">
-          ✓ Saved and locked.
+          {subjectSaved[focusSubject]}
         </div>
       )}
 
       {!locked && (
         <div className="text-[11px] text-white/50 mb-2">
-          {left === 0
-            ? "All students have a mark — saving will lock this subject."
-            : `${left} student${left === 1 ? "" : "s"} still without a mark. It stays unlocked until all are filled.`}
+          {started
+            ? `Saved marks are locked. ${left} empty box${left === 1 ? "" : "es"} still open — fill and save to lock ${left === 1 ? "it" : "them"}.`
+            : "Each mark locks as soon as you save it. Empty boxes stay open until you fill and save them. Total marks and your name are fixed by the first save."}
         </div>
       )}
 
@@ -664,7 +830,9 @@ function FocusMode({
           >
             <span className="text-[11px] text-white/40 w-8 shrink-0 tabular-nums">{st.roll_no}</span>
             <span className="flex-1 text-sm leading-tight min-w-0">
-              <span className="block truncate">{st.student_name}</span>
+              <span className="block truncate">
+                {isMarkLocked(st.id, focusSubject) ? "🔒 " : ""}{st.student_name}
+              </span>
               <span className="block text-[10px] text-white/40 truncate">{st.father_name}</span>
             </span>
             <input
@@ -673,7 +841,8 @@ function FocusMode({
               className="w-20 rounded-lg px-2 py-2.5 text-center text-base text-white border outline-none shrink-0 disabled:opacity-50"
               style={inputBase}
               value={(marks[st.id] || {})[focusSubject] ?? ""}
-              disabled={locked}
+              disabled={isMarkLocked(st.id, focusSubject)}
+              title={isMarkLocked(st.id, focusSubject) ? "Saved and locked" : ""}
               onChange={(e) => updateMark(st.id, focusSubject, e.target.value)}
             />
           </div>

@@ -3,6 +3,11 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchAll } from "@/lib/fetchAll";
 import { makeSlug, cleanSlug } from "@/lib/awardListExams";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/exams
 // Public — the teacher page shows which exam is currently open.
 // Returns every exam plus a per-exam count of how many subjects have data,
@@ -23,8 +28,8 @@ export async function GET() {
   // Grows with every exam (31 sections × 9 subjects each), so paged.
   let cfg = [];
   try {
-    cfg = await fetchAll(() =>
-      supabase.from("award_subject_config").select("id, exam_id").order("id", { ascending: true })
+    cfg = await fetchAll((opts) =>
+      supabase.from("award_subject_config").select("id, exam_id", opts).order("id", { ascending: true })
     );
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });

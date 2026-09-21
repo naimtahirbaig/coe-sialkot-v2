@@ -4,6 +4,11 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { subjectsForClass, computeTotals, assignPositions } from "@/lib/awardListConfig";
 import { resolveExam } from "@/lib/resolveExam";
 
+// Always compute fresh. Without this, Next.js may cache the response at
+// build time and serve stale marks until the next deploy.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 // GET /api/award-list/export/excel?codes=6-Jinnah,7-Iqbal&adminPassword=...
 // Returns a .xlsx file with one sheet per requested section, matching the
 // layout of the original award list template.
