@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { roleFromRequest } from "@/lib/caseRegisterAuth";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,9 @@ const BUCKET = "case-evidence";
 
 // POST /api/case-register/upload — multipart form data: file, category
 export async function POST(request) {
+  const role = roleFromRequest(request);
+  if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+
   const form = await request.formData();
   const file = form.get("file");
   const category = form.get("category");
@@ -40,6 +44,9 @@ export async function POST(request) {
 // DELETE /api/case-register/upload  { path }  — remove a draft photo the
 // user attached and then removed before saving.
 export async function DELETE(request) {
+  const role = roleFromRequest(request);
+  if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+
   let body;
   try {
     body = await request.json();

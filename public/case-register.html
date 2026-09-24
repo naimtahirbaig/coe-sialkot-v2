@@ -51,6 +51,24 @@
   input, select, textarea { font-family: inherit; }
   a { color: inherit; }
 
+  /* ---------------- Login screen ---------------- */
+  .login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--card);
+    border-radius: var(--radius-card);
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
   /* ---------------- Top bar ---------------- */
   .topbar {
     background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
@@ -863,6 +881,29 @@
     text-align: center;
     line-height: 1.1;
     flex-shrink: 0;
+    overflow: hidden;
+  }
+  .letter-emblem img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .letter-evidence-row {
+    display: flex;
+    gap: 14px;
+    margin: 4px 0 16px;
+  }
+  .letter-evidence-block { flex: 1; text-align: center; }
+  .letter-evidence-block img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border: 1px solid #1a1a1a;
+  }
+  .letter-evidence-caption {
+    font-size: 10.5px;
+    color: #444;
+    margin-top: 4px;
   }
   .letter-school-name {
     text-align: center;
@@ -907,7 +948,7 @@
     margin-top: 30px;
     font-size: 12.5px;
   }
-  .letter-sign-block { width: 45%; }
+  .letter-sign-block { width: 30%; }
   .letter-sign-line {
     border-top: 1px solid #1a1a1a;
     margin-top: 34px;
@@ -1027,6 +1068,42 @@
     "Committee — Member", "Committee — Secretary", "Class Teacher", "Other"
   ];
 
+  var SUBJECTS = [
+    "Mathematics", "English", "Urdu", "Science", "Physics", "Chemistry",
+    "Biology", "Computer Science", "Islamiyat", "Pakistan Studies",
+    "Social Studies", "Other"
+  ];
+
+  // One short, editable sentence per offense type — dropped into the
+  // description box automatically when that chip is selected, so the
+  // invigilator starts from a filled-in sentence instead of a blank box.
+  var OFFENSE_DESCRIPTIONS = {
+    "Chit / written material found": "A chit / written material with unauthorized content was found in the candidate's possession.",
+    "Copying from another candidate": "The candidate was seen copying from another candidate's answer sheet.",
+    "Mobile phone / electronic device": "A mobile phone / electronic device was found in the candidate's possession during the exam.",
+    "Talking or exchanging answers": "The candidate was talking to / exchanging answers with another candidate.",
+    "Unauthorized book or notes": "The candidate was found with an unauthorized book or notes during the exam.",
+    "Impersonation": "The candidate is suspected of impersonating another registered student.",
+    "Tampering with roll no. / answer sheet": "The candidate was found tampering with the roll number or answer sheet.",
+    "Misconduct with staff": "The candidate engaged in misconduct towards invigilation staff.",
+    "Other": ""
+  };
+
+  // ---------------------------------------------------------------
+  // Auth (teacher / admin login gate)
+  // ---------------------------------------------------------------
+  var AUTH_STORAGE_KEY = "umc_auth";
+  var authToken = null;
+  var authRole = null; // "teacher" | "admin"
+  try {
+    var savedAuth = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "null");
+    if (savedAuth && savedAuth.token && savedAuth.role) {
+      authToken = savedAuth.token;
+      authRole = savedAuth.role;
+    }
+  } catch (e) {}
+  function isAdmin() { return authRole === "admin"; }
+
   // ---------------------------------------------------------------
   // State
   // ---------------------------------------------------------------
@@ -1063,6 +1140,7 @@
   var draftEvidence = { student: [], paper: [], material: [] };
   var draftSelectedStudentId = null;
   var draftSelectedReporterId = null;
+  var draftAutoDescription = ""; // last value WE wrote into the description box
 
   // Base path for the case-register API routes deployed alongside this
   // page (src/app/api/case-register/... in the Next.js project).
@@ -1131,6 +1209,29 @@
     return null;
   }
 
+  // "6-Jinnah", "6-Iqbal", ... one room option per grade+section combo,
+  // for the Room / hall dropdown.
+  function allRoomOptions() {
+    var rooms = [];
+    Object.keys(SECTIONS_BY_GRADE).forEach(function (g) {
+      if (g === "other") return;
+      (SECTIONS_BY_GRADE[g] || []).forEach(function (s) {
+        rooms.push(g + "-" + s);
+      });
+    });
+    return rooms;
+  }
+
+  function studentsForGradeSection(grade, section) {
+    return state.students.filter(function (s) {
+      return s.grade === grade && (grade === "other" || s.section === section);
+    }).sort(function (a, b) {
+      var an = parseInt(a.rollNo, 10), bn = parseInt(b.rollNo, 10);
+      if (!isNaN(an) && !isNaN(bn) && an !== bn) return an - bn;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+  }
+
   // ---------------------------------------------------------------
   // Capability init
   // ---------------------------------------------------------------
@@ -1188,22 +1289,55 @@
   }
 
   async function apiGet(path) {
-    var res = await fetch(API_BASE + path, { cache: "no-store" });
+    var res = await fetch(API_BASE + path, {
+      cache: "no-store",
+      headers: authToken ? { Authorization: "Bearer " + authToken } : {}
+    });
+    if (res.status === 401) { logout(); throw new Error("Session expired. Please log in again."); }
     if (!res.ok) throw new Error("GET " + path + " failed (" + res.status + ")");
     return res.json();
   }
   async function apiSend(method, path, body) {
+    var headers = { "Content-Type": "application/json" };
+    if (authToken) headers.Authorization = "Bearer " + authToken;
     var res = await fetch(API_BASE + path, {
       method: method,
-      headers: { "Content-Type": "application/json" },
+      headers: headers,
       body: body === undefined ? undefined : JSON.stringify(body)
     });
+    if (res.status === 401) { logout(); throw new Error("Session expired. Please log in again."); }
     if (!res.ok) {
       var msg = "Request failed (" + res.status + ")";
       try { var j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
       throw new Error(msg);
     }
     return res.json();
+  }
+
+  async function login(password) {
+    var res = await fetch(API_BASE + "/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: password })
+    });
+    if (!res.ok) {
+      var msg = "Incorrect password.";
+      try { var j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+      throw new Error(msg);
+    }
+    var data = await res.json();
+    authToken = data.token;
+    authRole = data.role;
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ token: authToken, role: authRole }));
+    return data;
+  }
+
+  function logout() {
+    authToken = null;
+    authRole = null;
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    if (pollTimer) clearInterval(pollTimer);
+    render();
   }
 
   async function loadCases() {
@@ -1227,7 +1361,8 @@
   }
 
   async function initCapabilities() {
-    state.dbAvailable = true; // API routes are always "available" from the page's point of view
+    if (!authToken) { render(); return; } // login screen shows instead
+    state.dbAvailable = true;
     try {
       await loadAll();
     } catch (e) {
@@ -1561,7 +1696,53 @@
   // already open. Toast and lightbox hold no user input, so they're
   // safe to rebuild freely.
   // ---------------------------------------------------------------
+  function renderLoginScreen() {
+    return (
+      '<div class="login-screen">' +
+        '<div class="login-card">' +
+          '<div class="brand-eyebrow" style="color:var(--muted); margin-bottom:4px;">Centre of Excellence (B), Sialkot</div>' +
+          '<div class="brand-title" style="color:var(--ink); font-size:22px; margin-bottom:18px;">Unfair Means Case Register</div>' +
+          '<label style="font-size:13.5px; font-weight:700; color:var(--ink);">Password</label>' +
+          '<input id="loginPassword" type="password" placeholder="Enter your staff password" style="width:100%; margin:8px 0 14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;">' +
+          (state.loginError ? '<div style="color:var(--status-reported); font-size:13px; margin-bottom:10px;">' + esc(state.loginError) + "</div>" : "") +
+          '<button class="btn btn-gold" id="loginSubmitBtn" style="width:100%; justify-content:center;">Log in</button>' +
+          '<div style="font-size:12px; color:var(--muted); margin-top:14px;">Ask your controller / admin for the staff or admin password.</div>' +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  function bindLoginEvents() {
+    var btn = document.getElementById("loginSubmitBtn");
+    var input = document.getElementById("loginPassword");
+    if (!btn || !input) return;
+    function attempt() {
+      var pw = input.value;
+      if (!pw) return;
+      btn.disabled = true;
+      btn.textContent = "Checking…";
+      login(pw).then(function () {
+        state.loginError = null;
+        initCapabilities();
+      }).catch(function (e) {
+        state.loginError = e.message || "Incorrect password.";
+        btn.disabled = false;
+        btn.textContent = "Log in";
+        render();
+      });
+    }
+    btn.addEventListener("click", attempt);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") attempt(); });
+    input.focus();
+  }
+
   function render() {
+    if (!authToken) {
+      root.innerHTML = renderLoginScreen();
+      bindLoginEvents();
+      return;
+    }
+
     // Safety net for shorter in-page forms (the note box, the inline
     // forward/recommend/decide fields): if a background data update causes
     // a re-render while the person is mid-type, don't let it vanish under
@@ -1674,13 +1855,15 @@
         '<div class="topbar-actions">' +
           '<div class="nav-toggle">' +
             navBtn("cases", "Case Register") +
-            navBtn("rosters", "Students & Staff") +
+            (isAdmin() ? navBtn("rosters", "Students & Staff") : "") +
           "</div>" +
           '<select class="role-select" id="roleSelect" aria-label="Your role">' +
             roleOption("invigilator", "Invigilator / Teacher") +
             roleOption("controller", "Controller (Secretary)") +
             roleOption("committee", "Committee (Convenor / Member)") +
           "</select>" +
+          '<span class="btn-outline-light btn btn-small" style="pointer-events:none;">' + (isAdmin() ? "Admin" : "Teacher") + "</span>" +
+          '<button class="btn btn-outline-light btn-small" id="logoutBtn">Log out</button>' +
           (state.view === "cases" ? '<button class="btn btn-gold" id="newCaseBtn">+ New report</button>' : "") +
         "</div>" +
       "</div>"
@@ -1882,10 +2065,12 @@
 
   function renderActionBar(c) {
     var html = '<div class="action-bar">';
-    if (c.status === "reported") html += '<button class="btn btn-gold" data-action="open-forward" data-id="' + c._id + '">Forward to committee</button>';
-    if (c.status === "under_review") html += '<button class="btn btn-gold" data-action="open-recommend" data-id="' + c._id + '">Record recommendation</button>';
-    if (c.status === "recommended") html += '<button class="btn btn-gold" data-action="open-decide" data-id="' + c._id + '">Record final decision</button>';
-    if (c.status === "closed") html += '<button class="btn btn-outline" data-action="reopen-case" data-id="' + c._id + '">Reopen case</button>';
+    if (isAdmin()) {
+      if (c.status === "reported") html += '<button class="btn btn-gold" data-action="open-forward" data-id="' + c._id + '">Forward to committee</button>';
+      if (c.status === "under_review") html += '<button class="btn btn-gold" data-action="open-recommend" data-id="' + c._id + '">Record recommendation</button>';
+      if (c.status === "recommended") html += '<button class="btn btn-gold" data-action="open-decide" data-id="' + c._id + '">Record final decision</button>';
+      if (c.status === "closed") html += '<button class="btn btn-outline" data-action="reopen-case" data-id="' + c._id + '">Reopen case</button>';
+    }
     html += '<button class="btn btn-outline" data-action="open-letter" data-type="initiation" data-id="' + c._id + '">Initiation letter</button>';
     if (c.status === "closed") {
       html += '<button class="btn btn-outline" data-action="open-letter" data-type="closure" data-id="' + c._id + '">Closure letter</button>';
@@ -1930,35 +2115,35 @@
     draftSelectedReporterId = null;
     var gradeOpts = ["6", "7", "8", "9", "10", "other"];
 
-    function f(id, label, type, placeholder, span, hiddenByDefault) {
+    function f(id, label, type, placeholder, span, hiddenByDefault, readonly, hideOnly) {
+      var cls = "form-field" + (span === "full" ? " full" : "");
+      var style = (hiddenByDefault || hideOnly) ? ' style="display:none;"' : "";
+      if (hiddenByDefault) style += ' data-other-class-field="1"';
+      var ro = readonly ? " readonly" : "";
+      return '<div class="' + cls + '"' + style + "><label>" + esc(label) + '</label><input id="f_' + id + '" type="' + type + '" placeholder="' + esc(placeholder || "") + '"' + ro + "></div>";
+    }
+    function selectField(id, label, options, span, placeholder, hiddenByDefault) {
       var cls = "form-field" + (span === "full" ? " full" : "");
       var style = hiddenByDefault ? ' style="display:none;" data-other-class-field="1"' : "";
-      return '<div class="' + cls + '"' + style + "><label>" + esc(label) + '</label><input id="f_' + id + '" type="' + type + '" placeholder="' + esc(placeholder || "") + '"></div>';
-    }
-    function typeaheadField(id, label, placeholder) {
-      return (
-        '<div class="form-field full">' +
-          "<label>" + esc(label) + "</label>" +
-          '<div class="typeahead-wrap">' +
-            '<input id="f_' + id + '" type="text" placeholder="' + esc(placeholder) + '" autocomplete="off">' +
-            '<input type="hidden" id="f_' + id + 'Id">' +
-            '<div class="typeahead-suggestions" id="ta_' + id + '" style="display:none;"></div>' +
-          "</div>" +
-        "</div>"
-      );
+      var opts = (placeholder ? '<option value="">' + esc(placeholder) + "</option>" : "") +
+        options.map(function (o) { return '<option value="' + esc(o) + '">' + esc(o) + "</option>"; }).join("");
+      return '<div class="' + cls + '"' + style + "><label>" + esc(label) + '</label><select id="f_' + id + '">' + opts + "</select></div>";
     }
     function gradeField() {
       var opts = gradeOpts.map(function (g) {
-        var label = g === "other" ? "Other / not 6–8" : "Grade " + g;
+        var label = g === "other" ? "Other / not 6–10" : "Grade " + g;
         return '<option value="' + g + '">' + esc(label) + "</option>";
       }).join("");
-      return '<div class="form-field"><label>Grade</label><select id="f_grade">' + opts + "</select></div>";
+      return '<div class="form-field"><label>Grade *</label><select id="f_grade">' + opts + "</select></div>";
     }
     function evidenceUploader(category, title) {
       return (
         '<div class="evidence-category"><div class="evidence-category-title">' + esc(title) + '</div>' +
           '<div class="evidence-grid" id="draft_' + category + '_thumbs">' +
-            '<label class="evidence-upload-btn" title="Add photo">+' +
+            '<label class="evidence-upload-btn" title="Take a photo">📷' +
+              '<input type="file" accept="image/*" capture="environment" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
+            '</label>' +
+            '<label class="evidence-upload-btn" title="Upload from gallery">⬆' +
               '<input type="file" accept="image/*" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
             '</label>' +
           "</div>" +
@@ -1971,6 +2156,9 @@
     var invigActionOpts = INVIGILATOR_ACTIONS.map(function (a) {
       return '<option value="' + esc(a) + '">' + esc(a) + "</option>";
     }).join("");
+    var reporterOpts = state.teachers.map(function (t) {
+      return '<option value="' + esc(t._id) + '">' + esc(t.name) + (t.role ? " — " + esc(t.role) : "") + "</option>";
+    }).join("");
 
     return (
       '<div class="overlay">' +
@@ -1978,20 +2166,27 @@
           '<div class="drawer-header"><span class="drawer-title">New incident report</span><button class="close-btn" data-action="close-drawer">&times;</button></div>' +
 
           '<div class="form-grid">' +
-            typeaheadField("studentName", "Student name *", "Start typing to search the student list…") +
-          "</div>" +
-          '<div class="form-grid" style="margin-top:10px;">' +
-            f("rollNo", "Roll number", "text", "e.g. 23") +
             gradeField() +
-            '<div class="form-field" id="sectionFieldWrap"><label>Section</label><select id="f_section"></select></div>' +
-            f("customClass", "Class (if not Grade 6–8)", "text", "e.g. O-Level II", "", true) +
-            f("subject", "Exam subject", "text", "e.g. Mathematics") +
-            f("examDate", "Exam date", "date") +
-            f("room", "Room / hall", "text", "e.g. 8-Jinnah") +
+            '<div class="form-field" id="sectionFieldWrap"><label>Section *</label><select id="f_section"></select></div>' +
+            f("customClass", "Class (if not Grade 6–10)", "text", "e.g. O-Level II", "", true) +
           "</div>" +
 
           '<div class="form-grid" style="margin-top:10px;">' +
-            typeaheadField("reporterName", "Reported by *", "Start typing to search the staff list…") +
+            '<div class="form-field" id="studentFieldWrap"><label>Student *</label><select id="f_student"><option value="">— Select grade &amp; section first —</option></select></div>' +
+            f("studentNameOther", "Student name *", "text", "e.g. Ali Raza", "", true) +
+            f("rollNo", "Roll number", "text", "", "", false, true) +
+          "</div>" +
+
+          '<div class="form-grid" style="margin-top:10px;">' +
+            selectField("subject", "Exam subject", SUBJECTS, "", "— Select subject —") +
+            f("subjectOther", "Subject (specify)", "text", "e.g. General Knowledge", "", false, false, true) +
+            f("examDate", "Exam date", "date") +
+            selectField("room", "Room / hall", allRoomOptions(), "", "— Select room —") +
+            f("roomOther", "Room (specify)", "text", "e.g. Main hall", "", false, false, true) +
+          "</div>" +
+
+          '<div class="form-grid" style="margin-top:10px;">' +
+            '<div class="form-field full"><label>Reported by *</label><select id="f_reporter"><option value="">— Select staff member —</option>' + reporterOpts + "</select></div>" +
           "</div>" +
 
           '<div class="form-field full" style="margin-top:14px;"><label>Type of unfair means (select any that apply)</label>' +
@@ -2003,11 +2198,11 @@
             '<select id="f_invigilatorAction"><option value="">— Select if applicable —</option>' + invigActionOpts + "</select>" +
           "</div>" +
 
-          '<div class="form-field full" style="margin-top:14px;"><label>Incident description *</label>' +
+          '<div class="form-field full" style="margin-top:14px;"><label>Incident description * <span style="font-weight:400; color:var(--muted);">(auto-filled from the offense types above — edit as needed)</span></label>' +
             '<textarea id="f_description" placeholder="What happened, what was recovered, and any statement from the student…" style="min-height:110px;"></textarea>' +
           "</div>" +
 
-          '<div class="form-field full" style="margin-top:16px;"><label>Photo evidence — take a photo now or choose from gallery</label></div>' +
+          '<div class="form-field full" style="margin-top:16px;"><label>Photo evidence — take a photo now or upload from gallery</label></div>' +
           evidenceUploader("student", "Photo of student") +
           evidenceUploader("paper", "Photo of answer script / paper") +
           evidenceUploader("material", "Photo of unfair-means material") +
@@ -2051,14 +2246,34 @@
   function letterHeadHtml() {
     return (
       '<div class="letter-head">' +
-        '<div class="letter-emblem">COE<br>SLK</div>' +
+        '<div class="letter-emblem"><img src="/case-register-logo-left.png" alt="Government of Punjab" crossorigin="anonymous"></div>' +
         '<div class="letter-school-name">' +
           '<div class="l1">CENTRE OF EXCELLENCE (B)</div>' +
           '<div class="l2">Sialkot</div>' +
         "</div>" +
-        '<div class="letter-emblem">UMC<br>Committee</div>' +
+        '<div class="letter-emblem"><img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous"></div>' +
       "</div>"
     );
+  }
+
+  // First student photo + first available unfair-means photo (material,
+  // falling back to the paper/answer-script photo) — dropped into both
+  // letters so the record includes visual evidence, not just text.
+  function letterEvidenceHtml(c) {
+    var studentPhoto = (c.studentPhotoIds || [])[0];
+    var meansPhoto = (c.materialPhotoIds || [])[0] || (c.paperPhotoIds || [])[0];
+    if (!studentPhoto && !meansPhoto) return "";
+    var html = '<div class="letter-evidence-row">';
+    if (studentPhoto) {
+      html += '<div class="letter-evidence-block"><img src="' + esc(studentPhoto) + '" crossorigin="anonymous">' +
+        '<div class="letter-evidence-caption">Photo of student</div></div>';
+    }
+    if (meansPhoto) {
+      html += '<div class="letter-evidence-block"><img src="' + esc(meansPhoto) + '" crossorigin="anonymous">' +
+        '<div class="letter-evidence-caption">Evidence of unfair means</div></div>';
+    }
+    html += "</div>";
+    return html;
   }
 
   function buildInitiationLetterHtml(c) {
@@ -2070,6 +2285,8 @@
     html += '<div class="letter-meta-row"><span>Memo: <b>' + esc(memoNo) + "</b></span><span>Dated: <b>" + esc(fmtLongDate(c.reportedAt)) + "</b></span></div>";
     html += '<div class="letter-title">Notice of Initiation — Unfair Means Case</div>';
     html += '<div class="letter-subject">Subject: <b>INITIATION OF UNFAIR MEANS CASE — ' + esc((c.studentName || "").toUpperCase()) + "</b></div>";
+
+    html += letterEvidenceHtml(c);
 
     html += '<div class="letter-body">';
     html += "<p>This is to formally record that during the <b>" + esc(c.subject || "examination") + "</b> examination held on <b>" +
@@ -2091,6 +2308,7 @@
     html += '<div class="letter-sign-row">';
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Reported by (Invigilator)<br>' + esc(c.invigilatorName || "") + "</div></div>";
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Received by — Controller<br>Secretary, UMC Committee</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Parent / Guardian<br>(Informed of initiation)</div></div>';
     html += "</div>";
 
     html += letterFooterHtml();
@@ -2109,6 +2327,8 @@
     html += '<div class="letter-title">Notice of Case Closure — Unfair Means Case</div>';
     html += '<div class="letter-subject">Subject: <b>CLOSURE OF UNFAIR MEANS CASE — ' + esc((c.studentName || "").toUpperCase()) + " — CASE NO. " + esc(c.caseCode) + "</b></div>";
 
+    html += letterEvidenceHtml(c);
+
     html += '<div class="letter-body">';
     html += "<p>This is to record the closure of Unfair Means Case No. <b>" + esc(c.caseCode) + "</b>, initiated on <b>" +
       esc(fmtDateOnly(c.reportedAt)) + "</b> concerning <b>" + esc(c.studentName || "—") + "</b>, Roll No. " + esc(c.rollNo || "—") +
@@ -2124,7 +2344,9 @@
     html += "</div>";
 
     html += '<div class="letter-sign-row">';
-    html += '<div class="letter-sign-block center-single"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Decided by<br>' + esc(dec.decidedBy || "Principal") + "</div></div>";
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Parent / Guardian<br>(Acknowledged)</div></div>';
     html += "</div>";
 
     html += letterFooterHtml();
@@ -2358,92 +2580,6 @@
   }
 
   // ---------------------------------------------------------------
-  // Typeahead (student / reporter) — targeted DOM updates only
-  // ---------------------------------------------------------------
-  function wireTypeahead(fieldId, dataset, getLabel, getMeta, onPick) {
-    var input = document.getElementById("f_" + fieldId);
-    var box = document.getElementById("ta_" + fieldId);
-    var hiddenId = document.getElementById("f_" + fieldId + "Id");
-    if (!input || !box) return;
-
-    input.addEventListener("input", function () {
-      var q = input.value.trim().toLowerCase();
-      if (hiddenId) hiddenId.value = "";
-      if (!q) { box.style.display = "none"; box.innerHTML = ""; return; }
-      var matches = dataset().filter(function (item) {
-        return getLabel(item).toLowerCase().indexOf(q) > -1;
-      }).slice(0, 7);
-      if (!matches.length) {
-        box.innerHTML = '<div class="typeahead-empty">No match — you can still type a name manually.</div>';
-        box.style.display = "block";
-        return;
-      }
-      box.innerHTML = matches.map(function (item, i) {
-        return '<div class="typeahead-item" data-idx="' + i + '">' + esc(getLabel(item)) +
-          '<div class="ta-meta">' + esc(getMeta(item)) + "</div></div>";
-      }).join("");
-      box.style.display = "block";
-      Array.prototype.forEach.call(box.querySelectorAll(".typeahead-item"), function (el, i) {
-        el.addEventListener("mousedown", function (e) {
-          e.preventDefault();
-          onPick(matches[i]);
-          box.style.display = "none";
-        });
-      });
-    });
-    input.addEventListener("focus", function () {
-      if (box.innerHTML) box.style.display = "block";
-    });
-  }
-
-  // Click anywhere outside an open typeahead box closes it — registered once.
-  function installGlobalTypeaheadCloser() {
-    document.addEventListener("mousedown", function (e) {
-      Array.prototype.forEach.call(document.querySelectorAll(".typeahead-suggestions"), function (box) {
-        var wrap = box.closest(".typeahead-wrap");
-        if (wrap && !wrap.contains(e.target)) box.style.display = "none";
-      });
-    });
-  }
-
-  function setupStudentTypeahead() {
-    wireTypeahead(
-      "studentName",
-      function () { return state.students; },
-      function (s) { return s.name; },
-      function (s) { return "Roll " + (s.rollNo || "—") + " · " + classLabel(s); },
-      function (s) {
-        document.getElementById("f_studentName").value = s.name;
-        document.getElementById("f_studentNameId").value = s._id;
-        draftSelectedStudentId = s._id;
-        var rollEl = document.getElementById("f_rollNo"); if (rollEl) rollEl.value = s.rollNo || "";
-        var gradeEl = document.getElementById("f_grade");
-        if (gradeEl) { gradeEl.value = s.grade || "6"; populateDrawerDynamic(); }
-        setTimeout(function () {
-          var sectionEl = document.getElementById("f_section");
-          if (sectionEl && s.section) sectionEl.value = s.section;
-          var customEl = document.getElementById("f_customClass");
-          if (customEl && s.customClass) customEl.value = s.customClass;
-        }, 0);
-      }
-    );
-  }
-
-  function setupReporterTypeahead() {
-    wireTypeahead(
-      "reporterName",
-      function () { return state.teachers; },
-      function (t) { return t.name; },
-      function (t) { return t.role || "Staff"; },
-      function (t) {
-        document.getElementById("f_reporterName").value = t.name;
-        document.getElementById("f_reporterNameId").value = t._id;
-        draftSelectedReporterId = t._id;
-      }
-    );
-  }
-
-  // ---------------------------------------------------------------
   // Events
   // ---------------------------------------------------------------
   function bindEvents() {
@@ -2451,6 +2587,8 @@
     if (roleSelect) roleSelect.addEventListener("change", function () {
       state.role = roleSelect.value; localStorage.setItem("umc_role", state.role); render();
     });
+    var logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) logoutBtn.addEventListener("click", function () { logout(); });
 
     var newCaseBtn = document.getElementById("newCaseBtn");
     if (newCaseBtn) newCaseBtn.addEventListener("click", function () {
@@ -2515,8 +2653,29 @@
     var gradeSel = document.getElementById("f_grade");
     if (gradeSel) gradeSel.addEventListener("change", populateDrawerDynamic);
 
-    setupStudentTypeahead();
-    setupReporterTypeahead();
+    var sectionSel = document.getElementById("f_section");
+    if (sectionSel) sectionSel.addEventListener("change", populateStudentOptions);
+
+    var studentSel = document.getElementById("f_student");
+    if (studentSel) studentSel.addEventListener("change", function () {
+      draftSelectedStudentId = studentSel.value || null;
+      var student = draftSelectedStudentId ? state.students.filter(function (s) { return s._id === draftSelectedStudentId; })[0] : null;
+      var rollField = document.getElementById("f_rollNo");
+      if (rollField) rollField.value = student ? (student.rollNo || "") : "";
+    });
+
+    var reporterSel = document.getElementById("f_reporter");
+    if (reporterSel) reporterSel.addEventListener("change", function () {
+      draftSelectedReporterId = reporterSel.value || null;
+    });
+
+    var subjectSel = document.getElementById("f_subject");
+    if (subjectSel) subjectSel.addEventListener("change", function () { toggleOtherField("f_subject", "f_subjectOther"); });
+
+    var roomSel = document.getElementById("f_room");
+    if (roomSel) roomSel.addEventListener("change", function () { toggleOtherField("f_room", "f_roomOther"); });
+
+    populateDrawerDynamic();
   }
 
   // Bound ONCE, at the moment the letter modal is mounted.
@@ -2641,6 +2800,7 @@
         var otherChip = Array.prototype.find.call(document.querySelectorAll(".offense-chip"), function (c) { return c.getAttribute("data-value") === "Other"; });
         var otherInput = document.getElementById("f_offenseOther");
         if (otherInput && otherChip) otherInput.style.display = otherChip.classList.contains("active") ? "" : "none";
+        updateAutoDescription();
         break;
       }
       case "remove-draft-evidence":
@@ -2700,37 +2860,112 @@
   function populateDrawerDynamic() {
     var gradeSel = document.getElementById("f_grade");
     var sectionSel = document.getElementById("f_section");
-    var customWrap = document.querySelector('[data-other-class-field="1"]');
+    var studentWrap = document.getElementById("studentFieldWrap");
     if (!gradeSel || !sectionSel) return;
     var grade = gradeSel.value || "6";
+    var isOther = grade === "other";
     var sections = SECTIONS_BY_GRADE[grade] || [];
     sectionSel.innerHTML = sections.map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("") || '<option value="">—</option>';
-    sectionSel.parentElement.style.display = grade === "other" ? "none" : "";
-    if (customWrap) customWrap.style.display = grade === "other" ? "" : "none";
+    sectionSel.parentElement.style.display = isOther ? "none" : "";
+    if (studentWrap) studentWrap.style.display = isOther ? "none" : "";
+    // f_studentNameOther and f_customClass are the only two fields marked
+    // data-other-class-field="1" — both only apply to "other" grades.
+    Array.prototype.forEach.call(document.querySelectorAll('[data-other-class-field="1"]'), function (el) {
+      el.style.display = isOther ? "" : "none";
+    });
+    populateStudentOptions();
+  }
+
+  function populateStudentOptions() {
+    var gradeSel = document.getElementById("f_grade");
+    var sectionSel = document.getElementById("f_section");
+    var studentSel = document.getElementById("f_student");
+    if (!gradeSel || !studentSel) return;
+    var grade = gradeSel.value || "6";
+    if (grade === "other") { studentSel.innerHTML = ""; return; }
+    var section = sectionSel ? sectionSel.value : "";
+    var list = studentsForGradeSection(grade, section);
+    studentSel.innerHTML = '<option value="">— Select student —</option>' +
+      list.map(function (s) {
+        return '<option value="' + esc(s._id) + '">' + esc(s.name) + (s.rollNo ? " (Roll " + esc(s.rollNo) + ")" : "") + "</option>";
+      }).join("");
+    var rollField = document.getElementById("f_rollNo");
+    if (rollField) rollField.value = "";
+    draftSelectedStudentId = null;
+  }
+
+  function toggleOtherField(selectId, otherFieldId, otherValue) {
+    var sel = document.getElementById(selectId);
+    var other = document.getElementById(otherFieldId);
+    if (!sel || !other) return;
+    var wrap = other.closest(".form-field");
+    var show = sel.value === (otherValue || "Other");
+    if (wrap) wrap.style.display = show ? "" : "none";
+  }
+
+  // Builds a short description from the currently-checked offense chips.
+  // Only overwrites the textarea if it's empty or still holds exactly what
+  // we last auto-generated — so it never clobbers something the
+  // invigilator typed themselves.
+  function updateAutoDescription() {
+    var box = document.getElementById("f_description");
+    if (!box) return;
+    var current = box.value;
+    if (current !== "" && current !== draftAutoDescription) return;
+    var active = Array.prototype.map.call(document.querySelectorAll(".offense-chip.active"), function (c) { return c.getAttribute("data-value"); });
+    var sentences = active.map(function (o) { return OFFENSE_DESCRIPTIONS[o]; }).filter(Boolean);
+    var generated = sentences.join(" ");
+    draftAutoDescription = generated;
+    box.value = generated;
   }
 
   function handleSubmitReport() {
-    var studentName = valueOf("f_studentName");
-    var invigilatorName = valueOf("f_reporterName");
+    var grade = valueOf("f_grade") || "6";
+    var isOther = grade === "other";
+    var studentName, studentId = null, rollNo, section;
+
+    if (isOther) {
+      studentName = valueOf("f_studentNameOther");
+      rollNo = valueOf("f_rollNo");
+      section = "";
+    } else {
+      var studentSel = document.getElementById("f_student");
+      studentId = studentSel ? studentSel.value : "";
+      var student = studentId ? state.students.filter(function (s) { return s._id === studentId; })[0] : null;
+      studentName = student ? student.name : "";
+      rollNo = student ? (student.rollNo || "") : "";
+      section = valueOf("f_section");
+    }
+
+    var reporterSel = document.getElementById("f_reporter");
+    var reporterId = reporterSel ? reporterSel.value : "";
+    var reporter = reporterId ? state.teachers.filter(function (t) { return t._id === reporterId; })[0] : null;
+    var invigilatorName = reporter ? reporter.name : "";
+
     var description = valueOf("f_description");
-    if (!studentName) { showToast("Please enter the student's name."); return; }
-    if (!invigilatorName) { showToast("Please enter who is reporting this."); return; }
+
+    if (!studentName) { showToast(isOther ? "Please enter the student's name." : "Please select a student."); return; }
+    if (!invigilatorName) { showToast("Please select who is reporting this."); return; }
     if (!description) { showToast("Please describe the incident."); return; }
 
-    var grade = valueOf("f_grade") || "6";
+    var subject = valueOf("f_subject");
+    if (subject === "Other") subject = valueOf("f_subjectOther");
+    var room = valueOf("f_room");
+    if (room === "Other") room = valueOf("f_roomOther");
+
     var offenseTypes = Array.prototype.map.call(document.querySelectorAll(".offense-chip.active"), function (c) { return c.getAttribute("data-value"); });
 
     var payload = {
-      studentId: draftSelectedStudentId,
+      studentId: studentId,
       studentName: studentName,
-      rollNo: valueOf("f_rollNo"),
+      rollNo: rollNo,
       grade: grade,
-      section: grade === "other" ? "" : valueOf("f_section"),
-      customClass: grade === "other" ? valueOf("f_customClass") : "",
-      subject: valueOf("f_subject"),
+      section: section,
+      customClass: isOther ? valueOf("f_customClass") : "",
+      subject: subject,
       examDate: valueOf("f_examDate"),
-      room: valueOf("f_room"),
-      reporterId: draftSelectedReporterId,
+      room: room,
+      reporterId: reporterId || null,
       invigilatorName: invigilatorName,
       offenseTypes: offenseTypes,
       offenseOther: offenseTypes.indexOf("Other") > -1 ? valueOf("f_offenseOther") : "",
@@ -2749,7 +2984,6 @@
   // #overlayLayer, a sibling of #app, so a listener on `root` alone would
   // never see clicks inside them.
   document.addEventListener("click", onRootClick);
-  installGlobalTypeaheadCloser();
   render();
   initCapabilities();
 })();

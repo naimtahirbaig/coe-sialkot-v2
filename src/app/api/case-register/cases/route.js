@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { roleFromRequest } from "@/lib/caseRegisterAuth";
 
 // GET /api/case-register/cases — list every case, newest first.
-export async function GET() {
+export async function GET(request) {
+  const role = roleFromRequest(request);
+  if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+
   const { data, error } = await supabaseAdmin
     .from("case_register_cases")
     .select("*")
@@ -15,8 +19,11 @@ export async function GET() {
   return NextResponse.json({ cases: data });
 }
 
-// POST /api/case-register/cases — file a new report.
+// POST /api/case-register/cases — file a new report. Teacher or admin.
 export async function POST(request) {
+  const role = roleFromRequest(request);
+  if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+
   let body;
   try {
     body = await request.json();
@@ -31,12 +38,9 @@ export async function POST(request) {
     );
   }
 
-  const year = new Date().getFullYear();
-  const caseCode =
-    "UMC-" + year + "-" + crypto.randomUUID().slice(0, 6).toUpperCase();
-
+  // memo_no and case_code are assigned by a database trigger (sequential,
+  // e.g. "UMC-2026-0007") — never set them from the client.
   const row = {
-    case_code: caseCode,
     student_id: body.studentId || null,
     student_name: body.studentName,
     roll_no: body.rollNo || "",
