@@ -613,6 +613,55 @@
     color: #fff; font-size: 28px;
   }
 
+  /* ---------------- In-page camera (real camera, not gallery) ---------------- */
+  .camera-modal {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 220;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .camera-modal video {
+    max-width: 100%;
+    max-height: calc(100vh - 100px);
+    background: #000;
+  }
+  .camera-controls {
+    position: absolute;
+    bottom: 22px;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
+  }
+  .camera-shutter-btn {
+    width: 68px; height: 68px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid rgba(255,255,255,0.4);
+  }
+  .camera-cancel-btn {
+    position: absolute;
+    top: 18px; right: 22px;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+  }
+  .camera-error {
+    color: #fff;
+    text-align: center;
+    padding: 0 24px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
   .role-hint {
     font-size: 10.5px;
     color: rgba(255,255,255,0.55);
@@ -949,6 +998,7 @@
     font-size: 12.5px;
   }
   .letter-sign-block { width: 30%; }
+  .letter-sign-row.cols-4 .letter-sign-block { width: 22%; }
   .letter-sign-line {
     border-top: 1px solid #1a1a1a;
     margin-top: 34px;
@@ -1114,6 +1164,7 @@
     students: [],
     teachers: [],
     dbAvailable: null,
+    cameraOpen: false,
     role: localStorage.getItem("umc_role") || "invigilator",
     myName: localStorage.getItem("umc_name") || "",
     filterStatus: "all",
@@ -1141,6 +1192,9 @@
   var draftSelectedStudentId = null;
   var draftSelectedReporterId = null;
   var draftAutoDescription = ""; // last value WE wrote into the description box
+  var cameraStream = null;
+  var cameraTargetCategory = null;
+  var cameraTargetCaseId = null; // null = draft (new report); set = an existing case
 
   // Base path for the case-register API routes deployed alongside this
   // page (src/app/api/case-register/... in the Next.js project).
@@ -1785,8 +1839,25 @@
 
   var drawerMounted = false;
   var letterMounted = false;
+  var cameraMounted = false;
 
   function syncOverlay() {
+    // --- Camera: real getUserMedia stream, must not be torn down or
+    // re-requested by an unrelated re-render while it's live. ---
+    if (state.cameraOpen && !cameraMounted) {
+      var camwrap = document.createElement("div");
+      camwrap.id = "cameraHost";
+      camwrap.innerHTML = renderCameraModal();
+      overlayLayer.appendChild(camwrap);
+      cameraMounted = true;
+      startCameraStream();
+    } else if (!state.cameraOpen && cameraMounted) {
+      stopCameraStream();
+      var camhost = document.getElementById("cameraHost");
+      if (camhost) camhost.remove();
+      cameraMounted = false;
+    }
+
     // --- Drawer: mount once on open, unmount once on close, untouched between ---
     if (state.drawerOpen && !drawerMounted) {
       var wrap = document.createElement("div");
@@ -1835,6 +1906,88 @@
       extraWrap.innerHTML = extraHtml;
       overlayLayer.appendChild(extraWrap);
     }
+  }
+
+  function renderCameraModal() {
+    return (
+      '<div class="camera-modal">' +
+        '<button type="button" class="camera-cancel-btn" data-action="camera-cancel" aria-label="Close camera">&times;</button>' +
+        '<video id="cameraVideo" autoplay playsinline muted></video>' +
+        '<canvas id="cameraCanvas" style="display:none;"></canvas>' +
+        '<div id="cameraErrorBox"></div>' +
+        '<div class="camera-controls"><button type="button" class="camera-shutter-btn" data-action="camera-shutter" aria-label="Take photo"></button></div>' +
+      "</div>"
+    );
+  }
+
+  async function startCameraStream() {
+    var video = document.getElementById("cameraVideo");
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showCameraError("This browser can't access the camera directly. Please use the upload button instead.");
+      return;
+    }
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+      });
+      if (video) video.srcObject = cameraStream;
+    } catch (e) {
+      console.error(e);
+      showCameraError("Could not open the camera. Check that this site has camera permission (in your browser's site settings), then try again.");
+    }
+  }
+
+  function showCameraError(message) {
+    var box = document.getElementById("cameraErrorBox");
+    if (box) box.innerHTML = '<div class="camera-error">' + esc(message) + '<br><br><button type="button" class="btn btn-outline" data-action="camera-cancel">Close</button></div>';
+    var video = document.getElementById("cameraVideo");
+    if (video) video.style.display = "none";
+    var shutter = document.querySelector(".camera-shutter-btn");
+    if (shutter) shutter.style.display = "none";
+  }
+
+  function stopCameraStream() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(function (t) { t.stop(); });
+      cameraStream = null;
+    }
+  }
+
+  function openCamera(category, caseId) {
+    cameraTargetCategory = category;
+    cameraTargetCaseId = caseId || null;
+    state.cameraOpen = true;
+    render();
+  }
+
+  function closeCamera() {
+    state.cameraOpen = false;
+    cameraTargetCategory = null;
+    cameraTargetCaseId = null;
+    render();
+  }
+
+  function capturePhotoFromCamera() {
+    var video = document.getElementById("cameraVideo");
+    var canvas = document.getElementById("cameraCanvas");
+    if (!video || !canvas || !video.videoWidth) return;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(function (blob) {
+      if (!blob) return;
+      var file = new File([blob], "photo-" + Date.now() + ".jpg", { type: "image/jpeg" });
+      var category = cameraTargetCategory;
+      var caseId = cameraTargetCaseId;
+      closeCamera();
+      if (caseId) {
+        uploadCaseEvidence(caseId, file, category);
+      } else {
+        uploadDraftEvidence(file, category);
+      }
+    }, "image/jpeg", 0.9);
   }
 
   function renderTopbar() {
@@ -1985,10 +2138,14 @@
       (ids || []).forEach(function (id) {
         html += '<img class="evidence-thumb" src="' + esc(id) + '" data-action="view-evidence" data-url="' + esc(id) + '" alt="' + esc(title) + '">';
       });
-      html += '<label class="evidence-upload-btn" title="Add ' + esc(title.toLowerCase()) + '">' +
-        (state.uploading ? "…" : "+") +
-        '<input type="file" accept="image/*" class="case-evidence-input" data-category="' + category + '" style="display:none;">' +
-        "</label>";
+      if (state.uploading) {
+        html += '<div class="evidence-upload-btn">…</div>';
+      } else {
+        html += '<button type="button" class="evidence-upload-btn" title="Take a photo" data-action="open-camera" data-category="' + category + '" data-case-target="1">📷</button>';
+        html += '<label class="evidence-upload-btn" title="Upload from gallery">⬆' +
+          '<input type="file" accept="image/*" class="case-evidence-input" data-category="' + category + '" style="display:none;">' +
+          "</label>";
+      }
       html += "</div></div>";
       return html;
     }
@@ -2140,9 +2297,7 @@
       return (
         '<div class="evidence-category"><div class="evidence-category-title">' + esc(title) + '</div>' +
           '<div class="evidence-grid" id="draft_' + category + '_thumbs">' +
-            '<label class="evidence-upload-btn" title="Take a photo">📷' +
-              '<input type="file" accept="image/*" capture="environment" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
-            '</label>' +
+            '<button type="button" class="evidence-upload-btn" title="Take a photo" data-action="open-camera" data-category="' + category + '">📷</button>' +
             '<label class="evidence-upload-btn" title="Upload from gallery">⬆' +
               '<input type="file" accept="image/*" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
             '</label>' +
@@ -2238,7 +2393,6 @@
       '<div class="letter-footer">' +
         '<div class="school">Centre of Excellence (Boys), Sialkot</div>' +
         '<div>Circular Road, Near Jinnah Stadium Overhead Bridge, Sialkot. Ph # 052-9250189</div>' +
-        '<div>Email: principal.coebslk@daanishschools.edu.pk — Website: www.daanishschools.edu.pk</div>' +
       "</div>"
     );
   }
@@ -2305,10 +2459,11 @@
       "examination rules and school policy.</p>";
     html += "</div>";
 
-    html += '<div class="letter-sign-row">';
+    html += '<div class="letter-sign-row cols-4">';
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Reported by (Invigilator)<br>' + esc(c.invigilatorName || "") + "</div></div>";
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Received by — Controller<br>Secretary, UMC Committee</div></div>';
-    html += '<div class="letter-sign-block"><div class="letter-sign-line">Parent / Guardian<br>(Informed of initiation)</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Parent / Guardian<br>(Informed)</div></div>';
     html += "</div>";
 
     html += letterFooterHtml();
@@ -2815,6 +2970,14 @@
       case "close-drawer": state.drawerOpen = false; render(); break;
       case "close-lightbox": state.lightboxUrl = null; render(); break;
       case "view-evidence": state.lightboxUrl = el.getAttribute("data-url"); render(); break;
+      case "open-camera": {
+        var camCategory = el.getAttribute("data-category");
+        var camCaseId = el.getAttribute("data-case-target") ? state.selectedId : null;
+        openCamera(camCategory, camCaseId);
+        break;
+      }
+      case "camera-cancel": closeCamera(); break;
+      case "camera-shutter": capturePhotoFromCamera(); break;
       case "open-forward": state.openAction = "forward"; state.openActionId = el.getAttribute("data-id"); render(); break;
       case "open-recommend": state.openAction = "recommend"; state.openActionId = el.getAttribute("data-id"); render(); break;
       case "open-decide": state.openAction = "decide"; state.openActionId = el.getAttribute("data-id"); render(); break;
