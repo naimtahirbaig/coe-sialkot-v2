@@ -1,22 +1,23 @@
-// Server-only Supabase client using the service role key, so it can write
-// to award_* tables even though RLS blocks public writes.
-// NEVER import this from a "use client" component — API routes / server
-// actions only.
+// Server-only Supabase client using the service-role key, which bypasses
+// Row Level Security. Never import this file from client-side code.
 //
-// If you already have an equivalent helper in the repo (e.g. the one used
-// to write mcq_tests rows), just reuse that instead of adding this file.
+// If your project already has an equivalent helper (e.g. the one used by
+// your award-list routes), use that instead and delete this file — just
+// make sure it also uses the service-role key, not the anon key, since
+// these routes write on behalf of any staff member without per-user auth.
 
 import { createClient } from "@supabase/supabase-js";
 
-export function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars"
-    );
-  }
-  return createClient(url, serviceKey, {
-    auth: { persistSession: false },
-  });
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !serviceRoleKey) {
+  console.warn(
+    "case-register: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set. " +
+    "Add them in your Vercel project settings (Environment Variables)."
+  );
 }
+
+export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+  auth: { persistSession: false },
+});

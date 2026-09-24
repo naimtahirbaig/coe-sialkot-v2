@@ -1,0 +1,2759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UMC Case Register — Centre of Excellence (B), Sialkot</title>
+<style>
+  :root {
+    --navy: #14213D;
+    --navy-deep: #0E1930;
+    --navy-mid: #1C2E52;
+    --gold: #C9972B;
+    --gold-soft: #E7C878;
+    --paper: #F1F3F6;
+    --paper-dim: #E7EAEF;
+    --card: #FFFFFF;
+    --ink: #16233F;
+    --muted: #5B6B84;
+    --line: #DFE3EA;
+
+    --status-reported: #C2542E;
+    --status-reported-bg: #FBEAE3;
+    --status-review: #35688C;
+    --status-review-bg: #E6EEF4;
+    --status-recommended: #6B4A8A;
+    --status-recommended-bg: #EFE8F4;
+    --status-closed: #1E8A78;
+    --status-closed-bg: #E2F2EF;
+
+    --radius-card: 10px;
+    --radius-tag: 4px;
+    --serif: 'DejaVu Serif Condensed', 'Liberation Serif', Georgia, serif;
+    --sans: 'Liberation Sans', 'DejaVu Sans', Arial, sans-serif;
+    --mono: 'DejaVu Sans Mono', 'Liberation Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    background: var(--paper);
+    font-family: var(--sans);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  :root:not([data-theme="light"]) {
+    color-scheme: light;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, textarea { font-family: inherit; }
+  a { color: inherit; }
+
+  /* ---------------- Top bar ---------------- */
+  .topbar {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    padding: 18px 28px;
+    padding-top: calc(18px + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .brand-eyebrow {
+    font-size: 12.5px;
+    color: var(--gold-soft);
+  }
+  .brand-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 25px;
+    color: #FFFFFF;
+    letter-spacing: 0.2px;
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .role-select {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(231,200,120,0.4);
+    color: #F3EFE2;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13.5px;
+  }
+  .role-select option { color: #16233F; }
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: #241804;
+  }
+  .btn-gold:hover { background: var(--gold-soft); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .btn-outline:hover { background: var(--paper-dim); }
+  .btn-outline-light {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #EDEFF3;
+  }
+  .btn-outline-light:hover { background: rgba(255,255,255,0.08); }
+  .btn-small { padding: 6px 11px; font-size: 12.5px; border-radius: 6px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  /* ---------------- Tally strip ---------------- */
+  .tally {
+    display: flex;
+    gap: 0;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    overflow-x: auto;
+  }
+  .tally-item {
+    flex: 1 1 0;
+    min-width: 130px;
+    padding: 14px 20px;
+    border-right: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tally-item:last-child { border-right: none; }
+  .tally-num {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1;
+  }
+  .tally-label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .tally-item[data-status="reported"] .tally-num { color: var(--status-reported); }
+  .tally-item[data-status="under_review"] .tally-num { color: var(--status-review); }
+  .tally-item[data-status="recommended"] .tally-num { color: var(--status-recommended); }
+  .tally-item[data-status="closed"] .tally-num { color: var(--status-closed); }
+  .tally-item[data-status="total"] .tally-num { color: var(--navy); }
+  .tally-item { position: relative; }
+  .tally-item.active { background: var(--paper-dim); }
+
+  /* ---------------- Layout ---------------- */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 0;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 880px) {
+    .main { grid-template-columns: 1fr; }
+    .rail { border-right: none; border-bottom: 1px solid var(--line); }
+    .detail-pane.mobile-hidden { display: none; }
+    .rail.mobile-hidden { display: none; }
+  }
+
+  /* ---------------- Rail (filters + list) ---------------- */
+  .rail {
+    border-right: 1px solid var(--line);
+    background: var(--card);
+    min-height: calc(100vh - 130px);
+    display: flex;
+    flex-direction: column;
+  }
+  .rail-section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .search-box {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 13.5px;
+  }
+  .search-box:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .chip {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .chip.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .filter-title {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 2px;
+    text-transform: none;
+  }
+  .rail-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .case-row {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .case-row:hover { background: var(--paper); }
+  .case-row.active { background: var(--paper-dim); border-left: 3px solid var(--gold); padding-left: 15px; }
+  .case-row-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .case-row-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .case-row-code {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+  .case-row-meta {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .empty-list {
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  /* ---------------- Status tag ---------------- */
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px 3px 7px;
+    border-radius: var(--radius-tag);
+    white-space: nowrap;
+  }
+  .status-tag::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-tag[data-status="reported"] { background: var(--status-reported-bg); color: var(--status-reported); }
+  .status-tag[data-status="reported"]::before { background: var(--status-reported); }
+  .status-tag[data-status="under_review"] { background: var(--status-review-bg); color: var(--status-review); }
+  .status-tag[data-status="under_review"]::before { background: var(--status-review); }
+  .status-tag[data-status="recommended"] { background: var(--status-recommended-bg); color: var(--status-recommended); }
+  .status-tag[data-status="recommended"]::before { background: var(--status-recommended); }
+  .status-tag[data-status="closed"] { background: var(--status-closed-bg); color: var(--status-closed); }
+  .status-tag[data-status="closed"]::before { background: var(--status-closed); }
+
+  /* ---------------- Detail pane ---------------- */
+  .detail-pane {
+    padding: 24px 32px 60px 32px;
+    min-height: calc(100vh - 130px);
+  }
+  .detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60vh;
+    color: var(--muted);
+    text-align: center;
+    gap: 10px;
+  }
+  .detail-empty-title {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .back-link {
+    display: none;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+  @media (max-width: 880px) {
+    .back-link { display: inline-flex; align-items: center; gap: 5px; }
+  }
+
+  .file-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .file-code {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .file-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 27px;
+    color: var(--ink);
+    margin: 0;
+  }
+  .file-subtitle {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 18px 20px;
+    margin: 20px 0;
+  }
+  .file-field-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .file-field-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .section-block {
+    margin: 24px 0;
+  }
+  .section-heading {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--ink);
+    margin: 0 0 10px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--paper-dim);
+  }
+  .desc-text {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+    white-space: pre-wrap;
+  }
+
+  .evidence-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .evidence-thumb {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    cursor: pointer;
+  }
+  .evidence-upload-btn {
+    width: 96px;
+    height: 96px;
+    border-radius: 8px;
+    border: 1.5px dashed var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 24px;
+    background: var(--paper);
+  }
+  .evidence-upload-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* Decision / recommendation callouts */
+  .callout {
+    border-radius: var(--radius-card);
+    padding: 16px 18px;
+    margin: 14px 0;
+    border-left: 4px solid var(--line);
+    background: var(--paper);
+  }
+  .callout[data-kind="recommendation"] { border-left-color: var(--status-recommended); background: var(--status-recommended-bg); }
+  .callout[data-kind="decision"] { border-left-color: var(--status-closed); background: var(--status-closed-bg); }
+  .callout-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .callout-body { font-size: 14px; line-height: 1.55; }
+  .callout-meta { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+
+  /* Timeline */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .timeline-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--paper-dim);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--navy);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .timeline-text { font-size: 13.5px; line-height: 1.5; }
+  .timeline-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+  .note-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: flex-start;
+  }
+  .note-form textarea {
+    flex: 1;
+    resize: vertical;
+    min-height: 40px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+  }
+
+  /* Action bar */
+  .action-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---------------- Drawer (new report) ---------------- */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,25,48,0.45);
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+  }
+  .drawer {
+    width: min(560px, 100%);
+    background: var(--card);
+    height: 100%;
+    overflow-y: auto;
+    padding: 26px 28px 100px 28px;
+    padding-top: calc(26px + env(safe-area-inset-top, 0px));
+  }
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .drawer-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 22px;
+  }
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--muted);
+    line-height: 1;
+    padding: 4px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-field { display: flex; flex-direction: column; gap: 5px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-field label { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+  .form-field input, .form-field select, .form-field textarea {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    width: 100%;
+  }
+  .form-field textarea { resize: vertical; min-height: 90px; }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus {
+    outline: 2px solid var(--gold); outline-offset: 0px;
+  }
+  .required-mark { color: var(--status-reported); }
+  .drawer-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--card);
+    padding-top: 16px;
+    margin-top: 20px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .field-hint { font-size: 11.5px; color: var(--muted); }
+
+  /* Confidentiality note */
+  .confidential-note {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.5;
+    padding: 14px 18px;
+    background: var(--paper);
+  }
+  .confidential-note b { color: var(--ink); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy-deep);
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    z-index: 200;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,15,26,0.88);
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+  }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+  .lightbox-close {
+    position: absolute;
+    top: 18px; right: 22px;
+    background: none; border: none;
+    color: #fff; font-size: 28px;
+  }
+
+  .role-hint {
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.55);
+  }
+
+  /* ---------------- Nav toggle (Cases / Rosters) ---------------- */
+  .nav-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(231,200,120,0.3);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .nav-toggle button {
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.75);
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .nav-toggle button.active {
+    background: var(--gold);
+    color: #241804;
+  }
+
+  /* ---------------- Typeahead ---------------- */
+  .typeahead-wrap { position: relative; }
+  .typeahead-suggestions {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 8px 22px rgba(20,33,61,0.16);
+    z-index: 30;
+    max-height: 230px;
+    overflow-y: auto;
+  }
+  .typeahead-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--paper-dim);
+  }
+  .typeahead-item:last-child { border-bottom: none; }
+  .typeahead-item:hover, .typeahead-item.hl { background: var(--paper); }
+  .ta-meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .typeahead-empty {
+    padding: 8px 12px;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  /* ---------------- Offense chips ---------------- */
+  .offense-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .offense-chip {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 6px 13px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+  .offense-chip.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+
+  /* ---------------- Evidence categories ---------------- */
+  .evidence-category { margin-bottom: 16px; }
+  .evidence-category-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  /* ---------------- Roster view ---------------- */
+  .roster-shell {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px 28px 60px 28px;
+  }
+  .roster-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .roster-tab {
+    padding: 9px 18px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+  .roster-tab.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+  .roster-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .roster-toolbar .search-box { max-width: 280px; }
+  .roster-panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  .roster-panel-title {
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0 0 12px 0;
+  }
+  .roster-table { width: 100%; border-collapse: collapse; }
+  .roster-table th {
+    text-align: left;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .roster-table td {
+    padding: 9px 10px;
+    font-size: 13.5px;
+    border-bottom: 1px solid var(--paper-dim);
+  }
+  .roster-table tr:last-child td { border-bottom: none; }
+  .roster-delete {
+    background: none;
+    border: none;
+    color: var(--status-reported);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .roster-photo {
+    width: 30px; height: 30px; border-radius: 50%;
+    object-fit: cover; vertical-align: middle; margin-right: 8px;
+    border: 1px solid var(--line);
+  }
+  .roster-avatar-fallback {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--paper-dim); display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 11px; color: var(--muted); margin-right: 8px; vertical-align: middle;
+  }
+  .import-textarea {
+    width: 100%;
+    min-height: 110px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    resize: vertical;
+  }
+  .import-hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 10px 0; line-height: 1.5; }
+  .details-toggle {
+    font-size: 12.5px;
+    color: var(--navy);
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-block;
+    margin-bottom: 10px;
+  }
+  .class-teacher-note {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ---------------- Letter export ---------------- */
+  .letter-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,25,48,0.6);
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: auto;
+    padding: 24px 16px 60px 16px;
+  }
+  .letter-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: var(--navy-deep);
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+    width: 100%;
+    max-width: 794px;
+    box-sizing: border-box;
+  }
+  .letter-toolbar .letter-toolbar-title {
+    color: #EFEAD9;
+    font-size: 13px;
+    margin-right: auto;
+    font-weight: 700;
+    flex: 1 1 100%;
+    order: -1;
+  }
+  @media (min-width: 640px) {
+    .letter-toolbar .letter-toolbar-title { flex: 1 1 auto; order: 0; }
+  }
+  .letter-scale-wrap {
+    background: #444;
+    padding: 14px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .letter-page {
+    width: 794px;
+    height: 1123px;
+    background: #ffffff;
+    color: #1a1a1a;
+    font-family: 'Liberation Serif', 'DejaVu Serif Condensed', Georgia, serif;
+    padding: 52px 60px 40px 60px;
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .letter-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    border-bottom: 3px double #1a1a1a;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+  }
+  .letter-emblem {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    border: 2px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.1;
+    flex-shrink: 0;
+  }
+  .letter-school-name {
+    text-align: center;
+  }
+  .letter-school-name .l1 {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .letter-school-name .l2 {
+    font-size: 15px;
+    text-decoration: underline;
+  }
+  .letter-meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    margin-bottom: 18px;
+  }
+  .letter-title {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    text-decoration: underline;
+    margin-bottom: 16px;
+  }
+  .letter-subject {
+    font-size: 13.5px;
+    margin-bottom: 14px;
+  }
+  .letter-subject b { text-decoration: underline; }
+  .letter-body {
+    font-size: 13px;
+    line-height: 1.75;
+    text-align: justify;
+    flex: 1;
+  }
+  .letter-body p { margin: 0 0 12px 0; }
+  .letter-sign-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+    font-size: 12.5px;
+  }
+  .letter-sign-block { width: 45%; }
+  .letter-sign-line {
+    border-top: 1px solid #1a1a1a;
+    margin-top: 34px;
+    padding-top: 4px;
+  }
+  .letter-sign-block.center-single {
+    margin-left: auto;
+    text-align: center;
+  }
+  .letter-footer {
+    border-top: 1px solid #1a1a1a;
+    margin-top: 20px;
+    padding-top: 8px;
+    text-align: center;
+    font-size: 10.5px;
+    font-family: 'Liberation Sans', sans-serif;
+    color: #333;
+    line-height: 1.5;
+  }
+  .letter-footer .school { font-weight: 700; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-thumb { background: #C9C9C9; border-radius: 10px; }
+
+  @media print {
+    body { background: #fff; }
+    .topbar, .tally, .rail, .action-bar, .toast, .overlay,
+    .back-link, .note-form, .evidence-upload-btn { display: none !important; }
+    .main { grid-template-columns: 1fr; max-width: 100%; }
+    .detail-pane { padding: 0; min-height: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="overlayLayer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+/* ===================================================================
+   UMC Case Register — Centre of Excellence (B), Sialkot
+
+   Backed by Supabase via the API routes under /api/case-register/*
+   (see supabaseAdmin.js and case-register-schema.sql). Polls every
+   POLL_MS so multiple staff members see each other's updates.
+
+   Tables (snake_case columns, mapped to the shapes below on read):
+   - cases:    { caseCode, studentId, studentName, rollNo, grade, section,
+                 customClass, subject, examDate, room, reporterId,
+                 invigilatorName, description, offenseTypes[], offenseOther,
+                 invigilatorAction, status, reportedAt,
+                 studentPhotoIds[], paperPhotoIds[], materialPhotoIds[],
+                 notes[], forwarded, recommendation, decision, closedAt }
+   - students: { name, rollNo, grade, section, customClass, photoAssetId, createdAt }
+   - teachers: { name, role, classTeacherGrade, classTeacherSection, createdAt }
+=================================================================== */
+
+(function () {
+  "use strict";
+
+  // ---------------------------------------------------------------
+  // Constants
+  // ---------------------------------------------------------------
+  var SECTIONS_BY_GRADE = {
+    "6": ["Jinnah", "Iqbal", "Sir Syed", "Liaqat", "Tipu", "Babar"],
+    "7": ["Jinnah", "Iqbal", "Sir Syed", "Liaqat", "Tipu", "Babar"],
+    "8": ["Jinnah", "Iqbal", "Sir Syed", "Liaqat", "Tipu", "Babar", "Abdali"],
+    "9": ["Jinnah", "Iqbal", "Sir Syed", "Liaqat", "Tipu", "Babar"],
+    "10": ["Jinnah", "Iqbal", "Sir Syed", "Liaqat", "Tipu", "Babar"],
+    "other": []
+  };
+
+  var STATUS_LABEL = {
+    reported: "Reported",
+    under_review: "Under review",
+    recommended: "Recommendation sent",
+    closed: "Closed"
+  };
+
+  var ACTION_OPTIONS = [
+    "No unfair means found",
+    "Warning issued",
+    "Paper / question cancelled",
+    "Suspension recommended",
+    "Expulsion recommended",
+    "Other (see decision notes)"
+  ];
+
+  // Quick-select offense categories the invigilator can tag on the spot.
+  // Editable here if the school uses different board terminology.
+  var OFFENSE_TYPES = [
+    "Chit / written material found",
+    "Copying from another candidate",
+    "Mobile phone / electronic device",
+    "Talking or exchanging answers",
+    "Unauthorized book or notes",
+    "Impersonation",
+    "Tampering with roll no. / answer sheet",
+    "Misconduct with staff",
+    "Other"
+  ];
+
+  // The invigilator's own on-the-spot suggestion — distinct from the
+  // Committee's later, binding recommendation.
+  var INVIGILATOR_ACTIONS = [
+    "Refer to committee — no immediate action taken",
+    "Verbal warning given",
+    "Material confiscated",
+    "Candidate moved / seat changed",
+    "Recommend paper cancellation",
+    "Recommend immediate removal from exam",
+    "Other — see description"
+  ];
+
+  var TEACHER_ROLES = [
+    "Invigilator", "Controller", "Committee — Convenor",
+    "Committee — Member", "Committee — Secretary", "Class Teacher", "Other"
+  ];
+
+  // ---------------------------------------------------------------
+  // State
+  // ---------------------------------------------------------------
+  var state = {
+    view: "cases", // "cases" | "rosters"
+    rosterTab: "students", // "students" | "teachers"
+    cases: [],
+    students: [],
+    teachers: [],
+    dbAvailable: null,
+    role: localStorage.getItem("umc_role") || "invigilator",
+    myName: localStorage.getItem("umc_name") || "",
+    filterStatus: "all",
+    filterGrade: "all",
+    search: "",
+    selectedId: null,
+    drawerOpen: false,
+    lightboxUrl: null,
+    mobileDetailOpen: false,
+    uploading: false,
+    toast: null,
+    openAction: null,
+    openActionId: null,
+    rosterSearch: "",
+    rosterAddOpen: false,
+    rosterImportOpen: false,
+    letterView: null // { type: "initiation" | "closure", caseId }
+  };
+
+  // Draft evidence collected DURING report filing, before the case document
+  // exists. Kept OUTSIDE `state` so uploading a photo never triggers a full
+  // re-render of the drawer (which would wipe whatever else the invigilator
+  // has already typed — see note above renderDrawer()).
+  var draftEvidence = { student: [], paper: [], material: [] };
+  var draftSelectedStudentId = null;
+  var draftSelectedReporterId = null;
+
+  // Base path for the case-register API routes deployed alongside this
+  // page (src/app/api/case-register/... in the Next.js project).
+  var API_BASE = "/api/case-register";
+  var POLL_MS = 8000; // how often to re-fetch cases/students/teachers
+  var pollTimer = null;
+  var viewerName = "";
+
+  var root = document.getElementById("app");
+  var overlayLayer = document.getElementById("overlayLayer");
+
+  // ---------------------------------------------------------------
+  // Utilities
+  // ---------------------------------------------------------------
+  function esc(s) {
+    if (s === undefined || s === null) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function uid(prefix) {
+    return (prefix || "c") + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) +
+        " · " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    } catch (e) { return iso; }
+  }
+
+  function fmtDateOnly(iso) {
+    if (!iso) return "—";
+    try {
+      var d = new Date(iso + (iso.length === 10 ? "T00:00:00" : ""));
+      return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    } catch (e) { return iso; }
+  }
+
+  function showToast(msg) {
+    state.toast = msg;
+    render();
+    setTimeout(function () {
+      state.toast = null;
+      render();
+    }, 2600);
+  }
+
+  function classLabel(c) {
+    if (!c) return "—";
+    if (c.grade === "other") return c.customClass || "—";
+    return "Grade " + c.grade + " · " + c.section;
+  }
+
+  function findClassTeacher(grade, section) {
+    if (!grade || !section) return null;
+    for (var i = 0; i < state.teachers.length; i++) {
+      var t = state.teachers[i];
+      if (t.classTeacherGrade === grade && t.classTeacherSection === section) return t;
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------
+  // Capability init
+  // ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // Data layer — talks to the Next.js API routes under API_BASE,
+  // which read/write Supabase. Replaces the Claude-artifact-only
+  // window.claude db/assets/downloads/user capabilities.
+  // ---------------------------------------------------------------
+
+  // Row shape from Postgres is snake_case; the rest of this file was
+  // written against camelCase fields, so map on the way in.
+  function rowToCase(row) {
+    return {
+      _id: row.id,
+      caseCode: row.case_code,
+      studentId: row.student_id,
+      studentName: row.student_name,
+      rollNo: row.roll_no,
+      grade: row.grade,
+      section: row.section,
+      customClass: row.custom_class,
+      subject: row.subject,
+      examDate: row.exam_date,
+      room: row.room,
+      reporterId: row.reporter_id,
+      invigilatorName: row.invigilator_name,
+      description: row.description,
+      offenseTypes: row.offense_types || [],
+      offenseOther: row.offense_other,
+      invigilatorAction: row.invigilator_action,
+      status: row.status,
+      reportedAt: row.reported_at,
+      studentPhotoIds: row.student_photo_urls || [],
+      paperPhotoIds: row.paper_photo_urls || [],
+      materialPhotoIds: row.material_photo_urls || [],
+      notes: row.notes || [],
+      forwarded: row.forwarded,
+      recommendation: row.recommendation,
+      decision: row.decision,
+      closedAt: row.closed_at
+    };
+  }
+  function rowToStudent(row) {
+    return {
+      _id: row.id, name: row.name, rollNo: row.roll_no, grade: row.grade,
+      section: row.section, customClass: row.custom_class, createdAt: row.created_at
+    };
+  }
+  function rowToTeacher(row) {
+    return {
+      _id: row.id, name: row.name, role: row.role,
+      classTeacherGrade: row.class_teacher_grade, classTeacherSection: row.class_teacher_section,
+      createdAt: row.created_at
+    };
+  }
+
+  async function apiGet(path) {
+    var res = await fetch(API_BASE + path, { cache: "no-store" });
+    if (!res.ok) throw new Error("GET " + path + " failed (" + res.status + ")");
+    return res.json();
+  }
+  async function apiSend(method, path, body) {
+    var res = await fetch(API_BASE + path, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    if (!res.ok) {
+      var msg = "Request failed (" + res.status + ")";
+      try { var j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+      throw new Error(msg);
+    }
+    return res.json();
+  }
+
+  async function loadCases() {
+    var data = await apiGet("/cases");
+    state.cases = (data.cases || []).map(rowToCase);
+    render();
+  }
+  async function loadStudents() {
+    var data = await apiGet("/students");
+    state.students = (data.students || []).map(rowToStudent);
+    render();
+  }
+  async function loadTeachers() {
+    var data = await apiGet("/teachers");
+    state.teachers = (data.teachers || []).map(rowToTeacher);
+    render();
+  }
+  async function loadAll() {
+    var results = await Promise.allSettled([loadCases(), loadStudents(), loadTeachers()]);
+    results.forEach(function (r) { if (r.status === "rejected") console.error(r.reason); });
+  }
+
+  async function initCapabilities() {
+    state.dbAvailable = true; // API routes are always "available" from the page's point of view
+    try {
+      await loadAll();
+    } catch (e) {
+      console.error(e);
+      state.dbAvailable = false;
+    }
+    render();
+
+    // Poll for changes so multiple staff members filing/reviewing cases
+    // at the same time see each other's updates without a manual refresh.
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(function () {
+      loadAll().catch(function (e) { console.error(e); });
+    }, POLL_MS);
+  }
+
+  // ---------------------------------------------------------------
+  // Case write helpers
+  // ---------------------------------------------------------------
+  function getCase(id) {
+    for (var i = 0; i < state.cases.length; i++) {
+      if (state.cases[i]._id === id) return state.cases[i];
+    }
+    return null;
+  }
+
+  async function createCase(payload) {
+    var body = Object.assign({}, payload, {
+      studentPhotoUrls: draftEvidence.student.map(function (e) { return e.url; }),
+      paperPhotoUrls: draftEvidence.paper.map(function (e) { return e.url; }),
+      materialPhotoUrls: draftEvidence.material.map(function (e) { return e.url; })
+    });
+    try {
+      var res = await apiSend("POST", "/cases", body);
+      var created = rowToCase(res.case);
+      state.cases.unshift(created);
+      state.selectedId = created._id;
+      state.drawerOpen = false;
+      state.mobileDetailOpen = true;
+      draftEvidence = { student: [], paper: [], material: [] };
+      showToast("Report filed as " + created.caseCode + ".");
+      render();
+    } catch (e) {
+      console.error(e);
+      showToast("Could not save the report. Please try again.");
+    }
+  }
+
+  async function patchCase(caseId, patch) {
+    var res = await apiSend("PATCH", "/cases/" + caseId, patch);
+    var updated = rowToCase(res.case);
+    state.cases = state.cases.map(function (c) { return c._id === caseId ? updated : c; });
+    return updated;
+  }
+
+  async function addNote(caseId, text, tag) {
+    var c = getCase(caseId);
+    if (!c) return;
+    var notes = (c.notes || []).slice();
+    notes.push({ text: text, author: state.myName || "Staff member", tag: tag || "note", at: new Date().toISOString() });
+    try { await patchCase(caseId, { notes: notes }); render(); }
+    catch (e) { console.error(e); showToast("Could not add the note."); }
+  }
+
+  async function forwardToCommittee(caseId, note) {
+    var by = state.myName || "Controller";
+    try {
+      await patchCase(caseId, {
+        status: "under_review",
+        forwarded: { by: by, at: new Date().toISOString(), note: note || "" }
+      });
+      if (note) await addNote(caseId, note, "forward");
+      showToast("Case forwarded to the committee.");
+      render();
+    } catch (e) { console.error(e); showToast("Could not forward the case."); }
+  }
+
+  async function sendRecommendation(caseId, text, action) {
+    var by = state.myName || "Committee";
+    try {
+      await patchCase(caseId, {
+        status: "recommended",
+        recommendation: { text: text, action: action, by: by, at: new Date().toISOString() }
+      });
+      showToast("Recommendation recorded.");
+      render();
+    } catch (e) { console.error(e); showToast("Could not save the recommendation."); }
+  }
+
+  async function recordDecision(caseId, text, decidedBy) {
+    try {
+      await patchCase(caseId, {
+        status: "closed",
+        decision: { text: text, decidedBy: decidedBy || "Principal", at: new Date().toISOString() },
+        closedAt: new Date().toISOString()
+      });
+      showToast("Decision recorded. Case closed.");
+      render();
+    } catch (e) { console.error(e); showToast("Could not record the decision."); }
+  }
+
+  async function reopenCase(caseId) {
+    try {
+      await patchCase(caseId, { status: "under_review" });
+      await addNote(caseId, "Case reopened for further review.", "reopen");
+      showToast("Case reopened.");
+      render();
+    } catch (e) { console.error(e); }
+  }
+
+  async function uploadFile(file, category) {
+    var form = new FormData();
+    form.append("file", file);
+    form.append("category", category);
+    var res = await fetch(API_BASE + "/upload", { method: "POST", body: form });
+    if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+    return res.json(); // { url, path }
+  }
+
+  // Upload evidence to an EXISTING case (used from the detail page).
+  async function uploadCaseEvidence(caseId, file, category) {
+    var c = getCase(caseId);
+    if (!c) return;
+    var field = category === "student" ? "studentPhotoIds" : category === "paper" ? "paperPhotoIds" : "materialPhotoIds";
+    var apiField = category === "student" ? "studentPhotoUrls" : category === "paper" ? "paperPhotoUrls" : "materialPhotoUrls";
+    state.uploading = true;
+    render();
+    try {
+      var uploaded = await uploadFile(file, category);
+      var urls = (c[field] || []).slice();
+      urls.push(uploaded.url);
+      var patch = {}; patch[apiField] = urls;
+      await patchCase(caseId, patch);
+      showToast("Evidence attached.");
+    } catch (e) { console.error(e); showToast("Could not upload evidence."); }
+    finally { state.uploading = false; render(); }
+  }
+
+  // Upload evidence to the DRAFT (before the case exists) — targeted DOM
+  // update only, no render(), so the rest of the open form is untouched.
+  async function uploadDraftEvidence(file, category) {
+    var containerId = "draft_" + category + "_thumbs";
+    var container = document.getElementById(containerId);
+    try {
+      var res = await uploadFile(file, category);
+      draftEvidence[category].push({ url: res.url, path: res.path });
+      if (container) {
+        var span = document.createElement("span");
+        span.style.position = "relative";
+        span.style.display = "inline-block";
+        span.innerHTML =
+          '<img class="evidence-thumb" src="' + esc(res.url) + '" alt="' + esc(category) + ' photo">' +
+          '<button type="button" data-action="remove-draft-evidence" data-cat="' + category + '" data-id="' + esc(res.url) + '" ' +
+          'style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#B23A5B;color:#fff;border:2px solid #fff;font-size:12px;line-height:1;cursor:pointer;">×</button>';
+        container.insertBefore(span, container.lastElementChild);
+      }
+    } catch (e) { console.error(e); showToast("Could not upload evidence."); }
+  }
+
+  function removeDraftEvidence(category, url, btnEl) {
+    var removed = null;
+    draftEvidence[category] = draftEvidence[category].filter(function (x) {
+      if (x.url === url) { removed = x; return false; }
+      return true;
+    });
+    if (btnEl && btnEl.parentElement) btnEl.parentElement.remove();
+    if (removed && removed.path) {
+      apiSend("DELETE", "/upload", { path: removed.path }).catch(function () {});
+    }
+  }
+
+  function exportCsv() {
+    var rows = [[
+      "Case code", "Student", "Roll No", "Class", "Subject", "Exam date", "Room",
+      "Reported by", "Reported at", "Offense types", "Invigilator recommended action",
+      "Status", "Committee recommendation", "Final decision"
+    ]];
+    filteredCases().forEach(function (c) {
+      rows.push([
+        c.caseCode, c.studentName, c.rollNo, classLabel(c), c.subject, c.examDate, c.room,
+        c.invigilatorName, fmtDate(c.reportedAt),
+        (c.offenseTypes || []).join("; "), c.invigilatorAction || "",
+        STATUS_LABEL[c.status] || c.status,
+        c.recommendation ? (c.recommendation.action + " — " + c.recommendation.text) : "",
+        c.decision ? c.decision.text : ""
+      ]);
+    });
+    var csv = rows.map(function (r) {
+      return r.map(function (v) {
+        var s = (v === undefined || v === null) ? "" : String(v);
+        if (s.indexOf(",") > -1 || s.indexOf('"') > -1 || s.indexOf("\n") > -1) s = '"' + s.replace(/"/g, '""') + '"';
+        return s;
+      }).join(",");
+    }).join("\n");
+
+    var blob = new Blob([csv], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = "umc-cases.csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------------------------------------------------------------
+  // Roster write helpers
+  // ---------------------------------------------------------------
+  async function addStudent(data) {
+    try {
+      var res = await apiSend("POST", "/students", data);
+      state.students.push(rowToStudent(res.student));
+      render();
+    } catch (e) { console.error(e); showToast("Could not add the student."); }
+  }
+
+  async function addTeacher(data) {
+    try {
+      var res = await apiSend("POST", "/teachers", data);
+      state.teachers.push(rowToTeacher(res.teacher));
+      render();
+    } catch (e) { console.error(e); showToast("Could not add the teacher."); }
+  }
+
+  async function deleteStudent(id) {
+    try {
+      await apiSend("DELETE", "/students/" + id);
+      state.students = state.students.filter(function (s) { return s._id !== id; });
+      render();
+    } catch (e) { console.error(e); showToast("Could not remove that student."); }
+  }
+
+  async function deleteTeacher(id) {
+    try {
+      await apiSend("DELETE", "/teachers/" + id);
+      state.teachers = state.teachers.filter(function (t) { return t._id !== id; });
+      render();
+    } catch (e) { console.error(e); showToast("Could not remove that teacher."); }
+  }
+
+  async function bulkImportStudents(text) {
+    var lines = text.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!lines.length) { showToast("Nothing to import."); return; }
+    var bulk = [];
+    for (var i = 0; i < lines.length; i++) {
+      var parts = lines[i].split(",").map(function (p) { return p.trim(); });
+      var name = parts[0], rollNo = parts[1] || "", grade = parts[2] || "6", section = parts[3] || "";
+      if (!name) continue;
+      bulk.push({ name: name, rollNo: rollNo, grade: grade, section: section });
+    }
+    try {
+      var res = await apiSend("POST", "/students", { bulk: bulk });
+      showToast("Imported " + res.inserted + " student" + (res.inserted === 1 ? "" : "s") + (res.failed ? (", " + res.failed + " failed") : ".") + ".");
+      await loadStudents();
+    } catch (e) {
+      console.error(e);
+      showToast("Import failed.");
+    }
+    state.rosterImportOpen = false;
+    render();
+  }
+
+  async function bulkImportTeachers(text) {
+    var lines = text.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    if (!lines.length) { showToast("Nothing to import."); return; }
+    var bulk = [];
+    for (var i = 0; i < lines.length; i++) {
+      var parts = lines[i].split(",").map(function (p) { return p.trim(); });
+      var name = parts[0], role = parts[1] || "Invigilator", ctGrade = parts[2] || "", ctSection = parts[3] || "";
+      if (!name) continue;
+      bulk.push({ name: name, role: role, classTeacherGrade: ctGrade, classTeacherSection: ctSection });
+    }
+    try {
+      var res = await apiSend("POST", "/teachers", { bulk: bulk });
+      showToast("Imported " + res.inserted + " teacher" + (res.inserted === 1 ? "" : "s") + (res.failed ? (", " + res.failed + " failed") : ".") + ".");
+      await loadTeachers();
+    } catch (e) {
+      console.error(e);
+      showToast("Import failed.");
+    }
+    state.rosterImportOpen = false;
+    render();
+  }
+
+  // ---------------------------------------------------------------
+  // Filtering
+  // ---------------------------------------------------------------
+  function filteredCases() {
+    var q = state.search.trim().toLowerCase();
+    return state.cases.filter(function (c) {
+      if (state.filterStatus !== "all" && c.status !== state.filterStatus) return false;
+      if (state.filterGrade !== "all" && c.grade !== state.filterGrade) return false;
+      if (q) {
+        var hay = [c.studentName, c.caseCode, c.rollNo, c.subject, c.room, c.invigilatorName].join(" ").toLowerCase();
+        if (hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function tallyCounts() {
+    var counts = { reported: 0, under_review: 0, recommended: 0, closed: 0 };
+    state.cases.forEach(function (c) { if (counts[c.status] !== undefined) counts[c.status]++; });
+    return counts;
+  }
+
+  function filteredStudents() {
+    var q = state.rosterSearch.trim().toLowerCase();
+    if (!q) return state.students;
+    return state.students.filter(function (s) {
+      return (s.name + " " + s.rollNo).toLowerCase().indexOf(q) > -1;
+    });
+  }
+
+  function filteredTeachers() {
+    var q = state.rosterSearch.trim().toLowerCase();
+    if (!q) return state.teachers;
+    return state.teachers.filter(function (t) {
+      return (t.name + " " + (t.role || "")).toLowerCase().indexOf(q) > -1;
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // Top-level render dispatch
+  //
+  // IMPORTANT: the drawer is deliberately NOT rebuilt on every render().
+  // render() fires whenever live data changes (another staff member's
+  // edit arrives via the db subscription) — if the drawer's form HTML
+  // were regenerated on every such event, a half-filled incident report
+  // would be silently wiped out from under the person typing it. So the
+  // drawer lives in its own container (#overlayLayer) and syncOverlay()
+  // only (re)builds it on the OPEN/CLOSE transition, never while it's
+  // already open. Toast and lightbox hold no user input, so they're
+  // safe to rebuild freely.
+  // ---------------------------------------------------------------
+  function render() {
+    // Safety net for shorter in-page forms (the note box, the inline
+    // forward/recommend/decide fields): if a background data update causes
+    // a re-render while the person is mid-type, don't let it vanish under
+    // them. (The New Report drawer needs no such patch — it's isolated
+    // from this render cycle entirely; see syncOverlay() below.)
+    var ae = document.activeElement;
+    var preserved = null;
+    if (ae && ae.id && (ae.tagName === "TEXTAREA" || ae.tagName === "INPUT") && root.contains(ae)) {
+      preserved = { id: ae.id, value: ae.value };
+      try { preserved.selStart = ae.selectionStart; preserved.selEnd = ae.selectionEnd; } catch (e) {}
+    }
+
+    var html = "";
+    html += renderTopbar();
+    if (state.view === "rosters") {
+      html += renderRostersView();
+    } else {
+      var counts = tallyCounts();
+      html += renderTally(counts);
+      html += '<div class="main">';
+      html += renderRail();
+      html += renderDetailPane();
+      html += "</div>";
+    }
+    root.innerHTML = html;
+    bindEvents();
+    syncOverlay();
+
+    if (preserved) {
+      var again = document.getElementById(preserved.id);
+      if (again && (again.tagName === "TEXTAREA" || again.tagName === "INPUT")) {
+        again.value = preserved.value;
+        again.focus();
+        if (preserved.selStart !== undefined) {
+          try { again.setSelectionRange(preserved.selStart, preserved.selEnd); } catch (e) {}
+        }
+      }
+    }
+  }
+
+  var drawerMounted = false;
+  var letterMounted = false;
+
+  function syncOverlay() {
+    // --- Drawer: mount once on open, unmount once on close, untouched between ---
+    if (state.drawerOpen && !drawerMounted) {
+      var wrap = document.createElement("div");
+      wrap.id = "drawerHost";
+      wrap.innerHTML = renderDrawer();
+      overlayLayer.appendChild(wrap);
+      drawerMounted = true;
+      bindDrawerEvents();
+      populateDrawerDynamic();
+    } else if (!state.drawerOpen && drawerMounted) {
+      var host = document.getElementById("drawerHost");
+      if (host) host.remove();
+      drawerMounted = false;
+    }
+
+    // --- Letter modal: same treatment — an in-flight html2canvas capture
+    // must never have its source node yanked out from under it by an
+    // unrelated background update arriving mid-export. ---
+    if (state.letterView && !letterMounted) {
+      var lwrap = document.createElement("div");
+      lwrap.id = "letterHost";
+      lwrap.innerHTML = renderLetterModal();
+      overlayLayer.appendChild(lwrap);
+      letterMounted = true;
+      bindLetterEvents();
+    } else if (!state.letterView && letterMounted) {
+      var lhost = document.getElementById("letterHost");
+      if (lhost) lhost.remove();
+      letterMounted = false;
+      if (letterResizeHandler) {
+        window.removeEventListener("resize", letterResizeHandler);
+        window.removeEventListener("orientationchange", letterResizeHandler);
+        letterResizeHandler = null;
+      }
+    }
+
+    // --- Lightbox + toast: no persistent input, safe to rebuild freely ---
+    var extra = document.getElementById("overlayExtras");
+    if (extra) extra.remove();
+    var extraHtml = "";
+    if (state.lightboxUrl) extraHtml += renderLightbox();
+    if (state.toast) extraHtml += '<div class="toast">' + esc(state.toast) + "</div>";
+    if (extraHtml) {
+      var extraWrap = document.createElement("div");
+      extraWrap.id = "overlayExtras";
+      extraWrap.innerHTML = extraHtml;
+      overlayLayer.appendChild(extraWrap);
+    }
+  }
+
+  function renderTopbar() {
+    function navBtn(view, label) {
+      var active = state.view === view ? " active" : "";
+      return '<button class="' + active.trim() + '" data-action="nav-view" data-value="' + view + '">' + esc(label) + "</button>";
+    }
+    function roleOption(val, label) {
+      var sel = state.role === val ? " selected" : "";
+      return '<option value="' + val + '"' + sel + ">" + esc(label) + "</option>";
+    }
+    return (
+      '<div class="topbar">' +
+        '<div class="brand">' +
+          '<span class="brand-eyebrow">Centre of Excellence (B), Sialkot</span>' +
+          '<span class="brand-title">Unfair Means Case Register</span>' +
+        "</div>" +
+        '<div class="topbar-actions">' +
+          '<div class="nav-toggle">' +
+            navBtn("cases", "Case Register") +
+            navBtn("rosters", "Students & Staff") +
+          "</div>" +
+          '<select class="role-select" id="roleSelect" aria-label="Your role">' +
+            roleOption("invigilator", "Invigilator / Teacher") +
+            roleOption("controller", "Controller (Secretary)") +
+            roleOption("committee", "Committee (Convenor / Member)") +
+          "</select>" +
+          (state.view === "cases" ? '<button class="btn btn-gold" id="newCaseBtn">+ New report</button>' : "") +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderTally(counts) {
+    var total = state.cases.length;
+    function item(status, label, num) {
+      var active = state.filterStatus === status ? " active" : "";
+      return (
+        '<div class="tally-item' + active + '" data-status="' + status + '" data-action="filter-status" data-value="' + status + '">' +
+          '<span class="tally-num">' + num + "</span><span class=\"tally-label\">" + esc(label) + "</span>" +
+        "</div>"
+      );
+    }
+    return (
+      '<div class="tally">' +
+        item("all", "Total cases", total) +
+        item("reported", "Reported", counts.reported) +
+        item("under_review", "Under review", counts.under_review) +
+        item("recommended", "Recommendation sent", counts.recommended) +
+        item("closed", "Closed", counts.closed) +
+      "</div>"
+    );
+  }
+
+  function statusTag(status) {
+    return '<span class="status-tag" data-status="' + status + '">' + esc(STATUS_LABEL[status] || status) + "</span>";
+  }
+
+  // ---------------------------------------------------------------
+  // Case rail + list
+  // ---------------------------------------------------------------
+  function buildCaseRows() {
+    var list = filteredCases();
+    var rows = list.map(function (c) {
+      var active = c._id === state.selectedId ? " active" : "";
+      return (
+        '<div class="case-row' + active + '" data-action="select-case" data-id="' + c._id + '">' +
+          '<div class="case-row-top">' +
+            '<span class="case-row-name">' + esc(c.studentName || "Unnamed student") + "</span>" + statusTag(c.status) +
+          "</div>" +
+          '<div class="case-row-code">' + esc(c.caseCode) + "</div>" +
+          '<div class="case-row-meta">' + esc(classLabel(c)) + " · " + esc(c.subject || "—") + "</div>" +
+        "</div>"
+      );
+    }).join("");
+    if (!list.length) {
+      rows = '<div class="empty-list">' +
+        (state.dbAvailable === false
+          ? "Could not reach the case register server. Check your connection and reload."
+          : (state.cases.length === 0 ? "No cases have been reported yet." : "No cases match these filters.")) +
+        "</div>";
+    }
+    return rows;
+  }
+
+  function refreshRailList() {
+    var elList = document.getElementById("railList");
+    if (elList) elList.innerHTML = buildCaseRows();
+  }
+
+  function renderRail() {
+    var railHidden = state.mobileDetailOpen ? " mobile-hidden" : "";
+    function statusChip(val, label) {
+      var active = state.filterStatus === val ? " active" : "";
+      return '<span class="chip' + active + '" data-action="filter-status" data-value="' + val + '">' + esc(label) + "</span>";
+    }
+    function gradeChip(val, label) {
+      var active = state.filterGrade === val ? " active" : "";
+      return '<span class="chip' + active + '" data-action="filter-grade" data-value="' + val + '">' + esc(label) + "</span>";
+    }
+    return (
+      '<div class="rail' + railHidden + '">' +
+        '<div class="rail-section">' +
+          '<input class="search-box" id="searchBox" type="text" placeholder="Search student, case no., subject…" value="' + esc(state.search) + '">' +
+          '<div class="filter-title" style="margin-top:12px;">Status</div>' +
+          '<div class="filter-row">' + statusChip("all", "All") + statusChip("reported", "Reported") + statusChip("under_review", "Under review") + statusChip("recommended", "Recommended") + statusChip("closed", "Closed") + "</div>" +
+          '<div class="filter-title" style="margin-top:12px;">Grade</div>' +
+          '<div class="filter-row">' + gradeChip("all", "All") + gradeChip("6", "6") + gradeChip("7", "7") + gradeChip("8", "8") + gradeChip("9", "9") + gradeChip("10", "10") + "</div>" +
+        "</div>" +
+        '<div class="rail-section" style="display:flex; gap:8px;">' +
+          '<button class="btn btn-outline btn-small" id="exportCsvBtn" style="flex:1;">Export CSV</button>' +
+        "</div>" +
+        '<div class="rail-list" id="railList">' + buildCaseRows() + "</div>" +
+        '<div class="confidential-note"><b>Confidentiality.</b> This register is visible only to signed-in staff of this school. Discuss cases only through this system and the UMC Committee — not informally.</div>' +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Case detail
+  // ---------------------------------------------------------------
+  function renderDetailPane() {
+    var detailHidden = state.mobileDetailOpen ? "" : " mobile-hidden";
+    var c = state.selectedId ? getCase(state.selectedId) : null;
+
+    if (!c) {
+      return (
+        '<div class="detail-pane' + detailHidden + '">' +
+          '<div class="detail-empty">' +
+            '<div class="detail-empty-title">Select a case to view its file</div>' +
+            '<div>Or click “+ New report” to log a fresh incident.</div>' +
+          "</div>" +
+        "</div>"
+      );
+    }
+
+    function field(label, value) {
+      return '<div><div class="file-field-label">' + esc(label) + '</div><div class="file-field-value">' + esc(value || "—") + "</div></div>";
+    }
+    function timelineItem(text, at) {
+      return '<div class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-text">' + text + '</div><div class="timeline-meta">' + fmtDate(at) + "</div></div></div>";
+    }
+    function evidenceCategory(title, ids, category) {
+      var html = '<div class="evidence-category"><div class="evidence-category-title">' + esc(title) + "</div>";
+      html += '<div class="evidence-grid">';
+      (ids || []).forEach(function (id) {
+        html += '<img class="evidence-thumb" src="' + esc(id) + '" data-action="view-evidence" data-url="' + esc(id) + '" alt="' + esc(title) + '">';
+      });
+      html += '<label class="evidence-upload-btn" title="Add ' + esc(title.toLowerCase()) + '">' +
+        (state.uploading ? "…" : "+") +
+        '<input type="file" accept="image/*" class="case-evidence-input" data-category="' + category + '" style="display:none;">' +
+        "</label>";
+      html += "</div></div>";
+      return html;
+    }
+
+    var classTeacher = findClassTeacher(c.grade, c.section);
+
+    var html = '<div class="detail-pane' + detailHidden + '">';
+    html += '<a class="back-link" data-action="back-to-list" href="javascript:void(0)">‹ Back to list</a>';
+
+    html += '<div class="file-header"><div>';
+    html += '<span class="file-code">' + esc(c.caseCode) + "</span>";
+    html += '<h1 class="file-title">' + esc(c.studentName || "Unnamed student") + "</h1>";
+    html += '<div class="file-subtitle">' + esc(classLabel(c)) + " · Roll No. " + esc(c.rollNo || "—") + "</div>";
+    if (classTeacher) html += '<div class="class-teacher-note">Class teacher: ' + esc(classTeacher.name) + "</div>";
+    html += "</div>" + statusTag(c.status) + "</div>";
+
+    html += '<div class="file-grid">';
+    html += field("Subject", c.subject);
+    html += field("Exam date", fmtDateOnly(c.examDate));
+    html += field("Room / hall", c.room);
+    html += field("Reported by", c.invigilatorName);
+    html += field("Reported on", fmtDate(c.reportedAt));
+    html += "</div>";
+
+    if ((c.offenseTypes && c.offenseTypes.length) || c.invigilatorAction) {
+      html += '<div class="file-grid">';
+      if (c.offenseTypes && c.offenseTypes.length) {
+        html += field("Offense type(s)", c.offenseTypes.join(", ") + (c.offenseOther ? " — " + c.offenseOther : ""));
+      }
+      if (c.invigilatorAction) {
+        html += field("Invigilator's recommended action", c.invigilatorAction);
+      }
+      html += "</div>";
+    }
+
+    html += '<div class="section-block"><h2 class="section-heading">Incident description</h2>';
+    html += '<div class="desc-text">' + esc(c.description || "No description provided.") + "</div></div>";
+
+    html += '<div class="section-block"><h2 class="section-heading">Evidence</h2>';
+    html += evidenceCategory("Photo of student", c.studentPhotoIds, "student");
+    html += evidenceCategory("Photo of answer script / paper", c.paperPhotoIds, "paper");
+    html += evidenceCategory("Photo of unfair-means material", c.materialPhotoIds, "material");
+    html += "</div>";
+
+    if (c.recommendation) {
+      html += '<div class="callout" data-kind="recommendation"><div class="callout-label">Committee recommendation</div>';
+      html += '<div class="callout-body"><b>' + esc(c.recommendation.action) + "</b><br>" + esc(c.recommendation.text) + "</div>";
+      html += '<div class="callout-meta">' + esc(c.recommendation.by) + " · " + fmtDate(c.recommendation.at) + "</div></div>";
+    }
+    if (c.decision) {
+      html += '<div class="callout" data-kind="decision"><div class="callout-label">Final decision</div>';
+      html += '<div class="callout-body">' + esc(c.decision.text) + "</div>";
+      html += '<div class="callout-meta">Decided by ' + esc(c.decision.decidedBy) + " · " + fmtDate(c.decision.at) + "</div></div>";
+    }
+
+    html += '<div class="section-block"><h2 class="section-heading">Case notes</h2><div class="timeline">';
+    html += timelineItem("Case reported by " + esc(c.invigilatorName || "invigilator") + ".", c.reportedAt);
+    if (c.forwarded) html += timelineItem("Forwarded to the committee by " + esc(c.forwarded.by) + (c.forwarded.note ? ": " + esc(c.forwarded.note) : "") + ".", c.forwarded.at);
+    (c.notes || []).forEach(function (n) {
+      if (n.tag === "forward") return;
+      html += timelineItem(esc(n.author) + ": " + esc(n.text), n.at);
+    });
+    if (c.recommendation) html += timelineItem("Recommendation sent by " + esc(c.recommendation.by) + ".", c.recommendation.at);
+    if (c.decision) html += timelineItem("Decision recorded by " + esc(c.decision.decidedBy) + ". Case closed.", c.decision.at);
+    html += "</div>";
+
+    html += '<div class="note-form"><textarea id="noteInput" placeholder="Add a note to this case file…"></textarea>';
+    html += '<button class="btn btn-outline btn-small" id="addNoteBtn">Add note</button></div></div>';
+
+    html += renderActionBar(c);
+    html += "</div>";
+    return html;
+  }
+
+  function renderActionBar(c) {
+    var html = '<div class="action-bar">';
+    if (c.status === "reported") html += '<button class="btn btn-gold" data-action="open-forward" data-id="' + c._id + '">Forward to committee</button>';
+    if (c.status === "under_review") html += '<button class="btn btn-gold" data-action="open-recommend" data-id="' + c._id + '">Record recommendation</button>';
+    if (c.status === "recommended") html += '<button class="btn btn-gold" data-action="open-decide" data-id="' + c._id + '">Record final decision</button>';
+    if (c.status === "closed") html += '<button class="btn btn-outline" data-action="reopen-case" data-id="' + c._id + '">Reopen case</button>';
+    html += '<button class="btn btn-outline" data-action="open-letter" data-type="initiation" data-id="' + c._id + '">Initiation letter</button>';
+    if (c.status === "closed") {
+      html += '<button class="btn btn-outline" data-action="open-letter" data-type="closure" data-id="' + c._id + '">Closure letter</button>';
+    }
+    html += '<button class="btn btn-outline" data-action="print-case" data-id="' + c._id + '">Print case file</button>';
+    html += "</div>";
+
+    function inlineForm(kind, id, fieldsHtml, submitLabel) {
+      return (
+        '<div class="file-grid" style="margin-top:14px; display:block;"><div class="form-grid">' + fieldsHtml + "</div>" +
+          '<div style="margin-top:14px; display:flex; gap:8px;">' +
+            '<button class="btn btn-gold btn-small" data-action="submit-' + kind + '" data-id="' + id + '">' + esc(submitLabel) + "</button>" +
+            '<button class="btn btn-outline btn-small" data-action="cancel-inline">Cancel</button>' +
+          "</div></div>"
+      );
+    }
+
+    if (state.openAction === "forward" && state.openActionId === c._id) {
+      html += inlineForm("forward", c._id, '<div class="form-field full"><label>Note for the committee (optional)</label><textarea id="forwardNote" placeholder="Any context for the committee…"></textarea></div>', "Forward");
+    }
+    if (state.openAction === "recommend" && state.openActionId === c._id) {
+      html += inlineForm("recommend", c._id,
+        '<div class="form-field full"><label>Proposed action</label><select id="recAction">' + ACTION_OPTIONS.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="form-field full"><label>Recommendation notes <span class="required-mark">*</span></label><textarea id="recText" placeholder="Summarize the committee\'s review and reasoning…"></textarea></div>',
+        "Send recommendation");
+    }
+    if (state.openAction === "decide" && state.openActionId === c._id) {
+      html += inlineForm("decide", c._id,
+        '<div class="form-field"><label>Decided by</label><input id="decBy" type="text" placeholder="e.g. Principal" value="' + esc(state.myName) + '"></div>' +
+        '<div class="form-field full"><label>Final decision <span class="required-mark">*</span></label><textarea id="decText" placeholder="Record the competent authority\'s final decision…"></textarea></div>',
+        "Record decision & close case");
+    }
+    return html;
+  }
+
+  // ---------------------------------------------------------------
+  // New-report drawer
+  // ---------------------------------------------------------------
+  function renderDrawer() {
+    draftEvidence = { student: [], paper: [], material: [] };
+    draftSelectedStudentId = null;
+    draftSelectedReporterId = null;
+    var gradeOpts = ["6", "7", "8", "9", "10", "other"];
+
+    function f(id, label, type, placeholder, span, hiddenByDefault) {
+      var cls = "form-field" + (span === "full" ? " full" : "");
+      var style = hiddenByDefault ? ' style="display:none;" data-other-class-field="1"' : "";
+      return '<div class="' + cls + '"' + style + "><label>" + esc(label) + '</label><input id="f_' + id + '" type="' + type + '" placeholder="' + esc(placeholder || "") + '"></div>';
+    }
+    function typeaheadField(id, label, placeholder) {
+      return (
+        '<div class="form-field full">' +
+          "<label>" + esc(label) + "</label>" +
+          '<div class="typeahead-wrap">' +
+            '<input id="f_' + id + '" type="text" placeholder="' + esc(placeholder) + '" autocomplete="off">' +
+            '<input type="hidden" id="f_' + id + 'Id">' +
+            '<div class="typeahead-suggestions" id="ta_' + id + '" style="display:none;"></div>' +
+          "</div>" +
+        "</div>"
+      );
+    }
+    function gradeField() {
+      var opts = gradeOpts.map(function (g) {
+        var label = g === "other" ? "Other / not 6–8" : "Grade " + g;
+        return '<option value="' + g + '">' + esc(label) + "</option>";
+      }).join("");
+      return '<div class="form-field"><label>Grade</label><select id="f_grade">' + opts + "</select></div>";
+    }
+    function evidenceUploader(category, title) {
+      return (
+        '<div class="evidence-category"><div class="evidence-category-title">' + esc(title) + '</div>' +
+          '<div class="evidence-grid" id="draft_' + category + '_thumbs">' +
+            '<label class="evidence-upload-btn" title="Add photo">+' +
+              '<input type="file" accept="image/*" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
+            '</label>' +
+          "</div>" +
+        "</div>"
+      );
+    }
+    var offenseChips = OFFENSE_TYPES.map(function (o) {
+      return '<span class="offense-chip" data-action="toggle-offense" data-value="' + esc(o) + '">' + esc(o) + "</span>";
+    }).join("");
+    var invigActionOpts = INVIGILATOR_ACTIONS.map(function (a) {
+      return '<option value="' + esc(a) + '">' + esc(a) + "</option>";
+    }).join("");
+
+    return (
+      '<div class="overlay">' +
+        '<div class="drawer" id="drawerPanel">' +
+          '<div class="drawer-header"><span class="drawer-title">New incident report</span><button class="close-btn" data-action="close-drawer">&times;</button></div>' +
+
+          '<div class="form-grid">' +
+            typeaheadField("studentName", "Student name *", "Start typing to search the student list…") +
+          "</div>" +
+          '<div class="form-grid" style="margin-top:10px;">' +
+            f("rollNo", "Roll number", "text", "e.g. 23") +
+            gradeField() +
+            '<div class="form-field" id="sectionFieldWrap"><label>Section</label><select id="f_section"></select></div>' +
+            f("customClass", "Class (if not Grade 6–8)", "text", "e.g. O-Level II", "", true) +
+            f("subject", "Exam subject", "text", "e.g. Mathematics") +
+            f("examDate", "Exam date", "date") +
+            f("room", "Room / hall", "text", "e.g. 8-Jinnah") +
+          "</div>" +
+
+          '<div class="form-grid" style="margin-top:10px;">' +
+            typeaheadField("reporterName", "Reported by *", "Start typing to search the staff list…") +
+          "</div>" +
+
+          '<div class="form-field full" style="margin-top:14px;"><label>Type of unfair means (select any that apply)</label>' +
+            '<div class="offense-grid" id="offenseGrid">' + offenseChips + "</div>" +
+            '<input id="f_offenseOther" type="text" placeholder="Describe \'Other\'…" style="display:none; margin-top:8px;">' +
+          "</div>" +
+
+          '<div class="form-field full" style="margin-top:14px;"><label>Your recommended action (optional)</label>' +
+            '<select id="f_invigilatorAction"><option value="">— Select if applicable —</option>' + invigActionOpts + "</select>" +
+          "</div>" +
+
+          '<div class="form-field full" style="margin-top:14px;"><label>Incident description *</label>' +
+            '<textarea id="f_description" placeholder="What happened, what was recovered, and any statement from the student…" style="min-height:110px;"></textarea>' +
+          "</div>" +
+
+          '<div class="form-field full" style="margin-top:16px;"><label>Photo evidence — take a photo now or choose from gallery</label></div>' +
+          evidenceUploader("student", "Photo of student") +
+          evidenceUploader("paper", "Photo of answer script / paper") +
+          evidenceUploader("material", "Photo of unfair-means material") +
+
+          '<div class="drawer-footer">' +
+            '<button class="btn btn-outline" data-action="close-drawer">Cancel</button>' +
+            '<button class="btn btn-gold" id="submitReportBtn">File report</button>' +
+          "</div>" +
+        "</div>" +
+      "</div>"
+    );
+  }
+
+  function renderLightbox() {
+    return '<div class="lightbox" data-action="close-lightbox"><button class="lightbox-close" data-action="close-lightbox">&times;</button><img src="' + esc(state.lightboxUrl) + '" alt="Evidence"></div>';
+  }
+
+  // ---------------------------------------------------------------
+  // Official letters (initiation / closure) — rendered as a fixed-size
+  // A4 page, captured with html2canvas, then offered as a 4K PNG and
+  // as a single-page PDF built from that same capture.
+  // ---------------------------------------------------------------
+  function fmtLongDate(iso) {
+    if (!iso) return "____________";
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+    } catch (e) { return iso; }
+  }
+
+  function letterFooterHtml() {
+    return (
+      '<div class="letter-footer">' +
+        '<div class="school">Centre of Excellence (Boys), Sialkot</div>' +
+        '<div>Circular Road, Near Jinnah Stadium Overhead Bridge, Sialkot. Ph # 052-9250189</div>' +
+        '<div>Email: principal.coebslk@daanishschools.edu.pk — Website: www.daanishschools.edu.pk</div>' +
+      "</div>"
+    );
+  }
+
+  function letterHeadHtml() {
+    return (
+      '<div class="letter-head">' +
+        '<div class="letter-emblem">COE<br>SLK</div>' +
+        '<div class="letter-school-name">' +
+          '<div class="l1">CENTRE OF EXCELLENCE (B)</div>' +
+          '<div class="l2">Sialkot</div>' +
+        "</div>" +
+        '<div class="letter-emblem">UMC<br>Committee</div>' +
+      "</div>"
+    );
+  }
+
+  function buildInitiationLetterHtml(c) {
+    var memoNo = "COE/B/SLK/UMC-" + (c.caseCode || "").replace("UMC-", "");
+    var offense = (c.offenseTypes && c.offenseTypes.length) ? c.offenseTypes.join(", ") + (c.offenseOther ? " — " + c.offenseOther : "") : "Not specified at time of report.";
+
+    var html = '<div class="letter-page" id="letterCapture">';
+    html += letterHeadHtml();
+    html += '<div class="letter-meta-row"><span>Memo: <b>' + esc(memoNo) + "</b></span><span>Dated: <b>" + esc(fmtLongDate(c.reportedAt)) + "</b></span></div>";
+    html += '<div class="letter-title">Notice of Initiation — Unfair Means Case</div>';
+    html += '<div class="letter-subject">Subject: <b>INITIATION OF UNFAIR MEANS CASE — ' + esc((c.studentName || "").toUpperCase()) + "</b></div>";
+
+    html += '<div class="letter-body">';
+    html += "<p>This is to formally record that during the <b>" + esc(c.subject || "examination") + "</b> examination held on <b>" +
+      esc(fmtDateOnly(c.examDate)) + "</b> in <b>" + esc(c.room || "the examination hall") + "</b>, the following candidate was reported for suspected unfair means:</p>";
+    html += "<p><b>Student:</b> " + esc(c.studentName || "—") + " &nbsp; <b>Roll No.:</b> " + esc(c.rollNo || "—") +
+      " &nbsp; <b>Class:</b> " + esc(classLabel(c)) + "</p>";
+    html += "<p><b>Reported by:</b> " + esc(c.invigilatorName || "—") + "</p>";
+    html += "<p><b>Nature of alleged unfair means:</b> " + esc(offense) + "</p>";
+    html += "<p><b>Invigilator's account:</b> " + esc(c.description || "No further details recorded.") + "</p>";
+    if (c.invigilatorAction) {
+      html += "<p><b>Invigilator's on-the-spot recommendation:</b> " + esc(c.invigilatorAction) + "</p>";
+    }
+    html += "<p>In accordance with the Office Order constituting the Unfair Means Cases (UMC) Committee, this case " +
+      "(<b>Case No. " + esc(c.caseCode) + "</b>) is hereby placed on record and forwarded for formal inquiry. All evidence " +
+      "and statements are to be reviewed by the Committee and the matter processed in accordance with the prevailing " +
+      "examination rules and school policy.</p>";
+    html += "</div>";
+
+    html += '<div class="letter-sign-row">';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Reported by (Invigilator)<br>' + esc(c.invigilatorName || "") + "</div></div>";
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Received by — Controller<br>Secretary, UMC Committee</div></div>';
+    html += "</div>";
+
+    html += letterFooterHtml();
+    html += "</div>";
+    return html;
+  }
+
+  function buildClosureLetterHtml(c) {
+    var memoNo = "COE/B/SLK/UMC-" + (c.caseCode || "").replace("UMC-", "") + "-CLOSED";
+    var dec = c.decision || {};
+    var rec = c.recommendation || {};
+
+    var html = '<div class="letter-page" id="letterCapture">';
+    html += letterHeadHtml();
+    html += '<div class="letter-meta-row"><span>Memo: <b>' + esc(memoNo) + "</b></span><span>Dated: <b>" + esc(fmtLongDate(dec.at || c.closedAt)) + "</b></span></div>";
+    html += '<div class="letter-title">Notice of Case Closure — Unfair Means Case</div>';
+    html += '<div class="letter-subject">Subject: <b>CLOSURE OF UNFAIR MEANS CASE — ' + esc((c.studentName || "").toUpperCase()) + " — CASE NO. " + esc(c.caseCode) + "</b></div>";
+
+    html += '<div class="letter-body">';
+    html += "<p>This is to record the closure of Unfair Means Case No. <b>" + esc(c.caseCode) + "</b>, initiated on <b>" +
+      esc(fmtDateOnly(c.reportedAt)) + "</b> concerning <b>" + esc(c.studentName || "—") + "</b>, Roll No. " + esc(c.rollNo || "—") +
+      ", " + esc(classLabel(c)) + ", reported during the " + esc(c.subject || "examination") + " examination.</p>";
+
+    if (rec.text) {
+      html += "<p><b>Committee recommendation:</b> " + esc(rec.action || "") + " — " + esc(rec.text) +
+        " <i>(by " + esc(rec.by || "the Committee") + ", " + esc(fmtLongDate(rec.at)) + ")</i></p>";
+    }
+    html += "<p><b>Final decision:</b> " + esc(dec.text || "No decision text recorded.") + "</p>";
+    html += "<p><b>Decided by:</b> " + esc(dec.decidedBy || "—") + " &nbsp; <b>Date:</b> " + esc(fmtLongDate(dec.at)) + "</p>";
+    html += "<p>This case is accordingly closed and placed on permanent record in accordance with the prevailing examination rules and school policy.</p>";
+    html += "</div>";
+
+    html += '<div class="letter-sign-row">';
+    html += '<div class="letter-sign-block center-single"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
+    html += "</div>";
+
+    html += letterFooterHtml();
+    html += "</div>";
+    return html;
+  }
+
+  function renderLetterModal() {
+    var c = getCase(state.letterView.caseId);
+    if (!c) { state.letterView = null; return ""; }
+    var isInitiation = state.letterView.type === "initiation";
+    var letterHtml = isInitiation ? buildInitiationLetterHtml(c) : buildClosureLetterHtml(c);
+    var title = isInitiation ? "Initiation letter" : "Closure letter";
+
+    return (
+      '<div class="letter-modal-overlay" id="letterModalOverlay">' +
+        '<div class="letter-toolbar">' +
+          '<span class="letter-toolbar-title">' + esc(title) + " — " + esc(c.caseCode) + "</span>" +
+          '<button class="btn btn-gold btn-small" id="letterDownloadPng">Download PNG (4K)</button>' +
+          '<button class="btn btn-outline-light btn-small" id="letterDownloadPdf">Download PDF</button>' +
+          '<button class="btn btn-outline-light btn-small" data-action="close-letter">Close</button>' +
+        "</div>" +
+        '<div class="letter-scale-wrap" id="letterScaleWrap"><div id="letterScaleInner">' + letterHtml + "</div></div>" +
+      "</div>"
+    );
+  }
+
+  // On phones (and any window narrower than the fixed 794px A4 page),
+  // shrink the letter to fit on screen. IMPORTANT: the scale transform is
+  // applied to a WRAPPER (#letterScaleInner), never to #letterCapture
+  // itself — html2canvas measures the element it's given directly, so if
+  // the transform sat on #letterCapture, a capture triggered from a phone
+  // could come back at the shrunk on-screen size instead of full 794x1123
+  // resolution. Scaling a wrapper keeps #letterCapture untouched at all
+  // times; only its on-screen presentation changes.
+  function fitLetterToViewport() {
+    var inner = document.getElementById("letterScaleInner");
+    var wrap = document.getElementById("letterScaleWrap");
+    if (!inner || !wrap) return;
+    var available = window.innerWidth - 32; // side padding on .letter-modal-overlay
+    var scale = Math.min(1, available / 794);
+    inner.style.transform = scale < 1 ? "scale(" + scale + ")" : "";
+    inner.style.transformOrigin = "top left";
+    wrap.style.width = (794 * scale) + "px";
+    wrap.style.height = (1123 * scale) + "px";
+  }
+
+  var letterResizeHandler = null;
+
+  var letterCapturing = false;
+
+  async function captureLetterCanvas() {
+    var node = document.getElementById("letterCapture");
+    if (!node) return null;
+    if (typeof window.html2canvas !== "function") {
+      showToast("Letter export isn't available right now — the rendering library didn't load. Check your connection and reopen the letter.");
+      return null;
+    }
+    var targetWidth = 3840; // 4K
+    var scale = targetWidth / node.offsetWidth;
+    return await window.html2canvas(node, {
+      scale: scale,
+      backgroundColor: "#ffffff",
+      useCORS: true
+    });
+  }
+
+  async function downloadLetterPng(caseCode, kind) {
+    if (letterCapturing) return;
+    letterCapturing = true;
+    try {
+      var canvas = await captureLetterCanvas();
+      if (!canvas) return;
+      canvas.toBlob(async function (blob) {
+        if (!blob) { showToast("Could not generate the image."); return; }
+        var filename = caseCode + "-" + kind + "-letter.png";
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a"); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, "image/png");
+    } catch (e) {
+      console.error(e); showToast("Could not generate the letter image.");
+    } finally {
+      letterCapturing = false;
+    }
+  }
+
+  async function downloadLetterPdf(caseCode, kind) {
+    if (letterCapturing) return;
+    letterCapturing = true;
+    try {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        showToast("PDF export isn't available right now — the rendering library didn't load. Check your connection and reopen the letter.");
+        return;
+      }
+      var canvas = await captureLetterCanvas();
+      if (!canvas) return;
+      var pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
+      var pageWidth = pdf.internal.pageSize.getWidth();
+      var pageHeight = pdf.internal.pageSize.getHeight();
+      var imgData = canvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+      var blob = pdf.output("blob");
+      var filename = caseCode + "-" + kind + "-letter.pdf";
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a"); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e); showToast("Could not generate the PDF.");
+    } finally {
+      letterCapturing = false;
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // Rosters view
+  // ---------------------------------------------------------------
+  function buildRosterTableInner() {
+    var isStudents = state.rosterTab === "students";
+    var html = "";
+    if (isStudents) {
+      html += '<table class="roster-table"><thead><tr><th>Name</th><th>Roll No.</th><th>Class</th><th></th></tr></thead><tbody>';
+      var students = filteredStudents();
+      if (!students.length) html += '<tr><td colspan="4" style="color:var(--muted);">No students yet. Add one above, or use bulk import.</td></tr>';
+      students.forEach(function (s) {
+        html += '<tr><td>' + esc(s.name) + '</td><td>' + esc(s.rollNo || "—") + '</td><td>' + esc(classLabel(s)) + '</td>' +
+          '<td><button class="roster-delete" data-action="delete-student" data-id="' + s._id + '">Remove</button></td></tr>';
+      });
+      html += "</tbody></table>";
+    } else {
+      html += '<table class="roster-table"><thead><tr><th>Name</th><th>Role</th><th>Class teacher of</th><th></th></tr></thead><tbody>';
+      var teachers = filteredTeachers();
+      if (!teachers.length) html += '<tr><td colspan="4" style="color:var(--muted);">No staff yet. Add one above, or use bulk import.</td></tr>';
+      teachers.forEach(function (t) {
+        var ct = (t.classTeacherGrade && t.classTeacherSection) ? ("Grade " + t.classTeacherGrade + " · " + t.classTeacherSection) : "—";
+        html += '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.role || "—") + '</td><td>' + esc(ct) + '</td>' +
+          '<td><button class="roster-delete" data-action="delete-teacher" data-id="' + t._id + '">Remove</button></td></tr>';
+      });
+      html += "</tbody></table>";
+    }
+    return html;
+  }
+
+  function refreshRosterTable() {
+    var wrap = document.getElementById("rosterTableWrap");
+    if (wrap) wrap.innerHTML = buildRosterTableInner();
+  }
+
+  function renderRostersView() {
+    var isStudents = state.rosterTab === "students";
+    var html = '<div class="roster-shell">';
+
+    html += '<div class="roster-tabs">';
+    html += '<button class="roster-tab' + (isStudents ? " active" : "") + '" data-action="roster-tab" data-value="students">Students (' + state.students.length + ')</button>';
+    html += '<button class="roster-tab' + (!isStudents ? " active" : "") + '" data-action="roster-tab" data-value="teachers">Staff (' + state.teachers.length + ')</button>';
+    html += "</div>";
+
+    html += '<div class="roster-toolbar">';
+    html += '<input class="search-box" id="rosterSearchBox" type="text" placeholder="Search ' + (isStudents ? "students" : "staff") + '…" value="' + esc(state.rosterSearch) + '">';
+    html += '<button class="btn btn-outline btn-small" data-action="toggle-roster-add">' + (state.rosterAddOpen ? "Close" : "+ Add " + (isStudents ? "student" : "staff member")) + '</button>';
+    html += '<button class="btn btn-outline btn-small" data-action="toggle-roster-import">' + (state.rosterImportOpen ? "Close import" : "Bulk import") + '</button>';
+    html += "</div>";
+
+    if (state.rosterAddOpen) html += isStudents ? renderAddStudentForm() : renderAddTeacherForm();
+    if (state.rosterImportOpen) html += isStudents ? renderImportStudentsPanel() : renderImportTeachersPanel();
+
+    html += '<div class="roster-panel" id="rosterTableWrap">' + buildRosterTableInner() + "</div>";
+
+    html += '<div class="confidential-note" style="border-radius:10px;">These lists power the autocomplete in “New report” — pick a name there and the class/roll fields fill in automatically. This is an internal roster kept inside this register; it is not connected to any external school-management system.</div>';
+    html += "</div>";
+    return html;
+  }
+
+  function renderAddStudentForm() {
+    var opts = ["6", "7", "8", "9", "10"].map(function (g) { return '<option value="' + g + '">Grade ' + g + "</option>"; }).join("") + '<option value="other">Other</option>';
+    return (
+      '<div class="roster-panel">' +
+        '<div class="roster-panel-title">Add a student</div>' +
+        '<div class="form-grid">' +
+          '<div class="form-field"><label>Name *</label><input id="rs_name" type="text" placeholder="e.g. Ali Raza"></div>' +
+          '<div class="form-field"><label>Roll number</label><input id="rs_roll" type="text" placeholder="e.g. 23"></div>' +
+          '<div class="form-field"><label>Grade</label><select id="rs_grade">' + opts + "</select></div>" +
+          '<div class="form-field" id="rs_sectionWrap"><label>Section</label><select id="rs_section"></select></div>' +
+          '<div class="form-field" id="rs_customWrap" style="display:none;"><label>Class</label><input id="rs_custom" type="text" placeholder="e.g. O-Level II"></div>' +
+        "</div>" +
+        '<div style="margin-top:12px;"><button class="btn btn-gold btn-small" data-action="submit-add-student">Add student</button></div>' +
+      "</div>"
+    );
+  }
+
+  function renderAddTeacherForm() {
+    var roleOpts = TEACHER_ROLES.map(function (r) { return '<option value="' + esc(r) + '">' + esc(r) + "</option>"; }).join("");
+    var gradeOpts = ["", "6", "7", "8", "9", "10"].map(function (g) { return '<option value="' + g + '">' + (g ? "Grade " + g : "— none —") + "</option>"; }).join("");
+    return (
+      '<div class="roster-panel">' +
+        '<div class="roster-panel-title">Add a staff member</div>' +
+        '<div class="form-grid">' +
+          '<div class="form-field"><label>Name *</label><input id="rt_name" type="text" placeholder="e.g. Ms. Sana"></div>' +
+          '<div class="form-field"><label>Role</label><select id="rt_role">' + roleOpts + "</select></div>" +
+          '<div class="form-field"><label>Class teacher of — grade</label><select id="rt_ctgrade">' + gradeOpts + "</select></div>" +
+          '<div class="form-field"><label>Class teacher of — section</label><select id="rt_ctsection"><option value="">— none —</option></select></div>' +
+        "</div>" +
+        '<div class="field-hint" style="margin-top:6px;">Setting “class teacher of” shows their name automatically on that class\'s case files.</div>' +
+        '<div style="margin-top:12px;"><button class="btn btn-gold btn-small" data-action="submit-add-teacher">Add staff member</button></div>' +
+      "</div>"
+    );
+  }
+
+  function renderImportStudentsPanel() {
+    return (
+      '<div class="roster-panel">' +
+        '<div class="roster-panel-title">Bulk import students</div>' +
+        '<div class="import-hint">One student per line: <b>Name, Roll number, Grade, Section</b><br>Example: <code>Ali Raza, 23, 8, Jinnah</code> — paste directly from a spreadsheet column export.</div>' +
+        '<textarea class="import-textarea" id="importStudentsText" placeholder="Ali Raza, 23, 8, Jinnah&#10;Bilal Khan, 7, 7, Iqbal"></textarea>' +
+        '<div style="margin-top:10px;"><button class="btn btn-gold btn-small" data-action="submit-import-students">Import students</button></div>' +
+      "</div>"
+    );
+  }
+
+  function renderImportTeachersPanel() {
+    return (
+      '<div class="roster-panel">' +
+        '<div class="roster-panel-title">Bulk import staff</div>' +
+        '<div class="import-hint">One person per line: <b>Name, Role, Class-teacher grade, Class-teacher section</b> (last two optional)<br>Example: <code>Ms. Sana, Invigilator</code> or <code>Mr. Adeel, Class Teacher, 8, Jinnah</code></div>' +
+        '<textarea class="import-textarea" id="importTeachersText" placeholder="Ms. Sana, Invigilator&#10;Mr. Adeel, Class Teacher, 8, Jinnah"></textarea>' +
+        '<div style="margin-top:10px;"><button class="btn btn-gold btn-small" data-action="submit-import-teachers">Import staff</button></div>' +
+      "</div>"
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Typeahead (student / reporter) — targeted DOM updates only
+  // ---------------------------------------------------------------
+  function wireTypeahead(fieldId, dataset, getLabel, getMeta, onPick) {
+    var input = document.getElementById("f_" + fieldId);
+    var box = document.getElementById("ta_" + fieldId);
+    var hiddenId = document.getElementById("f_" + fieldId + "Id");
+    if (!input || !box) return;
+
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      if (hiddenId) hiddenId.value = "";
+      if (!q) { box.style.display = "none"; box.innerHTML = ""; return; }
+      var matches = dataset().filter(function (item) {
+        return getLabel(item).toLowerCase().indexOf(q) > -1;
+      }).slice(0, 7);
+      if (!matches.length) {
+        box.innerHTML = '<div class="typeahead-empty">No match — you can still type a name manually.</div>';
+        box.style.display = "block";
+        return;
+      }
+      box.innerHTML = matches.map(function (item, i) {
+        return '<div class="typeahead-item" data-idx="' + i + '">' + esc(getLabel(item)) +
+          '<div class="ta-meta">' + esc(getMeta(item)) + "</div></div>";
+      }).join("");
+      box.style.display = "block";
+      Array.prototype.forEach.call(box.querySelectorAll(".typeahead-item"), function (el, i) {
+        el.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          onPick(matches[i]);
+          box.style.display = "none";
+        });
+      });
+    });
+    input.addEventListener("focus", function () {
+      if (box.innerHTML) box.style.display = "block";
+    });
+  }
+
+  // Click anywhere outside an open typeahead box closes it — registered once.
+  function installGlobalTypeaheadCloser() {
+    document.addEventListener("mousedown", function (e) {
+      Array.prototype.forEach.call(document.querySelectorAll(".typeahead-suggestions"), function (box) {
+        var wrap = box.closest(".typeahead-wrap");
+        if (wrap && !wrap.contains(e.target)) box.style.display = "none";
+      });
+    });
+  }
+
+  function setupStudentTypeahead() {
+    wireTypeahead(
+      "studentName",
+      function () { return state.students; },
+      function (s) { return s.name; },
+      function (s) { return "Roll " + (s.rollNo || "—") + " · " + classLabel(s); },
+      function (s) {
+        document.getElementById("f_studentName").value = s.name;
+        document.getElementById("f_studentNameId").value = s._id;
+        draftSelectedStudentId = s._id;
+        var rollEl = document.getElementById("f_rollNo"); if (rollEl) rollEl.value = s.rollNo || "";
+        var gradeEl = document.getElementById("f_grade");
+        if (gradeEl) { gradeEl.value = s.grade || "6"; populateDrawerDynamic(); }
+        setTimeout(function () {
+          var sectionEl = document.getElementById("f_section");
+          if (sectionEl && s.section) sectionEl.value = s.section;
+          var customEl = document.getElementById("f_customClass");
+          if (customEl && s.customClass) customEl.value = s.customClass;
+        }, 0);
+      }
+    );
+  }
+
+  function setupReporterTypeahead() {
+    wireTypeahead(
+      "reporterName",
+      function () { return state.teachers; },
+      function (t) { return t.name; },
+      function (t) { return t.role || "Staff"; },
+      function (t) {
+        document.getElementById("f_reporterName").value = t.name;
+        document.getElementById("f_reporterNameId").value = t._id;
+        draftSelectedReporterId = t._id;
+      }
+    );
+  }
+
+  // ---------------------------------------------------------------
+  // Events
+  // ---------------------------------------------------------------
+  function bindEvents() {
+    var roleSelect = document.getElementById("roleSelect");
+    if (roleSelect) roleSelect.addEventListener("change", function () {
+      state.role = roleSelect.value; localStorage.setItem("umc_role", state.role); render();
+    });
+
+    var newCaseBtn = document.getElementById("newCaseBtn");
+    if (newCaseBtn) newCaseBtn.addEventListener("click", function () {
+      state.drawerOpen = true; state.openAction = null; render();
+    });
+
+    var searchBox = document.getElementById("searchBox");
+    if (searchBox) searchBox.addEventListener("input", function () {
+      state.search = searchBox.value; refreshRailList();
+    });
+
+    var rosterSearchBox = document.getElementById("rosterSearchBox");
+    if (rosterSearchBox) rosterSearchBox.addEventListener("input", function () {
+      state.rosterSearch = rosterSearchBox.value;
+      refreshRosterTable();
+    });
+
+    var exportBtn = document.getElementById("exportCsvBtn");
+    if (exportBtn) exportBtn.addEventListener("click", exportCsv);
+
+    Array.prototype.forEach.call(document.querySelectorAll(".case-evidence-input"), function (inp) {
+      inp.addEventListener("change", function () {
+        if (inp.files && inp.files[0] && state.selectedId) uploadCaseEvidence(state.selectedId, inp.files[0], inp.getAttribute("data-category"));
+      });
+    });
+
+    var addNoteBtn = document.getElementById("addNoteBtn");
+    if (addNoteBtn) addNoteBtn.addEventListener("click", function () {
+      var input = document.getElementById("noteInput");
+      var text = input ? input.value.trim() : "";
+      if (!text) return;
+      addNote(state.selectedId, text, "note");
+    });
+
+    // Roster add-forms: grade -> section cascading
+    var rsGrade = document.getElementById("rs_grade");
+    if (rsGrade) {
+      rsGrade.addEventListener("change", populateRosterSectionField);
+      populateRosterSectionField();
+    }
+    var rtCtGrade = document.getElementById("rt_ctgrade");
+    if (rtCtGrade) {
+      rtCtGrade.addEventListener("change", populateTeacherSectionField);
+      populateTeacherSectionField();
+    }
+  }
+
+  // Bound ONCE, at the moment the drawer is mounted (see syncOverlay) — never
+  // re-run while it stays open, so a live data update elsewhere can't touch
+  // these listeners or the values sitting in the drawer's inputs.
+  function bindDrawerEvents() {
+    Array.prototype.forEach.call(document.querySelectorAll(".draft-evidence-input"), function (inp) {
+      inp.addEventListener("change", function () {
+        if (inp.files && inp.files[0]) uploadDraftEvidence(inp.files[0], inp.getAttribute("data-category"));
+        inp.value = "";
+      });
+    });
+
+    var submitReportBtn = document.getElementById("submitReportBtn");
+    if (submitReportBtn) submitReportBtn.addEventListener("click", handleSubmitReport);
+
+    var gradeSel = document.getElementById("f_grade");
+    if (gradeSel) gradeSel.addEventListener("change", populateDrawerDynamic);
+
+    setupStudentTypeahead();
+    setupReporterTypeahead();
+  }
+
+  // Bound ONCE, at the moment the letter modal is mounted.
+  function bindLetterEvents() {
+    var c = state.letterView ? getCase(state.letterView.caseId) : null;
+    if (!c) return;
+    var kind = state.letterView.type;
+    var pngBtn = document.getElementById("letterDownloadPng");
+    var pdfBtn = document.getElementById("letterDownloadPdf");
+    if (pngBtn) pngBtn.addEventListener("click", function () { downloadLetterPng(c.caseCode, kind); });
+    if (pdfBtn) pdfBtn.addEventListener("click", function () { downloadLetterPdf(c.caseCode, kind); });
+
+    fitLetterToViewport();
+    letterResizeHandler = fitLetterToViewport;
+    window.addEventListener("resize", letterResizeHandler);
+    window.addEventListener("orientationchange", letterResizeHandler);
+  }
+
+  function populateRosterSectionField() {
+    var gradeEl = document.getElementById("rs_grade");
+    var sectionWrap = document.getElementById("rs_sectionWrap");
+    var sectionEl = document.getElementById("rs_section");
+    var customWrap = document.getElementById("rs_customWrap");
+    if (!gradeEl || !sectionEl) return;
+    var grade = gradeEl.value;
+    if (grade === "other") {
+      sectionWrap.style.display = "none";
+      customWrap.style.display = "";
+    } else {
+      sectionWrap.style.display = "";
+      customWrap.style.display = "none";
+      sectionEl.innerHTML = (SECTIONS_BY_GRADE[grade] || []).map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("");
+    }
+  }
+
+  function populateTeacherSectionField() {
+    var gradeEl = document.getElementById("rt_ctgrade");
+    var sectionEl = document.getElementById("rt_ctsection");
+    if (!gradeEl || !sectionEl) return;
+    var grade = gradeEl.value;
+    if (!grade) { sectionEl.innerHTML = '<option value="">— none —</option>'; return; }
+    sectionEl.innerHTML = '<option value="">— none —</option>' + (SECTIONS_BY_GRADE[grade] || []).map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("");
+  }
+
+  function onRootClick(e) {
+    // The overlay backdrop closes the drawer, but ONLY on a direct hit on the
+    // backdrop itself (e.target === the .overlay div) — never for a click on
+    // anything inside it. This must be checked before the closest()-based
+    // dispatch below: any element inside the drawer that has its own
+    // data-action (a chip, a button) should fire THAT action, and anything
+    // else inside the drawer (a plain input, a label, empty padding) should
+    // do nothing at all rather than closing the form the person is filling in.
+    if (e.target.classList && e.target.classList.contains("overlay")) {
+      state.drawerOpen = false; render(); return;
+    }
+
+    var el = e.target.closest("[data-action]");
+    if (!el) return;
+    var action = el.getAttribute("data-action");
+
+    switch (action) {
+      case "nav-view":
+        state.view = el.getAttribute("data-value");
+        state.rosterAddOpen = false; state.rosterImportOpen = false;
+        render();
+        break;
+      case "roster-tab":
+        state.rosterTab = el.getAttribute("data-value");
+        state.rosterAddOpen = false; state.rosterImportOpen = false;
+        render();
+        break;
+      case "toggle-roster-add":
+        state.rosterAddOpen = !state.rosterAddOpen; state.rosterImportOpen = false;
+        render();
+        break;
+      case "toggle-roster-import":
+        state.rosterImportOpen = !state.rosterImportOpen; state.rosterAddOpen = false;
+        render();
+        break;
+      case "submit-add-student": {
+        var name = valueOf("rs_name");
+        if (!name) { showToast("Please enter the student's name."); return; }
+        var grade = valueOf("rs_grade") || "6";
+        addStudent({
+          name: name, rollNo: valueOf("rs_roll"), grade: grade,
+          section: grade === "other" ? "" : valueOf("rs_section"),
+          customClass: grade === "other" ? valueOf("rs_custom") : ""
+        });
+        state.rosterAddOpen = false;
+        showToast("Student added.");
+        break;
+      }
+      case "submit-add-teacher": {
+        var tname = valueOf("rt_name");
+        if (!tname) { showToast("Please enter a name."); return; }
+        addTeacher({
+          name: tname, role: valueOf("rt_role") || "Invigilator",
+          classTeacherGrade: valueOf("rt_ctgrade"), classTeacherSection: valueOf("rt_ctsection")
+        });
+        state.rosterAddOpen = false;
+        showToast("Staff member added.");
+        break;
+      }
+      case "submit-import-students": {
+        var stxt = valueOf("importStudentsText");
+        bulkImportStudents(stxt);
+        break;
+      }
+      case "submit-import-teachers": {
+        var ttxt = valueOf("importTeachersText");
+        bulkImportTeachers(ttxt);
+        break;
+      }
+      case "delete-student":
+        deleteStudent(el.getAttribute("data-id"));
+        break;
+      case "delete-teacher":
+        deleteTeacher(el.getAttribute("data-id"));
+        break;
+      case "toggle-offense": {
+        el.classList.toggle("active");
+        var otherChip = Array.prototype.find.call(document.querySelectorAll(".offense-chip"), function (c) { return c.getAttribute("data-value") === "Other"; });
+        var otherInput = document.getElementById("f_offenseOther");
+        if (otherInput && otherChip) otherInput.style.display = otherChip.classList.contains("active") ? "" : "none";
+        break;
+      }
+      case "remove-draft-evidence":
+        removeDraftEvidence(el.getAttribute("data-cat"), el.getAttribute("data-id"), el);
+        break;
+      case "filter-status": state.filterStatus = el.getAttribute("data-value"); render(); break;
+      case "filter-grade": state.filterGrade = el.getAttribute("data-value"); render(); break;
+      case "select-case":
+        state.selectedId = el.getAttribute("data-id"); state.mobileDetailOpen = true; state.openAction = null; render();
+        break;
+      case "back-to-list": state.mobileDetailOpen = false; render(); break;
+      case "close-drawer": state.drawerOpen = false; render(); break;
+      case "close-lightbox": state.lightboxUrl = null; render(); break;
+      case "view-evidence": state.lightboxUrl = el.getAttribute("data-url"); render(); break;
+      case "open-forward": state.openAction = "forward"; state.openActionId = el.getAttribute("data-id"); render(); break;
+      case "open-recommend": state.openAction = "recommend"; state.openActionId = el.getAttribute("data-id"); render(); break;
+      case "open-decide": state.openAction = "decide"; state.openActionId = el.getAttribute("data-id"); render(); break;
+      case "cancel-inline": state.openAction = null; state.openActionId = null; render(); break;
+      case "submit-forward": {
+        var note = valueOf("forwardNote");
+        forwardToCommittee(el.getAttribute("data-id"), note);
+        state.openAction = null;
+        break;
+      }
+      case "submit-recommend": {
+        var text = valueOf("recText"); var actionVal = valueOf("recAction");
+        if (!text) { showToast("Please add recommendation notes."); return; }
+        sendRecommendation(el.getAttribute("data-id"), text, actionVal);
+        state.openAction = null;
+        break;
+      }
+      case "submit-decide": {
+        var dText = valueOf("decText"); var dBy = valueOf("decBy");
+        if (!dText) { showToast("Please record the decision."); return; }
+        recordDecision(el.getAttribute("data-id"), dText, dBy);
+        state.openAction = null;
+        break;
+      }
+      case "reopen-case": reopenCase(el.getAttribute("data-id")); break;
+      case "print-case": window.print(); break;
+      case "open-letter":
+        state.letterView = { type: el.getAttribute("data-type"), caseId: el.getAttribute("data-id") };
+        render();
+        break;
+      case "close-letter":
+        state.letterView = null;
+        render();
+        break;
+    }
+  }
+
+  function valueOf(id) {
+    var el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  }
+
+  function populateDrawerDynamic() {
+    var gradeSel = document.getElementById("f_grade");
+    var sectionSel = document.getElementById("f_section");
+    var customWrap = document.querySelector('[data-other-class-field="1"]');
+    if (!gradeSel || !sectionSel) return;
+    var grade = gradeSel.value || "6";
+    var sections = SECTIONS_BY_GRADE[grade] || [];
+    sectionSel.innerHTML = sections.map(function (s) { return '<option value="' + esc(s) + '">' + esc(s) + "</option>"; }).join("") || '<option value="">—</option>';
+    sectionSel.parentElement.style.display = grade === "other" ? "none" : "";
+    if (customWrap) customWrap.style.display = grade === "other" ? "" : "none";
+  }
+
+  function handleSubmitReport() {
+    var studentName = valueOf("f_studentName");
+    var invigilatorName = valueOf("f_reporterName");
+    var description = valueOf("f_description");
+    if (!studentName) { showToast("Please enter the student's name."); return; }
+    if (!invigilatorName) { showToast("Please enter who is reporting this."); return; }
+    if (!description) { showToast("Please describe the incident."); return; }
+
+    var grade = valueOf("f_grade") || "6";
+    var offenseTypes = Array.prototype.map.call(document.querySelectorAll(".offense-chip.active"), function (c) { return c.getAttribute("data-value"); });
+
+    var payload = {
+      studentId: draftSelectedStudentId,
+      studentName: studentName,
+      rollNo: valueOf("f_rollNo"),
+      grade: grade,
+      section: grade === "other" ? "" : valueOf("f_section"),
+      customClass: grade === "other" ? valueOf("f_customClass") : "",
+      subject: valueOf("f_subject"),
+      examDate: valueOf("f_examDate"),
+      room: valueOf("f_room"),
+      reporterId: draftSelectedReporterId,
+      invigilatorName: invigilatorName,
+      offenseTypes: offenseTypes,
+      offenseOther: offenseTypes.indexOf("Other") > -1 ? valueOf("f_offenseOther") : "",
+      invigilatorAction: valueOf("f_invigilatorAction"),
+      description: description
+    };
+    state.myName = invigilatorName;
+    localStorage.setItem("umc_name", invigilatorName);
+    createCase(payload);
+  }
+
+  // ---------------------------------------------------------------
+  // Boot
+  // ---------------------------------------------------------------
+  // Bound to `document`, not `root` — the drawer/lightbox live in
+  // #overlayLayer, a sibling of #app, so a listener on `root` alone would
+  // never see clicks inside them.
+  document.addEventListener("click", onRootClick);
+  installGlobalTypeaheadCloser();
+  render();
+  initCapabilities();
+})();
+
+</script>
+</body>
+</html>
