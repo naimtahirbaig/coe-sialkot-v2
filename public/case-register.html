@@ -20,12 +20,21 @@
 
     --status-reported: #C2542E;
     --status-reported-bg: #FBEAE3;
-    --status-review: #35688C;
-    --status-review-bg: #E6EEF4;
-    --status-recommended: #6B4A8A;
-    --status-recommended-bg: #EFE8F4;
+    --status-controller: #2E6FB2;
+    --status-controller-bg: #E4EFFA;
+    --status-coordinator: #0E8F8A;
+    --status-coordinator-bg: #DEF4F2;
+    --status-senior: #7B4FA6;
+    --status-senior-bg: #F1E9F7;
+    --status-principal: #B8860B;
+    --status-principal-bg: #FBF2DC;
     --status-closed: #1E8A78;
     --status-closed-bg: #E2F2EF;
+    /* legacy aliases kept so nothing else in this file needs renaming */
+    --status-review: #2E6FB2;
+    --status-review-bg: #E4EFFA;
+    --status-recommended: #7B4FA6;
+    --status-recommended-bg: #F1E9F7;
 
     --radius-card: 10px;
     --radius-tag: 4px;
@@ -125,10 +134,11 @@
     gap: 6px;
   }
   .btn-gold {
-    background: var(--gold);
+    background: linear-gradient(155deg, var(--gold) 0%, #B5811F 100%);
     color: #241804;
+    box-shadow: 0 1px 3px rgba(184,134,11,0.35);
   }
-  .btn-gold:hover { background: var(--gold-soft); }
+  .btn-gold:hover { background: var(--gold-soft); box-shadow: 0 2px 6px rgba(184,134,11,0.45); }
   .btn-outline {
     background: transparent;
     border: 1px solid var(--line);
@@ -157,10 +167,17 @@
     min-width: 130px;
     padding: 14px 20px;
     border-right: 1px solid var(--line);
+    border-top: 3px solid transparent;
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
+  .tally-item[data-status="reported"] { border-top-color: var(--status-reported); }
+  .tally-item[data-status="controller_review"] { border-top-color: var(--status-controller); }
+  .tally-item[data-status="coordinator_review"] { border-top-color: var(--status-coordinator); }
+  .tally-item[data-status="senior_review"] { border-top-color: var(--status-senior); }
+  .tally-item[data-status="principal_review"] { border-top-color: var(--status-principal); }
+  .tally-item[data-status="closed"] { border-top-color: var(--status-closed); }
   .tally-item:last-child { border-right: none; }
   .tally-num {
     font-family: var(--serif);
@@ -173,8 +190,10 @@
     color: var(--muted);
   }
   .tally-item[data-status="reported"] .tally-num { color: var(--status-reported); }
-  .tally-item[data-status="under_review"] .tally-num { color: var(--status-review); }
-  .tally-item[data-status="recommended"] .tally-num { color: var(--status-recommended); }
+  .tally-item[data-status="controller_review"] .tally-num { color: var(--status-controller); }
+  .tally-item[data-status="coordinator_review"] .tally-num { color: var(--status-coordinator); }
+  .tally-item[data-status="senior_review"] .tally-num { color: var(--status-senior); }
+  .tally-item[data-status="principal_review"] .tally-num { color: var(--status-principal); }
   .tally-item[data-status="closed"] .tally-num { color: var(--status-closed); }
   .tally-item[data-status="total"] .tally-num { color: var(--navy); }
   .tally-item { position: relative; }
@@ -246,15 +265,24 @@
     overflow-y: auto;
   }
   .case-row {
-    padding: 12px 18px;
+    padding: 12px 18px 12px 15px;
     border-bottom: 1px solid var(--line);
+    border-left: 3px solid transparent;
     cursor: pointer;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    transition: background 0.12s ease, border-color 0.12s ease;
   }
   .case-row:hover { background: var(--paper); }
-  .case-row.active { background: var(--paper-dim); border-left: 3px solid var(--gold); padding-left: 15px; }
+  .case-row.active { background: var(--paper-dim); }
+  .case-row[data-status="reported"] { border-left-color: var(--status-reported); }
+  .case-row[data-status="controller_review"] { border-left-color: var(--status-controller); }
+  .case-row[data-status="coordinator_review"] { border-left-color: var(--status-coordinator); }
+  .case-row[data-status="senior_review"] { border-left-color: var(--status-senior); }
+  .case-row[data-status="principal_review"] { border-left-color: var(--status-principal); }
+  .case-row[data-status="closed"] { border-left-color: var(--status-closed); }
+  .case-row.active { border-left-width: 4px; }
   .case-row-top {
     display: flex;
     justify-content: space-between;
@@ -302,10 +330,14 @@
   }
   .status-tag[data-status="reported"] { background: var(--status-reported-bg); color: var(--status-reported); }
   .status-tag[data-status="reported"]::before { background: var(--status-reported); }
-  .status-tag[data-status="under_review"] { background: var(--status-review-bg); color: var(--status-review); }
-  .status-tag[data-status="under_review"]::before { background: var(--status-review); }
-  .status-tag[data-status="recommended"] { background: var(--status-recommended-bg); color: var(--status-recommended); }
-  .status-tag[data-status="recommended"]::before { background: var(--status-recommended); }
+  .status-tag[data-status="controller_review"] { background: var(--status-controller-bg); color: var(--status-controller); }
+  .status-tag[data-status="controller_review"]::before { background: var(--status-controller); }
+  .status-tag[data-status="coordinator_review"] { background: var(--status-coordinator-bg); color: var(--status-coordinator); }
+  .status-tag[data-status="coordinator_review"]::before { background: var(--status-coordinator); }
+  .status-tag[data-status="senior_review"] { background: var(--status-senior-bg); color: var(--status-senior); }
+  .status-tag[data-status="senior_review"]::before { background: var(--status-senior); }
+  .status-tag[data-status="principal_review"] { background: var(--status-principal-bg); color: var(--status-principal); }
+  .status-tag[data-status="principal_review"]::before { background: var(--status-principal); }
   .status-tag[data-status="closed"] { background: var(--status-closed-bg); color: var(--status-closed); }
   .status-tag[data-status="closed"]::before { background: var(--status-closed); }
 
@@ -738,6 +770,22 @@
     border-color: var(--navy);
   }
 
+  /* ---------------- Quick-pick notes ---------------- */
+  .quick-notes { margin-bottom: 10px; }
+  .quick-notes-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+  .quick-note-chip {
+    display: inline-block;
+    border: 1px solid var(--gold);
+    background: var(--gold-bg, #FBF2DC);
+    color: var(--navy);
+    border-radius: 14px;
+    padding: 5px 11px;
+    font-size: 12px;
+    margin: 0 6px 6px 0;
+    cursor: pointer;
+  }
+  .quick-note-chip:hover { background: var(--gold); color: #fff; }
+
   /* ---------------- Evidence categories ---------------- */
   .evidence-category { margin-bottom: 16px; }
   .evidence-category-title {
@@ -907,15 +955,16 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
+    border-top: 6px solid #16233F;
   }
   .letter-head {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 22px;
-    border-bottom: 3px double #1a1a1a;
+    border-bottom: 3px double #16233F;
     padding-bottom: 14px;
-    margin-bottom: 22px;
+    margin-bottom: 4px;
   }
   .letter-emblem {
     width: 58px;
@@ -936,6 +985,11 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+  }
+  .letter-head-accent {
+    height: 3px;
+    background: linear-gradient(90deg, #16233F 0%, #C9972B 50%, #16233F 100%);
+    margin-bottom: 18px;
   }
   .letter-evidence-row {
     display: flex;
@@ -961,6 +1015,7 @@
     font-size: 21px;
     font-weight: 700;
     letter-spacing: 0.5px;
+    color: #16233F;
   }
   .letter-school-name .l2 {
     font-size: 15px;
@@ -974,10 +1029,12 @@
   }
   .letter-title {
     text-align: center;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
-    text-decoration: underline;
+    color: #16233F;
+    padding-bottom: 8px;
     margin-bottom: 16px;
+    border-bottom: 2px solid #C9972B;
   }
   .letter-subject {
     font-size: 13.5px;
@@ -1073,9 +1130,96 @@
 
   var STATUS_LABEL = {
     reported: "Reported",
-    under_review: "Under review",
-    recommended: "Recommendation sent",
+    controller_review: "With Controller",
+    coordinator_review: "With Class Coordinator",
+    senior_review: "With Senior Coordinator",
+    principal_review: "With Principal",
     closed: "Closed"
+  };
+
+  // Fixed review chain. Each case is routed automatically to the named
+  // person for its grade — no manual "pick who to send it to" step.
+  var CONTROLLER_NAME = "Shahid Ali";
+  var CLASS_COORDINATORS = { "6": "Kh. Aleem Zakria", "7": "Ahmed Raza", "8": "Altaf Kasana" };
+  var SENIOR_COORDINATOR_LOWER = "Dr. Naim Tahir Baig"; // grades 6–8
+  var SENIOR_COORDINATOR_UPPER = "Aqeel Iftikhar Awan";  // grades 9–10
+
+  function classCoordinatorFor(grade) {
+    return CLASS_COORDINATORS[grade] || "Class Coordinator";
+  }
+  function seniorCoordinatorFor(grade) {
+    var g = parseInt(grade, 10);
+    return (g >= 9) ? SENIOR_COORDINATOR_UPPER : SENIOR_COORDINATOR_LOWER;
+  }
+
+  // The five-step chain: Invigilator (files) → Controller → Class
+  // Coordinator → Senior Coordinator (decision) → Principal (rectifies).
+  // Keyed by the case's CURRENT status; describes the action that moves
+  // it to the next one.
+  var CASE_CHAIN = {
+    reported: {
+      next: "controller_review",
+      tag: "controller-forward",
+      buttonLabel: function () { return "Send to Controller — " + CONTROLLER_NAME; },
+      noteLabel: "Note for the Controller (optional)"
+    },
+    controller_review: {
+      next: "coordinator_review",
+      tag: "coordinator-forward",
+      buttonLabel: function (c) { return "Refer to Class Coordinator — " + classCoordinatorFor(c.grade); },
+      noteLabel: "Controller's note (" + CONTROLLER_NAME + ")"
+    },
+    coordinator_review: {
+      next: "senior_review",
+      tag: "senior-forward",
+      buttonLabel: function (c) { return "Refer to Senior Coordinator — " + seniorCoordinatorFor(c.grade); },
+      noteLabel: "Class Coordinator's note"
+    },
+    senior_review: {
+      next: "principal_review",
+      tag: "senior-decision",
+      isDecision: true,
+      buttonLabel: function () { return "Record decision & refer to Principal"; },
+      noteLabel: "Decision"
+    },
+    principal_review: {
+      next: "closed",
+      tag: "principal-close",
+      setsClosedAt: true,
+      buttonLabel: function () { return "Close case (rectified) — Principal"; },
+      noteLabel: "Principal's rectification note (optional)"
+    }
+  };
+
+  // A short bank of ready-made notes for each stage, so staff can tap
+  // one instead of typing from scratch (still editable afterwards).
+  var DEFAULT_NOTES = {
+    "controller-forward": [
+      "Reviewed the invigilator's report — details appear consistent. Forwarding for the class coordinator's review.",
+      "Spoke with the invigilator to confirm the details before forwarding."
+    ],
+    "coordinator-forward": [
+      "Reviewed the case with the student. Forwarding to the senior coordinator with a recommendation for review.",
+      "Student's explanation noted. Referring for a decision."
+    ],
+    "senior-forward": [
+      "Case reviewed in full. Referring to the senior coordinator for a decision.",
+      "Discussed with the class coordinator — recommend proceeding to a decision."
+    ],
+    "senior-decision": [
+      "Case reviewed. Unfair means confirmed — recommend action per policy.",
+      "Case reviewed. Evidence inconclusive — recommend no further action.",
+      "First offense — recommend a warning and counselling."
+    ],
+    "principal-close": [
+      "Decision implemented and communicated to the student and parents. Case closed.",
+      "Reviewed and rectified per the recommended decision."
+    ],
+    "note": [
+      "Parent contacted and informed.",
+      "Student statement recorded.",
+      "Awaiting further information before proceeding."
+    ]
   };
 
   var ACTION_OPTIONS = [
@@ -1481,46 +1625,43 @@
     catch (e) { console.error(e); showToast("Could not add the note."); }
   }
 
-  async function forwardToCommittee(caseId, note) {
-    var by = state.myName || "Controller";
-    try {
-      await patchCase(caseId, {
-        status: "under_review",
-        forwarded: { by: by, at: new Date().toISOString(), note: note || "" }
-      });
-      if (note) await addNote(caseId, note, "forward");
-      showToast("Case forwarded to the committee.");
-      render();
-    } catch (e) { console.error(e); showToast("Could not forward the case."); }
-  }
+  var AUTHOR_BY_STATUS = {
+    reported: function (c) { return state.myName || c.invigilatorName || "Invigilator"; },
+    controller_review: function () { return CONTROLLER_NAME; },
+    coordinator_review: function (c) { return classCoordinatorFor(c.grade); },
+    principal_review: function () { return "Principal"; }
+  };
 
-  async function sendRecommendation(caseId, text, action) {
-    var by = state.myName || "Committee";
+  // Moves a case one step along the fixed review chain (see CASE_CHAIN),
+  // logging whatever note was entered under the outgoing stage's tag.
+  async function advanceCase(caseId, noteText, decisionFields) {
+    var c = getCase(caseId);
+    var step = c && CASE_CHAIN[c.status];
+    if (!c || !step) return;
+    var patch = { status: step.next };
+    if (step.isDecision) {
+      patch.decision = decisionFields;
+    } else {
+      var notes = (c.notes || []).slice();
+      if (noteText) {
+        var authorFn = AUTHOR_BY_STATUS[c.status];
+        notes.push({ text: noteText, author: authorFn ? authorFn(c) : (state.myName || "Staff"), tag: step.tag, at: new Date().toISOString() });
+      }
+      patch.notes = notes;
+    }
+    if (step.setsClosedAt) patch.closedAt = new Date().toISOString();
     try {
-      await patchCase(caseId, {
-        status: "recommended",
-        recommendation: { text: text, action: action, by: by, at: new Date().toISOString() }
-      });
-      showToast("Recommendation recorded.");
+      await patchCase(caseId, patch);
+      state.openAction = null;
+      state.openActionId = null;
+      showToast("Case moved to " + (STATUS_LABEL[step.next] || step.next) + ".");
       render();
-    } catch (e) { console.error(e); showToast("Could not save the recommendation."); }
-  }
-
-  async function recordDecision(caseId, text, decidedBy) {
-    try {
-      await patchCase(caseId, {
-        status: "closed",
-        decision: { text: text, decidedBy: decidedBy || "Principal", at: new Date().toISOString() },
-        closedAt: new Date().toISOString()
-      });
-      showToast("Decision recorded. Case closed.");
-      render();
-    } catch (e) { console.error(e); showToast("Could not record the decision."); }
+    } catch (e) { console.error(e); showToast(e.message || "Could not update the case."); }
   }
 
   async function reopenCase(caseId) {
     try {
-      await patchCase(caseId, { status: "under_review" });
+      await patchCase(caseId, { status: "senior_review" });
       await addNote(caseId, "Case reopened for further review.", "reopen");
       showToast("Case reopened.");
       render();
@@ -1531,8 +1672,14 @@
     var form = new FormData();
     form.append("file", file);
     form.append("category", category);
-    var res = await fetch(API_BASE + "/upload", { method: "POST", body: form });
-    if (!res.ok) throw new Error("Upload failed (" + res.status + ")");
+    var headers = authToken ? { Authorization: "Bearer " + authToken } : {};
+    var res = await fetch(API_BASE + "/upload", { method: "POST", headers: headers, body: form });
+    if (res.status === 401) { logout(); throw new Error("Session expired. Please log in again."); }
+    if (!res.ok) {
+      var msg = "Upload failed (" + res.status + ")";
+      try { var j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
+      throw new Error(msg);
+    }
     return res.json(); // { url, path }
   }
 
@@ -1551,7 +1698,7 @@
       var patch = {}; patch[apiField] = urls;
       await patchCase(caseId, patch);
       showToast("Evidence attached.");
-    } catch (e) { console.error(e); showToast("Could not upload evidence."); }
+    } catch (e) { console.error(e); showToast(e && e.message ? e.message : "Could not upload evidence."); }
     finally { state.uploading = false; render(); }
   }
 
@@ -1573,7 +1720,7 @@
           'style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#B23A5B;color:#fff;border:2px solid #fff;font-size:12px;line-height:1;cursor:pointer;">×</button>';
         container.insertBefore(span, container.lastElementChild);
       }
-    } catch (e) { console.error(e); showToast("Could not upload evidence."); }
+    } catch (e) { console.error(e); showToast(e && e.message ? e.message : "Could not upload evidence."); }
   }
 
   function removeDraftEvidence(category, url, btnEl) {
@@ -1592,7 +1739,7 @@
     var rows = [[
       "Case code", "Student", "Roll No", "Class", "Subject", "Exam date", "Room",
       "Reported by", "Reported at", "Offense types", "Invigilator recommended action",
-      "Status", "Committee recommendation", "Final decision"
+      "Status", "Decision", "Decided by"
     ]];
     filteredCases().forEach(function (c) {
       rows.push([
@@ -1600,8 +1747,8 @@
         c.invigilatorName, fmtDate(c.reportedAt),
         (c.offenseTypes || []).join("; "), c.invigilatorAction || "",
         STATUS_LABEL[c.status] || c.status,
-        c.recommendation ? (c.recommendation.action + " — " + c.recommendation.text) : "",
-        c.decision ? c.decision.text : ""
+        c.decision ? ((c.decision.action ? c.decision.action + " — " : "") + c.decision.text) : "",
+        c.decision ? c.decision.decidedBy : ""
       ]);
     });
     var csv = rows.map(function (r) {
@@ -1716,7 +1863,7 @@
   }
 
   function tallyCounts() {
-    var counts = { reported: 0, under_review: 0, recommended: 0, closed: 0 };
+    var counts = { reported: 0, controller_review: 0, coordinator_review: 0, senior_review: 0, principal_review: 0, closed: 0 };
     state.cases.forEach(function (c) { if (counts[c.status] !== undefined) counts[c.status]++; });
     return counts;
   }
@@ -2037,8 +2184,10 @@
       '<div class="tally">' +
         item("all", "Total cases", total) +
         item("reported", "Reported", counts.reported) +
-        item("under_review", "Under review", counts.under_review) +
-        item("recommended", "Recommendation sent", counts.recommended) +
+        item("controller_review", "With Controller", counts.controller_review) +
+        item("coordinator_review", "With Coordinator", counts.coordinator_review) +
+        item("senior_review", "With Senior Coordinator", counts.senior_review) +
+        item("principal_review", "With Principal", counts.principal_review) +
         item("closed", "Closed", counts.closed) +
       "</div>"
     );
@@ -2056,7 +2205,7 @@
     var rows = list.map(function (c) {
       var active = c._id === state.selectedId ? " active" : "";
       return (
-        '<div class="case-row' + active + '" data-action="select-case" data-id="' + c._id + '">' +
+        '<div class="case-row' + active + '" data-status="' + esc(c.status) + '" data-action="select-case" data-id="' + c._id + '">' +
           '<div class="case-row-top">' +
             '<span class="case-row-name">' + esc(c.studentName || "Unnamed student") + "</span>" + statusTag(c.status) +
           "</div>" +
@@ -2095,7 +2244,7 @@
         '<div class="rail-section">' +
           '<input class="search-box" id="searchBox" type="text" placeholder="Search student, case no., subject…" value="' + esc(state.search) + '">' +
           '<div class="filter-title" style="margin-top:12px;">Status</div>' +
-          '<div class="filter-row">' + statusChip("all", "All") + statusChip("reported", "Reported") + statusChip("under_review", "Under review") + statusChip("recommended", "Recommended") + statusChip("closed", "Closed") + "</div>" +
+          '<div class="filter-row">' + statusChip("all", "All") + statusChip("reported", "Reported") + statusChip("controller_review", "Controller") + statusChip("coordinator_review", "Coordinator") + statusChip("senior_review", "Senior Coord.") + statusChip("principal_review", "Principal") + statusChip("closed", "Closed") + "</div>" +
           '<div class="filter-title" style="margin-top:12px;">Grade</div>' +
           '<div class="filter-row">' + gradeChip("all", "All") + gradeChip("6", "6") + gradeChip("7", "7") + gradeChip("8", "8") + gradeChip("9", "9") + gradeChip("10", "10") + "</div>" +
         "</div>" +
@@ -2190,29 +2339,26 @@
     html += evidenceCategory("Photo of unfair-means material", c.materialPhotoIds, "material");
     html += "</div>";
 
-    if (c.recommendation) {
-      html += '<div class="callout" data-kind="recommendation"><div class="callout-label">Committee recommendation</div>';
-      html += '<div class="callout-body"><b>' + esc(c.recommendation.action) + "</b><br>" + esc(c.recommendation.text) + "</div>";
-      html += '<div class="callout-meta">' + esc(c.recommendation.by) + " · " + fmtDate(c.recommendation.at) + "</div></div>";
-    }
     if (c.decision) {
-      html += '<div class="callout" data-kind="decision"><div class="callout-label">Final decision</div>';
-      html += '<div class="callout-body">' + esc(c.decision.text) + "</div>";
+      html += '<div class="callout" data-kind="decision"><div class="callout-label">Senior Coordinator\'s decision</div>';
+      html += '<div class="callout-body">' + (c.decision.action ? "<b>" + esc(c.decision.action) + "</b><br>" : "") + esc(c.decision.text) + "</div>";
       html += '<div class="callout-meta">Decided by ' + esc(c.decision.decidedBy) + " · " + fmtDate(c.decision.at) + "</div></div>";
     }
 
     html += '<div class="section-block"><h2 class="section-heading">Case notes</h2><div class="timeline">';
     html += timelineItem("Case reported by " + esc(c.invigilatorName || "invigilator") + ".", c.reportedAt);
-    if (c.forwarded) html += timelineItem("Forwarded to the committee by " + esc(c.forwarded.by) + (c.forwarded.note ? ": " + esc(c.forwarded.note) : "") + ".", c.forwarded.at);
     (c.notes || []).forEach(function (n) {
-      if (n.tag === "forward") return;
+      if (n.tag === "senior-decision") return; // shown above as the decision callout
       html += timelineItem(esc(n.author) + ": " + esc(n.text), n.at);
     });
-    if (c.recommendation) html += timelineItem("Recommendation sent by " + esc(c.recommendation.by) + ".", c.recommendation.at);
-    if (c.decision) html += timelineItem("Decision recorded by " + esc(c.decision.decidedBy) + ". Case closed.", c.decision.at);
+    if (c.decision) html += timelineItem(esc(c.decision.decidedBy) + " recorded the decision and referred the case to the Principal.", c.decision.at);
+    if (c.closedAt) html += timelineItem("Case closed by the Principal.", c.closedAt);
     html += "</div>";
 
-    html += '<div class="note-form"><textarea id="noteInput" placeholder="Add a note to this case file…"></textarea>';
+    var plainQuickNotes = DEFAULT_NOTES["note"] || [];
+    html += '<div class="note-form">' +
+      (plainQuickNotes.length ? '<div class="quick-notes">' + plainQuickNotes.map(function (n) { return '<button type="button" class="quick-note-chip" data-action="use-quick-note" data-target="noteInput" data-text="' + esc(n) + '">' + esc(n) + "</button>"; }).join("") + "</div>" : "") +
+      '<textarea id="noteInput" placeholder="Add a note to this case file…"></textarea>';
     html += '<button class="btn btn-outline btn-small" id="addNoteBtn">Add note</button></div></div>';
 
     html += renderActionBar(c);
@@ -2222,11 +2368,12 @@
 
   function renderActionBar(c) {
     var html = '<div class="action-bar">';
-    if (isAdmin()) {
-      if (c.status === "reported") html += '<button class="btn btn-gold" data-action="open-forward" data-id="' + c._id + '">Forward to committee</button>';
-      if (c.status === "under_review") html += '<button class="btn btn-gold" data-action="open-recommend" data-id="' + c._id + '">Record recommendation</button>';
-      if (c.status === "recommended") html += '<button class="btn btn-gold" data-action="open-decide" data-id="' + c._id + '">Record final decision</button>';
-      if (c.status === "closed") html += '<button class="btn btn-outline" data-action="reopen-case" data-id="' + c._id + '">Reopen case</button>';
+    var step = CASE_CHAIN[c.status];
+    if (isAdmin() && step) {
+      html += '<button class="btn btn-gold" data-action="open-advance" data-id="' + c._id + '">' + esc(step.buttonLabel(c)) + "</button>";
+    }
+    if (isAdmin() && c.status === "closed") {
+      html += '<button class="btn btn-outline" data-action="reopen-case" data-id="' + c._id + '">Reopen case</button>';
     }
     html += '<button class="btn btn-outline" data-action="open-letter" data-type="initiation" data-id="' + c._id + '">Initiation letter</button>';
     if (c.status === "closed") {
@@ -2235,30 +2382,31 @@
     html += '<button class="btn btn-outline" data-action="print-case" data-id="' + c._id + '">Print case file</button>';
     html += "</div>";
 
-    function inlineForm(kind, id, fieldsHtml, submitLabel) {
-      return (
+    if (state.openAction === "advance" && state.openActionId === c._id && step) {
+      var quickNotes = DEFAULT_NOTES[step.tag] || [];
+      var quickHtml = quickNotes.length
+        ? '<div class="quick-notes"><div class="quick-notes-label">Quick notes — tap to use, then edit as needed:</div>' +
+            quickNotes.map(function (n, i) { return '<button type="button" class="quick-note-chip" data-action="use-quick-note" data-target="' + (step.isDecision ? "decText" : "advanceNote") + '" data-text="' + esc(n) + '">' + esc(n.length > 46 ? n.slice(0, 46) + "…" : n) + "</button>"; }).join("") +
+          "</div>"
+        : "";
+
+      var fieldsHtml;
+      if (step.isDecision) {
+        fieldsHtml =
+          '<div class="form-field"><label>Decided by</label><input id="decBy" type="text" value="' + esc(seniorCoordinatorFor(c.grade)) + '"></div>' +
+          '<div class="form-field"><label>Proposed action</label><select id="recAction">' + ACTION_OPTIONS.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") + "</select></div>" +
+          '<div class="form-field full">' + quickHtml + '<label>' + esc(step.noteLabel) + ' <span class="required-mark">*</span></label><textarea id="decText" placeholder="Record the reasoning and the decision…"></textarea></div>';
+      } else {
+        fieldsHtml = '<div class="form-field full">' + quickHtml + '<label>' + esc(step.noteLabel) + '</label><textarea id="advanceNote" placeholder="Add context for the next reviewer…"></textarea></div>';
+      }
+
+      html += (
         '<div class="file-grid" style="margin-top:14px; display:block;"><div class="form-grid">' + fieldsHtml + "</div>" +
           '<div style="margin-top:14px; display:flex; gap:8px;">' +
-            '<button class="btn btn-gold btn-small" data-action="submit-' + kind + '" data-id="' + id + '">' + esc(submitLabel) + "</button>" +
+            '<button class="btn btn-gold btn-small" data-action="submit-advance" data-id="' + c._id + '">' + esc(step.buttonLabel(c)) + "</button>" +
             '<button class="btn btn-outline btn-small" data-action="cancel-inline">Cancel</button>' +
           "</div></div>"
       );
-    }
-
-    if (state.openAction === "forward" && state.openActionId === c._id) {
-      html += inlineForm("forward", c._id, '<div class="form-field full"><label>Note for the committee (optional)</label><textarea id="forwardNote" placeholder="Any context for the committee…"></textarea></div>', "Forward");
-    }
-    if (state.openAction === "recommend" && state.openActionId === c._id) {
-      html += inlineForm("recommend", c._id,
-        '<div class="form-field full"><label>Proposed action</label><select id="recAction">' + ACTION_OPTIONS.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="form-field full"><label>Recommendation notes <span class="required-mark">*</span></label><textarea id="recText" placeholder="Summarize the committee\'s review and reasoning…"></textarea></div>',
-        "Send recommendation");
-    }
-    if (state.openAction === "decide" && state.openActionId === c._id) {
-      html += inlineForm("decide", c._id,
-        '<div class="form-field"><label>Decided by</label><input id="decBy" type="text" placeholder="e.g. Principal" value="' + esc(state.myName) + '"></div>' +
-        '<div class="form-field full"><label>Final decision <span class="required-mark">*</span></label><textarea id="decText" placeholder="Record the competent authority\'s final decision…"></textarea></div>',
-        "Record decision & close case");
     }
     return html;
   }
@@ -2406,7 +2554,8 @@
           '<div class="l2">Sialkot</div>' +
         "</div>" +
         '<div class="letter-emblem"><img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous"></div>' +
-      "</div>"
+      "</div>" +
+      '<div class="letter-head-accent"></div>'
     );
   }
 
@@ -2474,11 +2623,10 @@
   function buildClosureLetterHtml(c) {
     var memoNo = "COE/B/SLK/UMC-" + (c.caseCode || "").replace("UMC-", "") + "-CLOSED";
     var dec = c.decision || {};
-    var rec = c.recommendation || {};
 
     var html = '<div class="letter-page" id="letterCapture">';
     html += letterHeadHtml();
-    html += '<div class="letter-meta-row"><span>Memo: <b>' + esc(memoNo) + "</b></span><span>Dated: <b>" + esc(fmtLongDate(dec.at || c.closedAt)) + "</b></span></div>";
+    html += '<div class="letter-meta-row"><span>Memo: <b>' + esc(memoNo) + "</b></span><span>Dated: <b>" + esc(fmtLongDate(c.closedAt || dec.at)) + "</b></span></div>";
     html += '<div class="letter-title">Notice of Case Closure — Unfair Means Case</div>';
     html += '<div class="letter-subject">Subject: <b>CLOSURE OF UNFAIR MEANS CASE — ' + esc((c.studentName || "").toUpperCase()) + " — CASE NO. " + esc(c.caseCode) + "</b></div>";
 
@@ -2489,11 +2637,7 @@
       esc(fmtDateOnly(c.reportedAt)) + "</b> concerning <b>" + esc(c.studentName || "—") + "</b>, Roll No. " + esc(c.rollNo || "—") +
       ", " + esc(classLabel(c)) + ", reported during the " + esc(c.subject || "examination") + " examination.</p>";
 
-    if (rec.text) {
-      html += "<p><b>Committee recommendation:</b> " + esc(rec.action || "") + " — " + esc(rec.text) +
-        " <i>(by " + esc(rec.by || "the Committee") + ", " + esc(fmtLongDate(rec.at)) + ")</i></p>";
-    }
-    html += "<p><b>Final decision:</b> " + esc(dec.text || "No decision text recorded.") + "</p>";
+    html += "<p><b>Decision:</b> " + (dec.action ? esc(dec.action) + " — " : "") + esc(dec.text || "No decision text recorded.") + "</p>";
     html += "<p><b>Decided by:</b> " + esc(dec.decidedBy || "—") + " &nbsp; <b>Date:</b> " + esc(fmtLongDate(dec.at)) + "</p>";
     html += "<p>This case is accordingly closed and placed on permanent record in accordance with the prevailing examination rules and school policy.</p>";
     html += "</div>";
@@ -2978,28 +3122,31 @@
       }
       case "camera-cancel": closeCamera(); break;
       case "camera-shutter": capturePhotoFromCamera(); break;
-      case "open-forward": state.openAction = "forward"; state.openActionId = el.getAttribute("data-id"); render(); break;
-      case "open-recommend": state.openAction = "recommend"; state.openActionId = el.getAttribute("data-id"); render(); break;
-      case "open-decide": state.openAction = "decide"; state.openActionId = el.getAttribute("data-id"); render(); break;
+      case "open-advance": state.openAction = "advance"; state.openActionId = el.getAttribute("data-id"); render(); break;
       case "cancel-inline": state.openAction = null; state.openActionId = null; render(); break;
-      case "submit-forward": {
-        var note = valueOf("forwardNote");
-        forwardToCommittee(el.getAttribute("data-id"), note);
-        state.openAction = null;
+      case "use-quick-note": {
+        var targetId = el.getAttribute("data-target");
+        var targetEl = document.getElementById(targetId);
+        if (targetEl) { targetEl.value = el.getAttribute("data-text"); targetEl.focus(); }
         break;
       }
-      case "submit-recommend": {
-        var text = valueOf("recText"); var actionVal = valueOf("recAction");
-        if (!text) { showToast("Please add recommendation notes."); return; }
-        sendRecommendation(el.getAttribute("data-id"), text, actionVal);
-        state.openAction = null;
-        break;
-      }
-      case "submit-decide": {
-        var dText = valueOf("decText"); var dBy = valueOf("decBy");
-        if (!dText) { showToast("Please record the decision."); return; }
-        recordDecision(el.getAttribute("data-id"), dText, dBy);
-        state.openAction = null;
+      case "submit-advance": {
+        var advCaseId = el.getAttribute("data-id");
+        var advCase = getCase(advCaseId);
+        var advStep = advCase && CASE_CHAIN[advCase.status];
+        if (!advCase || !advStep) break;
+        if (advStep.isDecision) {
+          var decText = valueOf("decText");
+          if (!decText) { showToast("Please record the decision."); return; }
+          advanceCase(advCaseId, null, {
+            text: decText,
+            decidedBy: valueOf("decBy") || seniorCoordinatorFor(advCase.grade),
+            action: valueOf("recAction"),
+            at: new Date().toISOString()
+          });
+        } else {
+          advanceCase(advCaseId, valueOf("advanceNote"), null);
+        }
         break;
       }
       case "reopen-case": reopenCase(el.getAttribute("data-id")); break;
