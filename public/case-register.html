@@ -1452,6 +1452,7 @@
     cases: [],
     students: [],
     teachers: [],
+    classTeachers: [],
     dbAvailable: null,
     cameraOpen: false,
     role: localStorage.getItem("umc_role") || "invigilator",
@@ -1545,16 +1546,16 @@
 
   function findClassTeacher(grade, section) {
     if (!grade || !section) return null;
-    for (var i = 0; i < state.teachers.length; i++) {
-      var t = state.teachers[i];
-      if (t.classTeacherGrade === grade && t.classTeacherSection === section) return t;
+    for (var i = 0; i < state.classTeachers.length; i++) {
+      var link = state.classTeachers[i];
+      if (link.grade === grade && link.section === section) return { name: link.name };
     }
     return null;
   }
 
   function classTeacherLabel(grade, section) {
     var t = findClassTeacher(grade, section);
-    return t ? t.name : "(not yet linked — add under Students & Staff)";
+    return t ? t.name : "(not on record for this section)";
   }
 
   // "6-Jinnah", "6-Iqbal", ... one room option per grade+section combo,
@@ -1703,8 +1704,13 @@
     state.teachers = (data.teachers || []).map(rowToTeacher);
     render();
   }
+  async function loadClassTeachers() {
+    var data = await apiGet("/class-teachers");
+    state.classTeachers = data.classTeachers || [];
+    render();
+  }
   async function loadAll() {
-    var results = await Promise.allSettled([loadCases(), loadStudents(), loadTeachers()]);
+    var results = await Promise.allSettled([loadCases(), loadStudents(), loadTeachers(), loadClassTeachers()]);
     results.forEach(function (r) { if (r.status === "rejected") console.error(r.reason); });
   }
 
