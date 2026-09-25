@@ -1006,36 +1006,33 @@
     background: #ffffff;
     color: #1a1a1a;
     font-family: 'Liberation Serif', 'DejaVu Serif Condensed', Georgia, serif;
-    padding: 52px 60px 40px 60px;
+    padding: 52px 60px 90px 60px;
     box-sizing: border-box;
     position: relative;
-    display: flex;
-    flex-direction: column;
     flex-shrink: 0;
     border-top: 6px solid #150F3F;
   }
   .letter-head {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 22px;
+    display: table;
+    width: 100%;
     border-bottom: 3px double #150F3F;
     padding-bottom: 14px;
     margin-bottom: 4px;
   }
+  .letter-head-cell {
+    display: table-cell;
+    vertical-align: middle;
+  }
+  .letter-head-cell.emblem-cell { width: 70px; }
   .letter-emblem {
     width: 58px;
     height: 58px;
     border-radius: 50%;
     border: 2px solid #1a1a1a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-size: 10px;
     font-weight: 700;
     text-align: center;
     line-height: 1.1;
-    flex-shrink: 0;
     overflow: hidden;
   }
   .letter-emblem img {
@@ -1049,11 +1046,12 @@
     margin-bottom: 18px;
   }
   .letter-evidence-row {
-    display: flex;
-    gap: 14px;
+    display: table;
+    width: 100%;
     margin: 4px 0 16px;
+    border-spacing: 14px 0;
   }
-  .letter-evidence-block { flex: 1; text-align: center; }
+  .letter-evidence-block { display: table-cell; width: 50%; text-align: center; }
   .letter-evidence-block img {
     width: 100%;
     height: 130px;
@@ -1079,11 +1077,13 @@
     text-decoration: underline;
   }
   .letter-meta-row {
-    display: flex;
-    justify-content: space-between;
+    display: table;
+    width: 100%;
     font-size: 13px;
     margin-bottom: 18px;
   }
+  .letter-meta-row span { display: table-cell; }
+  .letter-meta-row span:last-child { text-align: right; }
   .letter-title {
     text-align: center;
     font-size: 17px;
@@ -1102,35 +1102,37 @@
     font-size: 13px;
     line-height: 1.75;
     text-align: justify;
-    flex: 1;
   }
   .letter-body p { margin: 0 0 12px 0; }
   .letter-sign-row {
-    display: flex;
-    justify-content: space-between;
+    display: table;
+    width: 100%;
     margin-top: 30px;
     font-size: 12.5px;
   }
-  .letter-sign-block { width: 30%; }
+  .letter-sign-block { display: table-cell; width: 30%; }
   .letter-sign-row.cols-4 .letter-sign-block { width: 22%; }
   .letter-sign-line {
     border-top: 1px solid #1a1a1a;
     margin-top: 34px;
     padding-top: 4px;
+    margin-right: 14px;
   }
   .letter-sign-block.center-single {
-    margin-left: auto;
     text-align: center;
   }
   .letter-footer {
     border-top: 1px solid #1a1a1a;
-    margin-top: 20px;
     padding-top: 8px;
     text-align: center;
     font-size: 10.5px;
     font-family: 'Liberation Sans', sans-serif;
     color: #333;
     line-height: 1.5;
+    position: absolute;
+    left: 60px;
+    right: 60px;
+    bottom: 40px;
   }
   .letter-footer .school { font-weight: 700; }
 
@@ -2622,12 +2624,14 @@
   function letterHeadHtml() {
     return (
       '<div class="letter-head">' +
-        '<div class="letter-emblem"><img src="/case-register-logo-left.png" alt="Government of Punjab" crossorigin="anonymous"></div>' +
-        '<div class="letter-school-name">' +
-          '<div class="l1">CENTRE OF EXCELLENCE (B)</div>' +
-          '<div class="l2">Sialkot</div>' +
+        '<div class="letter-head-cell emblem-cell"><div class="letter-emblem"><img src="/case-register-logo-left.png" alt="Government of Punjab" crossorigin="anonymous"></div></div>' +
+        '<div class="letter-head-cell">' +
+          '<div class="letter-school-name">' +
+            '<div class="l1">CENTRE OF EXCELLENCE (B)</div>' +
+            '<div class="l2">Sialkot</div>' +
+          "</div>" +
         "</div>" +
-        '<div class="letter-emblem"><img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous"></div>' +
+        '<div class="letter-head-cell emblem-cell"><div class="letter-emblem"><img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous"></div></div>' +
       "</div>" +
       '<div class="letter-head-accent"></div>'
     );
@@ -2783,6 +2787,21 @@
 
   var letterCapturing = false;
 
+  // Waits for every <img> inside the letter (logos + evidence photos) to
+  // actually finish loading before we hand the node to html2canvas —
+  // otherwise a slow evidence-photo fetch can get captured mid-load.
+  function waitForLetterImages(node) {
+    var imgs = Array.prototype.slice.call(node.querySelectorAll("img"));
+    return Promise.all(imgs.map(function (img) {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(function (resolve) {
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true }); // don't hang the export on a broken photo
+        setTimeout(resolve, 8000); // safety timeout
+      });
+    }));
+  }
+
   async function captureLetterCanvas() {
     var node = document.getElementById("letterCapture");
     if (!node) return null;
@@ -2790,6 +2809,7 @@
       showToast("Letter export isn't available right now — the rendering library didn't load. Check your connection and reopen the letter.");
       return null;
     }
+    await waitForLetterImages(node);
     var targetWidth = 3840; // 4K
     var scale = targetWidth / node.offsetWidth;
     return await window.html2canvas(node, {
