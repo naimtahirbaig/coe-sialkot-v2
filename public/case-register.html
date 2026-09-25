@@ -1002,11 +1002,11 @@
   }
   .letter-page {
     width: 794px;
-    height: 1123px;
+    min-height: 1123px;
     background: #ffffff;
     color: #1a1a1a;
     font-family: 'Liberation Serif', 'DejaVu Serif Condensed', Georgia, serif;
-    padding: 52px 60px 90px 60px;
+    padding: 52px 60px 40px 60px;
     box-sizing: border-box;
     position: relative;
     flex-shrink: 0;
@@ -1123,16 +1123,13 @@
   }
   .letter-footer {
     border-top: 1px solid #1a1a1a;
+    margin-top: 26px;
     padding-top: 8px;
     text-align: center;
     font-size: 10.5px;
     font-family: 'Liberation Sans', sans-serif;
     color: #333;
     line-height: 1.5;
-    position: absolute;
-    left: 60px;
-    right: 60px;
-    bottom: 40px;
   }
   .letter-footer .school { font-weight: 700; }
 
