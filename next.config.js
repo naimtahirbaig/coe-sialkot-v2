@@ -6,12 +6,11 @@ const nextConfig = {
   async rewrites() {
     return [
       { source: "/case-register", destination: "/case-register.html" },
-      { source: "/invigilator", destination: "/case-register.html?role=invigilator" },
-      { source: "/coordinator", destination: "/case-register.html?role=coordinator" },
-      { source: "/senior", destination: "/case-register.html?role=senior" }
+      { source: "/invigilator", destination: "/invigilator.html" },
+      { source: "/coordinator", destination: "/coordinator.html" },
+      { source: "/senior", destination: "/senior.html" }
     ];
   },
 }
 
 module.exports = nextConfig
-
