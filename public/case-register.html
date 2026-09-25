@@ -489,6 +489,27 @@
     background: var(--paper);
   }
   .evidence-upload-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .evidence-example {
+    width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    opacity: 0.7;
+  }
+  .evidence-example img {
+    width: 96px;
+    height: 96px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1.5px dashed var(--line);
+  }
+  .evidence-example span {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
 
   /* Decision / recommendation callouts */
   .callout {
@@ -1075,17 +1096,29 @@
     display: table;
     width: 100%;
     margin: 4px 0 16px;
-    border-spacing: 14px 0;
+    border-spacing: 10px 0;
   }
-  .letter-evidence-block { display: table-cell; width: 50%; text-align: center; }
+  .letter-evidence-block { display: table-cell; width: 33.33%; text-align: center; }
   .letter-evidence-block img {
     width: 100%;
-    height: 130px;
+    height: 110px;
     object-fit: cover;
     border: 1px solid #1a1a1a;
   }
-  .letter-evidence-caption {
+  .letter-evidence-missing {
+    width: 100%;
+    height: 110px;
+    box-sizing: border-box;
+    border: 1.5px dashed #999;
+    background: #F7F7F8;
+    color: #888;
     font-size: 10.5px;
+    line-height: 1.4;
+    padding-top: 40px;
+    text-align: center;
+  }
+  .letter-evidence-caption {
+    font-size: 10px;
     color: #444;
     margin-top: 4px;
   }
@@ -2643,6 +2676,11 @@
       }).join("");
       return '<div class="form-field"><label>Grade *</label><select id="f_grade">' + opts + "</select></div>";
     }
+    var EXAMPLE_IMAGES = {
+      student: "/example-photo-student.png",
+      paper: "/example-photo-paper.png",
+      material: "/example-photo-material.png"
+    };
     function evidenceUploader(category, title) {
       return (
         '<div class="evidence-category"><div class="evidence-category-title">' + esc(title) + '</div>' +
@@ -2651,6 +2689,7 @@
             '<label class="evidence-upload-btn" title="Upload from gallery">⬆' +
               '<input type="file" accept="image/*" class="draft-evidence-input" data-category="' + category + '" style="display:none;">' +
             '</label>' +
+            '<div class="evidence-example"><img src="' + EXAMPLE_IMAGES[category] + '" alt="Example"><span>Example</span></div>' +
           "</div>" +
         "</div>"
       );
@@ -2775,17 +2814,25 @@
   // letters so the record includes visual evidence, not just text.
   function letterEvidenceHtml(c) {
     var studentPhoto = (c.studentPhotoIds || [])[0];
-    var meansPhoto = (c.materialPhotoIds || [])[0] || (c.paperPhotoIds || [])[0];
-    if (!studentPhoto && !meansPhoto) return "";
+    var paperPhoto = (c.paperPhotoIds || [])[0];
+    var materialPhoto = (c.materialPhotoIds || [])[0];
+
+    function block(url, caption) {
+      if (url) {
+        return '<div class="letter-evidence-block"><img src="' + esc(url) + '" crossorigin="anonymous">' +
+          '<div class="letter-evidence-caption">' + esc(caption) + "</div></div>";
+      }
+      // No real photo for this category — a clearly-labeled empty box,
+      // never a generic image, so nothing on an official record could
+      // ever be mistaken for actual evidence.
+      return '<div class="letter-evidence-block"><div class="letter-evidence-missing">No photo<br>provided</div>' +
+        '<div class="letter-evidence-caption">' + esc(caption) + "</div></div>";
+    }
+
     var html = '<div class="letter-evidence-row">';
-    if (studentPhoto) {
-      html += '<div class="letter-evidence-block"><img src="' + esc(studentPhoto) + '" crossorigin="anonymous">' +
-        '<div class="letter-evidence-caption">Photo of student</div></div>';
-    }
-    if (meansPhoto) {
-      html += '<div class="letter-evidence-block"><img src="' + esc(meansPhoto) + '" crossorigin="anonymous">' +
-        '<div class="letter-evidence-caption">Evidence of unfair means</div></div>';
-    }
+    html += block(studentPhoto, "Photo of student");
+    html += block(paperPhoto, "Photo of answer script / paper");
+    html += block(materialPhoto, "Photo of unfair-means material");
     html += "</div>";
     return html;
   }
