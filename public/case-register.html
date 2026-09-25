@@ -2065,6 +2065,7 @@
 
   var drawerMounted = false;
   var letterMounted = false;
+  var letterMountedKey = null;
   var cameraMounted = false;
 
   function syncOverlay() {
@@ -2101,18 +2102,24 @@
 
     // --- Letter modal: same treatment — an in-flight html2canvas capture
     // must never have its source node yanked out from under it by an
-    // unrelated background update arriving mid-export. ---
-    if (state.letterView && !letterMounted) {
+    // unrelated background update arriving mid-export. Re-mounted (not
+    // left stale) if it's now pointing at a different case/type, though.
+    var letterKey = state.letterView ? (state.letterView.caseId + ":" + state.letterView.type) : null;
+    if (state.letterView && (!letterMounted || letterMountedKey !== letterKey)) {
+      var lhostOld = document.getElementById("letterHost");
+      if (lhostOld) lhostOld.remove();
       var lwrap = document.createElement("div");
       lwrap.id = "letterHost";
       lwrap.innerHTML = renderLetterModal();
       overlayLayer.appendChild(lwrap);
       letterMounted = true;
+      letterMountedKey = letterKey;
       bindLetterEvents();
     } else if (!state.letterView && letterMounted) {
       var lhost = document.getElementById("letterHost");
       if (lhost) lhost.remove();
       letterMounted = false;
+      letterMountedKey = null;
       if (letterResizeHandler) {
         window.removeEventListener("resize", letterResizeHandler);
         window.removeEventListener("orientationchange", letterResizeHandler);
@@ -2802,28 +2809,56 @@
     }));
   }
 
-  async function captureLetterCanvas() {
-    var node = document.getElementById("letterCapture");
-    if (!node) return null;
+  // Renders a completely fresh, off-screen copy of the letter — at its
+  // natural, unscaled 794x1123 size, with no CSS transform on any
+  // ancestor — purely for html2canvas to capture. The interactive modal
+  // on screen gets shrunk with a CSS transform to fit small phones
+  // (see fitLetterToViewport), and capturing THAT live, transformed,
+  // possibly still-resizing node is what caused the garbled/overlapping
+  // exports: html2canvas has to clone the whole ancestor chain including
+  // that transform, and any resize/orientation event firing mid-capture
+  // could shift it further. Rendering a brand-new, static, off-screen
+  // node sidesteps all of that — export and on-screen preview are now
+  // fully independent.
+  async function captureLetterCanvas(caseId, kind) {
     if (typeof window.html2canvas !== "function") {
       showToast("Letter export isn't available right now — the rendering library didn't load. Check your connection and reopen the letter.");
       return null;
     }
-    await waitForLetterImages(node);
-    var targetWidth = 3840; // 4K
-    var scale = targetWidth / node.offsetWidth;
-    return await window.html2canvas(node, {
-      scale: scale,
-      backgroundColor: "#ffffff",
-      useCORS: true
-    });
+    var c = getCase(caseId);
+    if (!c) return null;
+    var letterHtml = kind === "initiation" ? buildInitiationLetterHtml(c) : buildClosureLetterHtml(c);
+
+    var container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.left = "-99999px";
+    container.style.top = "0";
+    container.style.zIndex = "-1";
+    container.style.pointerEvents = "none";
+    container.innerHTML = letterHtml;
+    document.body.appendChild(container);
+
+    try {
+      var node = container.querySelector(".letter-page");
+      if (!node) return null;
+      await waitForLetterImages(node);
+      var targetWidth = 3840; // 4K
+      var scale = targetWidth / node.offsetWidth;
+      return await window.html2canvas(node, {
+        scale: scale,
+        backgroundColor: "#ffffff",
+        useCORS: true
+      });
+    } finally {
+      document.body.removeChild(container);
+    }
   }
 
-  async function downloadLetterPng(caseCode, kind) {
+  async function downloadLetterPng(caseId, caseCode, kind) {
     if (letterCapturing) return;
     letterCapturing = true;
     try {
-      var canvas = await captureLetterCanvas();
+      var canvas = await captureLetterCanvas(caseId, kind);
       if (!canvas) return;
       canvas.toBlob(async function (blob) {
         if (!blob) { showToast("Could not generate the image."); return; }
@@ -2840,7 +2875,7 @@
     }
   }
 
-  async function downloadLetterPdf(caseCode, kind) {
+  async function downloadLetterPdf(caseId, caseCode, kind) {
     if (letterCapturing) return;
     letterCapturing = true;
     try {
@@ -2848,7 +2883,7 @@
         showToast("PDF export isn't available right now — the rendering library didn't load. Check your connection and reopen the letter.");
         return;
       }
-      var canvas = await captureLetterCanvas();
+      var canvas = await captureLetterCanvas(caseId, kind);
       if (!canvas) return;
       var pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
       var pageWidth = pdf.internal.pageSize.getWidth();
@@ -2873,11 +2908,11 @@
   // Coordinator chat). Falls back to downloading the image and opening
   // WhatsApp so it can be attached by hand, for browsers without file
   // sharing support (mainly desktop).
-  async function shareLetterViaWhatsApp(caseCode, kind) {
+  async function shareLetterViaWhatsApp(caseId, caseCode, kind) {
     if (letterCapturing) return;
     letterCapturing = true;
     try {
-      var canvas = await captureLetterCanvas();
+      var canvas = await captureLetterCanvas(caseId, kind);
       if (!canvas) return;
       canvas.toBlob(async function (blob) {
         if (!blob) { showToast("Could not prepare the image."); return; }
@@ -3129,9 +3164,9 @@
     var pngBtn = document.getElementById("letterDownloadPng");
     var pdfBtn = document.getElementById("letterDownloadPdf");
     var waBtn = document.getElementById("letterShareWhatsapp");
-    if (pngBtn) pngBtn.addEventListener("click", function () { downloadLetterPng(c.caseCode, kind); });
-    if (pdfBtn) pdfBtn.addEventListener("click", function () { downloadLetterPdf(c.caseCode, kind); });
-    if (waBtn) waBtn.addEventListener("click", function () { shareLetterViaWhatsApp(c.caseCode, kind); });
+    if (pngBtn) pngBtn.addEventListener("click", function () { downloadLetterPng(c._id, c.caseCode, kind); });
+    if (pdfBtn) pdfBtn.addEventListener("click", function () { downloadLetterPdf(c._id, c.caseCode, kind); });
+    if (waBtn) waBtn.addEventListener("click", function () { shareLetterViaWhatsApp(c._id, c.caseCode, kind); });
 
     fitLetterToViewport();
     letterResizeHandler = fitLetterToViewport;
