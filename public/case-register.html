@@ -1130,16 +1130,13 @@
 
   var STATUS_LABEL = {
     reported: "Reported",
-    controller_review: "With Controller",
     coordinator_review: "With Class Coordinator",
     senior_review: "With Senior Coordinator",
-    principal_review: "With Principal",
     closed: "Closed"
   };
 
   // Fixed review chain. Each case is routed automatically to the named
   // person for its grade — no manual "pick who to send it to" step.
-  var CONTROLLER_NAME = "Shahid Ali";
   var CLASS_COORDINATORS = { "6": "Kh. Aleem Zakria", "7": "Ahmed Raza", "8": "Altaf Kasana" };
   var SENIOR_COORDINATOR_LOWER = "Dr. Naim Tahir Baig"; // grades 6–8
   var SENIOR_COORDINATOR_UPPER = "Aqeel Iftikhar Awan";  // grades 9–10
@@ -1152,68 +1149,48 @@
     return (g >= 9) ? SENIOR_COORDINATOR_UPPER : SENIOR_COORDINATOR_LOWER;
   }
 
-  // The five-step chain: Invigilator (files) → Controller → Class
-  // Coordinator → Senior Coordinator (decision) → Principal (rectifies).
+  // The three-step chain: Invigilator (files) → Class Coordinator (adds
+  // remarks) → Senior Coordinator (final decision, case closes).
   // Keyed by the case's CURRENT status; describes the action that moves
   // it to the next one.
   var CASE_CHAIN = {
     reported: {
-      next: "controller_review",
-      tag: "controller-forward",
-      buttonLabel: function () { return "Send to Controller — " + CONTROLLER_NAME; },
-      noteLabel: "Note for the Controller (optional)"
-    },
-    controller_review: {
       next: "coordinator_review",
       tag: "coordinator-forward",
       buttonLabel: function (c) { return "Refer to Class Coordinator — " + classCoordinatorFor(c.grade); },
-      noteLabel: "Controller's note (" + CONTROLLER_NAME + ")"
+      noteLabel: "Note for the Class Coordinator (optional)"
     },
     coordinator_review: {
       next: "senior_review",
       tag: "senior-forward",
       buttonLabel: function (c) { return "Refer to Senior Coordinator — " + seniorCoordinatorFor(c.grade); },
-      noteLabel: "Class Coordinator's note"
+      noteLabel: "Class Coordinator's remarks"
     },
     senior_review: {
-      next: "principal_review",
+      next: "closed",
       tag: "senior-decision",
       isDecision: true,
-      buttonLabel: function () { return "Record decision & refer to Principal"; },
-      noteLabel: "Decision"
-    },
-    principal_review: {
-      next: "closed",
-      tag: "principal-close",
       setsClosedAt: true,
-      buttonLabel: function () { return "Close case (rectified) — Principal"; },
-      noteLabel: "Principal's rectification note (optional)"
+      buttonLabel: function () { return "Record final decision & close case"; },
+      noteLabel: "Decision"
     }
   };
 
   // A short bank of ready-made notes for each stage, so staff can tap
   // one instead of typing from scratch (still editable afterwards).
   var DEFAULT_NOTES = {
-    "controller-forward": [
+    "coordinator-forward": [
       "Reviewed the invigilator's report — details appear consistent. Forwarding for the class coordinator's review.",
       "Spoke with the invigilator to confirm the details before forwarding."
     ],
-    "coordinator-forward": [
-      "Reviewed the case with the student. Forwarding to the senior coordinator with a recommendation for review.",
-      "Student's explanation noted. Referring for a decision."
-    ],
     "senior-forward": [
-      "Case reviewed in full. Referring to the senior coordinator for a decision.",
-      "Discussed with the class coordinator — recommend proceeding to a decision."
+      "Reviewed the case with the student. Referring to the senior coordinator with a recommendation for a decision.",
+      "Student's explanation noted. Referring for a final decision."
     ],
     "senior-decision": [
-      "Case reviewed. Unfair means confirmed — recommend action per policy.",
-      "Case reviewed. Evidence inconclusive — recommend no further action.",
-      "First offense — recommend a warning and counselling."
-    ],
-    "principal-close": [
-      "Decision implemented and communicated to the student and parents. Case closed.",
-      "Reviewed and rectified per the recommended decision."
+      "Case reviewed. Unfair means confirmed — action taken per policy.",
+      "Case reviewed. Evidence inconclusive — no further action.",
+      "First offense — warning and counselling given."
     ],
     "note": [
       "Parent contacted and informed.",
@@ -1627,9 +1604,7 @@
 
   var AUTHOR_BY_STATUS = {
     reported: function (c) { return state.myName || c.invigilatorName || "Invigilator"; },
-    controller_review: function () { return CONTROLLER_NAME; },
-    coordinator_review: function (c) { return classCoordinatorFor(c.grade); },
-    principal_review: function () { return "Principal"; }
+    coordinator_review: function (c) { return classCoordinatorFor(c.grade); }
   };
 
   // Moves a case one step along the fixed review chain (see CASE_CHAIN),
@@ -1863,7 +1838,7 @@
   }
 
   function tallyCounts() {
-    var counts = { reported: 0, controller_review: 0, coordinator_review: 0, senior_review: 0, principal_review: 0, closed: 0 };
+    var counts = { reported: 0, coordinator_review: 0, senior_review: 0, closed: 0 };
     state.cases.forEach(function (c) { if (counts[c.status] !== undefined) counts[c.status]++; });
     return counts;
   }
@@ -2184,10 +2159,8 @@
       '<div class="tally">' +
         item("all", "Total cases", total) +
         item("reported", "Reported", counts.reported) +
-        item("controller_review", "With Controller", counts.controller_review) +
-        item("coordinator_review", "With Coordinator", counts.coordinator_review) +
+        item("coordinator_review", "With Class Coordinator", counts.coordinator_review) +
         item("senior_review", "With Senior Coordinator", counts.senior_review) +
-        item("principal_review", "With Principal", counts.principal_review) +
         item("closed", "Closed", counts.closed) +
       "</div>"
     );
@@ -2244,7 +2217,7 @@
         '<div class="rail-section">' +
           '<input class="search-box" id="searchBox" type="text" placeholder="Search student, case no., subject…" value="' + esc(state.search) + '">' +
           '<div class="filter-title" style="margin-top:12px;">Status</div>' +
-          '<div class="filter-row">' + statusChip("all", "All") + statusChip("reported", "Reported") + statusChip("controller_review", "Controller") + statusChip("coordinator_review", "Coordinator") + statusChip("senior_review", "Senior Coord.") + statusChip("principal_review", "Principal") + statusChip("closed", "Closed") + "</div>" +
+          '<div class="filter-row">' + statusChip("all", "All") + statusChip("reported", "Reported") + statusChip("coordinator_review", "Class Coordinator") + statusChip("senior_review", "Senior Coord.") + statusChip("closed", "Closed") + "</div>" +
           '<div class="filter-title" style="margin-top:12px;">Grade</div>' +
           '<div class="filter-row">' + gradeChip("all", "All") + gradeChip("6", "6") + gradeChip("7", "7") + gradeChip("8", "8") + gradeChip("9", "9") + gradeChip("10", "10") + "</div>" +
         "</div>" +
@@ -2351,8 +2324,7 @@
       if (n.tag === "senior-decision") return; // shown above as the decision callout
       html += timelineItem(esc(n.author) + ": " + esc(n.text), n.at);
     });
-    if (c.decision) html += timelineItem(esc(c.decision.decidedBy) + " recorded the decision and referred the case to the Principal.", c.decision.at);
-    if (c.closedAt) html += timelineItem("Case closed by the Principal.", c.closedAt);
+    if (c.decision) html += timelineItem(esc(c.decision.decidedBy) + " recorded the final decision. Case closed.", c.decision.at);
     html += "</div>";
 
     var plainQuickNotes = DEFAULT_NOTES["note"] || [];
@@ -2602,16 +2574,14 @@
     if (c.invigilatorAction) {
       html += "<p><b>Invigilator's on-the-spot recommendation:</b> " + esc(c.invigilatorAction) + "</p>";
     }
-    html += "<p>In accordance with the Office Order constituting the Unfair Means Cases (UMC) Committee, this case " +
-      "(<b>Case No. " + esc(c.caseCode) + "</b>) is hereby placed on record and forwarded for formal inquiry. All evidence " +
-      "and statements are to be reviewed by the Committee and the matter processed in accordance with the prevailing " +
-      "examination rules and school policy.</p>";
+    html += "<p>This case (<b>Case No. " + esc(c.caseCode) + "</b>) is hereby placed on record and forwarded to the " +
+      "Class Coordinator, <b>" + esc(classCoordinatorFor(c.grade)) + "</b>, for review. The matter will then be referred " +
+      "to the Senior Coordinator for a final decision, in accordance with the prevailing examination rules and school policy.</p>";
     html += "</div>";
 
-    html += '<div class="letter-sign-row cols-4">';
+    html += '<div class="letter-sign-row">';
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Reported by (Invigilator)<br>' + esc(c.invigilatorName || "") + "</div></div>";
-    html += '<div class="letter-sign-block"><div class="letter-sign-line">Received by — Controller<br>Secretary, UMC Committee</div></div>';
-    html += '<div class="letter-sign-block"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
+    html += '<div class="letter-sign-block"><div class="letter-sign-line">Received by — Class Coordinator<br>' + esc(classCoordinatorFor(c.grade)) + "</div></div>";
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Parent / Guardian<br>(Informed)</div></div>';
     html += "</div>";
 
