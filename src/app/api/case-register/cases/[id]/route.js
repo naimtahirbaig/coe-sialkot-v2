@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { roleFromRequest } from "@/lib/caseRegisterAuth";
+import { roleFromRequest, ADVANCE_ROLE_FOR_STATUS } from "@/lib/caseRegisterAuth";
 
 // Only these fields may be patched from the client, mapped to their
 // actual column names. Anything else in the request body is ignored.
@@ -16,10 +16,10 @@ const ALLOWED = {
   materialPhotoUrls: "material_photo_urls",
 };
 
-// Changing these effectively moves the case through the workflow
-// (forward / recommend / decide / reopen) — restricted to admins.
-// Notes and evidence can be added by a teacher.
-const ADMIN_ONLY_FIELDS = ["status", "forwarded", "recommendation", "decision", "closedAt"];
+// Changing these moves the case to its next stage in the chain —
+// restricted to whichever role currently holds that stage (or admin).
+// Plain notes/evidence can be added by anyone logged in.
+const STAGE_FIELDS = ["status", "forwarded", "recommendation", "decision", "closedAt"];
 
 // PATCH /api/case-register/cases/:id — partial update.
 export async function PATCH(request, { params }) {
@@ -35,9 +35,21 @@ export async function PATCH(request, { params }) {
   }
 
   const requestedKeys = Object.keys(body).filter((k) => ALLOWED[k] !== undefined);
-  const needsAdmin = requestedKeys.some((k) => ADMIN_ONLY_FIELDS.includes(k));
-  if (needsAdmin && role !== "admin") {
-    return NextResponse.json({ error: "Only an admin can do that." }, { status: 403 });
+  const isStageMove = requestedKeys.some((k) => STAGE_FIELDS.includes(k));
+
+  if (isStageMove && role !== "admin") {
+    const { data: current, error: readError } = await supabaseAdmin
+      .from("case_register_cases")
+      .select("status")
+      .eq("id", id)
+      .single();
+    if (readError || !current) {
+      return NextResponse.json({ error: "Case not found." }, { status: 404 });
+    }
+    const requiredRole = ADVANCE_ROLE_FOR_STATUS[current.status];
+    if (role !== requiredRole) {
+      return NextResponse.json({ error: "This case isn't at your stage right now." }, { status: 403 });
+    }
   }
 
   const patch = {};

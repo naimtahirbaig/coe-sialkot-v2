@@ -588,6 +588,28 @@
     outline: 2px solid var(--gold); outline-offset: 0px;
   }
   .required-mark { color: var(--status-reported); }
+  .sop-banner {
+    border: 2px solid #C0392B;
+    background: #FDEDEC;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    color: #C0392B;
+    font-weight: 700;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .sop-banner .sop-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .letter-sop-banner {
+    border: 2px solid #C0392B;
+    padding: 10px 12px;
+    margin: 10px 0 16px;
+    color: #C0392B;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .letter-sop-banner .sop-title { font-size: 12.5px; text-transform: uppercase; margin-bottom: 3px; }
   .drawer-footer {
     position: sticky;
     bottom: 0;
@@ -1153,6 +1175,14 @@
   // remarks) → Senior Coordinator (final decision, case closes).
   // Keyed by the case's CURRENT status; describes the action that moves
   // it to the next one.
+  // Which login role may advance a case off this status (besides admin,
+  // who can always act as a fallback). Mirrors the server-side check.
+  var ADVANCE_ROLE_FOR_STATUS = {
+    reported: "invigilator",
+    coordinator_review: "coordinator",
+    senior_review: "senior"
+  };
+
   var CASE_CHAIN = {
     reported: {
       next: "coordinator_review",
@@ -1172,7 +1202,7 @@
       isDecision: true,
       setsClosedAt: true,
       buttonLabel: function () { return "Record final decision & close case"; },
-      noteLabel: "Decision"
+      noteLabel: "Decision (to be recorded the same day, after meeting the parents)"
     }
   };
 
@@ -1265,7 +1295,7 @@
   // ---------------------------------------------------------------
   var AUTH_STORAGE_KEY = "umc_auth";
   var authToken = null;
-  var authRole = null; // "teacher" | "admin"
+  var authRole = null; // "invigilator" | "coordinator" | "senior" | "admin"
   try {
     var savedAuth = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || "null");
     if (savedAuth && savedAuth.token && savedAuth.role) {
@@ -1274,6 +1304,15 @@
     }
   } catch (e) {}
   function isAdmin() { return authRole === "admin"; }
+  function canFile() { return authRole === "invigilator" || authRole === "admin"; }
+  function canManageRoster() { return authRole === "admin"; }
+  function canAdvance(status) {
+    var required = ADVANCE_ROLE_FOR_STATUS[status];
+    return authRole === "admin" || (required && authRole === required);
+  }
+  function roleDisplayLabel() {
+    return { invigilator: "Invigilator", coordinator: "Class Coordinator", senior: "Senior Coordinator", admin: "Admin" }[authRole] || authRole;
+  }
 
   // ---------------------------------------------------------------
   // State
@@ -1382,6 +1421,11 @@
       if (t.classTeacherGrade === grade && t.classTeacherSection === section) return t;
     }
     return null;
+  }
+
+  function classTeacherLabel(grade, section) {
+    var t = findClassTeacher(grade, section);
+    return t ? t.name : "the Class Teacher";
   }
 
   // "6-Jinnah", "6-Iqbal", ... one room option per grade+section combo,
@@ -1544,6 +1588,8 @@
       console.error(e);
       state.dbAvailable = false;
     }
+    // Invigilators have nothing to browse — take them straight to filing.
+    if (authRole === "invigilator" && !state.drawerOpen) state.drawerOpen = true;
     render();
 
     // Poll for changes so multiple staff members filing/reviewing cases
@@ -1578,7 +1624,11 @@
       state.drawerOpen = false;
       state.mobileDetailOpen = true;
       draftEvidence = { student: [], paper: [], material: [] };
-      showToast("Report filed as " + created.caseCode + ".");
+      showToast("Report filed as " + created.caseCode + ". Opening the initiation letter to share…");
+      // The invigilator's very next step is to get this letter to the
+      // Class Teacher and Class Coordinator — open it immediately rather
+      // than making them find it themselves.
+      state.letterView = { type: "initiation", caseId: created._id };
       render();
     } catch (e) {
       console.error(e);
@@ -1824,9 +1874,22 @@
   // ---------------------------------------------------------------
   // Filtering
   // ---------------------------------------------------------------
+  // A coordinator/senior login only ever needs to see their own queue —
+  // cases currently sitting at their stage. An invigilator doesn't browse
+  // cases at all (they only file new ones). Admin sees everything.
+  function myQueueStatus() {
+    if (authRole === "coordinator") return "coordinator_review";
+    if (authRole === "senior") return "senior_review";
+    return null;
+  }
+
   function filteredCases() {
     var q = state.search.trim().toLowerCase();
-    return state.cases.filter(function (c) {
+    var base = state.cases;
+    if (authRole === "invigilator") return [];
+    var queueStatus = myQueueStatus();
+    if (queueStatus) base = base.filter(function (c) { return c.status === queueStatus; });
+    return base.filter(function (c) {
       if (state.filterStatus !== "all" && c.status !== state.filterStatus) return false;
       if (state.filterGrade !== "all" && c.grade !== state.filterGrade) return false;
       if (q) {
@@ -1882,7 +1945,7 @@
           '<input id="loginPassword" type="password" placeholder="Enter your staff password" style="width:100%; margin:8px 0 14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;">' +
           (state.loginError ? '<div style="color:var(--status-reported); font-size:13px; margin-bottom:10px;">' + esc(state.loginError) + "</div>" : "") +
           '<button class="btn btn-gold" id="loginSubmitBtn" style="width:100%; justify-content:center;">Log in</button>' +
-          '<div style="font-size:12px; color:var(--muted); margin-top:14px;">Ask your controller / admin for the staff or admin password.</div>' +
+          '<div style="font-size:12px; color:var(--muted); margin-top:14px;">Ask the exam cell for your role\'s password.</div>' +
         "</div>" +
       "</div>"
     );
@@ -2117,10 +2180,6 @@
       var active = state.view === view ? " active" : "";
       return '<button class="' + active.trim() + '" data-action="nav-view" data-value="' + view + '">' + esc(label) + "</button>";
     }
-    function roleOption(val, label) {
-      var sel = state.role === val ? " selected" : "";
-      return '<option value="' + val + '"' + sel + ">" + esc(label) + "</option>";
-    }
     return (
       '<div class="topbar">' +
         '<div class="brand">' +
@@ -2130,16 +2189,11 @@
         '<div class="topbar-actions">' +
           '<div class="nav-toggle">' +
             navBtn("cases", "Case Register") +
-            (isAdmin() ? navBtn("rosters", "Students & Staff") : "") +
+            (canManageRoster() ? navBtn("rosters", "Students & Staff") : "") +
           "</div>" +
-          '<select class="role-select" id="roleSelect" aria-label="Your role">' +
-            roleOption("invigilator", "Invigilator / Teacher") +
-            roleOption("controller", "Controller (Secretary)") +
-            roleOption("committee", "Committee (Convenor / Member)") +
-          "</select>" +
-          '<span class="btn-outline-light btn btn-small" style="pointer-events:none;">' + (isAdmin() ? "Admin" : "Teacher") + "</span>" +
+          '<span class="btn-outline-light btn btn-small" style="pointer-events:none;">' + esc(roleDisplayLabel()) + "</span>" +
           '<button class="btn btn-outline-light btn-small" id="logoutBtn">Log out</button>' +
-          (state.view === "cases" ? '<button class="btn btn-gold" id="newCaseBtn">+ New report</button>' : "") +
+          (state.view === "cases" && canFile() ? '<button class="btn btn-gold" id="newCaseBtn">+ New report</button>' : "") +
         "</div>" +
       "</div>"
     );
@@ -2191,7 +2245,9 @@
       rows = '<div class="empty-list">' +
         (state.dbAvailable === false
           ? "Could not reach the case register server. Check your connection and reload."
-          : (state.cases.length === 0 ? "No cases have been reported yet." : "No cases match these filters.")) +
+          : (authRole === "invigilator" ? "Use \"+ New report\" above to file an incident." :
+             myQueueStatus() ? "No cases are waiting in your queue right now." :
+             (state.cases.length === 0 ? "No cases have been reported yet." : "No cases match these filters."))) +
         "</div>";
     }
     return rows;
@@ -2341,7 +2397,7 @@
   function renderActionBar(c) {
     var html = '<div class="action-bar">';
     var step = CASE_CHAIN[c.status];
-    if (isAdmin() && step) {
+    if (step && canAdvance(c.status)) {
       html += '<button class="btn btn-gold" data-action="open-advance" data-id="' + c._id + '">' + esc(step.buttonLabel(c)) + "</button>";
     }
     if (isAdmin() && c.status === "closed") {
@@ -2439,6 +2495,13 @@
       '<div class="overlay">' +
         '<div class="drawer" id="drawerPanel">' +
           '<div class="drawer-header"><span class="drawer-title">New incident report</span><button class="close-btn" data-action="close-drawer">&times;</button></div>' +
+
+          '<div class="sop-banner"><div class="sop-title">⚠ Immediate action required</div>' +
+            "Cancel the paper immediately and confiscate the answer sheet and all related material. " +
+            "After filing this report, download or share the Initiation Letter via WhatsApp with the Class Teacher and Class Coordinator right away. " +
+            "Hand over the confiscated answer sheet and material to the Class Teacher for record-keeping. " +
+            "Instruct the Class Teacher to call the parents/guardian today between 1:30 PM and 2:30 PM." +
+          "</div>" +
 
           '<div class="form-grid">' +
             gradeField() +
@@ -2563,6 +2626,14 @@
 
     html += letterEvidenceHtml(c);
 
+    html += '<div class="letter-sop-banner"><div class="sop-title">Immediate action</div>' +
+      "The examination paper has been cancelled and the answer sheet / material confiscated with immediate effect. " +
+      "This letter is to be shared via WhatsApp with the Class Teacher, <b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b>, " +
+      "and the Class Coordinator, <b>" + esc(classCoordinatorFor(c.grade)) + "</b>, without delay. " +
+      "The confiscated answer sheet and material are to be handed over to the Class Teacher for record-keeping. " +
+      "The Class Teacher is instructed to contact the parents / guardian today between 1:30 PM and 2:30 PM." +
+    "</div>";
+
     html += '<div class="letter-body">';
     html += "<p>This is to formally record that during the <b>" + esc(c.subject || "examination") + "</b> examination held on <b>" +
       esc(fmtDateOnly(c.examDate)) + "</b> in <b>" + esc(c.room || "the examination hall") + "</b>, the following candidate was reported for suspected unfair means:</p>";
@@ -2612,6 +2683,11 @@
     html += "<p>This case is accordingly closed and placed on permanent record in accordance with the prevailing examination rules and school policy.</p>";
     html += "</div>";
 
+    html += '<div class="letter-sop-banner"><div class="sop-title">Filing instruction</div>' +
+      "After printing, this letter (together with the Initiation Letter) is to be handed to the Class Teacher, <b>" +
+      esc(classTeacherLabel(c.grade, c.section)) + "</b>, for filing in the student's file." +
+    "</div>";
+
     html += '<div class="letter-sign-row">';
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Decided by<br>' + esc(dec.decidedBy || "Principal") + "</div></div>";
     html += '<div class="letter-sign-block"><div class="letter-sign-line">Principal<br>Centre of Excellence (Boys), Sialkot</div></div>';
@@ -2636,6 +2712,7 @@
           '<span class="letter-toolbar-title">' + esc(title) + " — " + esc(c.caseCode) + "</span>" +
           '<button class="btn btn-gold btn-small" id="letterDownloadPng">Download PNG (4K)</button>' +
           '<button class="btn btn-outline-light btn-small" id="letterDownloadPdf">Download PDF</button>' +
+          '<button class="btn btn-outline-light btn-small" id="letterShareWhatsapp">Share via WhatsApp</button>' +
           '<button class="btn btn-outline-light btn-small" data-action="close-letter">Close</button>' +
         "</div>" +
         '<div class="letter-scale-wrap" id="letterScaleWrap"><div id="letterScaleInner">' + letterHtml + "</div></div>" +
@@ -2727,6 +2804,44 @@
       URL.revokeObjectURL(url);
     } catch (e) {
       console.error(e); showToast("Could not generate the PDF.");
+    } finally {
+      letterCapturing = false;
+    }
+  }
+
+  // Tries the device's native share sheet (which on a phone includes
+  // WhatsApp directly, letting the person pick the Class Teacher / Class
+  // Coordinator chat). Falls back to downloading the image and opening
+  // WhatsApp so it can be attached by hand, for browsers without file
+  // sharing support (mainly desktop).
+  async function shareLetterViaWhatsApp(caseCode, kind) {
+    if (letterCapturing) return;
+    letterCapturing = true;
+    try {
+      var canvas = await captureLetterCanvas();
+      if (!canvas) return;
+      canvas.toBlob(async function (blob) {
+        if (!blob) { showToast("Could not prepare the image."); return; }
+        var filename = caseCode + "-" + kind + "-letter.png";
+        var file = new File([blob], filename, { type: "image/png" });
+        var shareText = "UMC Case " + caseCode + " — " + (kind === "initiation" ? "Initiation Letter" : "Closure Letter");
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: shareText, text: shareText });
+          } catch (e) {
+            // User cancelled the share sheet — not an error worth surfacing.
+          }
+        } else {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a"); a.href = url; a.download = filename;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast("Image downloaded — attach it to your WhatsApp message.");
+          window.open("https://wa.me/", "_blank");
+        }
+      }, "image/png");
+    } catch (e) {
+      console.error(e); showToast("Could not prepare the letter for sharing.");
     } finally {
       letterCapturing = false;
     }
@@ -2954,8 +3069,10 @@
     var kind = state.letterView.type;
     var pngBtn = document.getElementById("letterDownloadPng");
     var pdfBtn = document.getElementById("letterDownloadPdf");
+    var waBtn = document.getElementById("letterShareWhatsapp");
     if (pngBtn) pngBtn.addEventListener("click", function () { downloadLetterPng(c.caseCode, kind); });
     if (pdfBtn) pdfBtn.addEventListener("click", function () { downloadLetterPdf(c.caseCode, kind); });
+    if (waBtn) waBtn.addEventListener("click", function () { shareLetterViaWhatsApp(c.caseCode, kind); });
 
     fitLetterToViewport();
     letterResizeHandler = fitLetterToViewport;

@@ -19,10 +19,13 @@ export async function GET(request) {
   return NextResponse.json({ cases: data });
 }
 
-// POST /api/case-register/cases — file a new report. Teacher or admin.
+// POST /api/case-register/cases — file a new report. Invigilator or admin.
 export async function POST(request) {
   const role = roleFromRequest(request);
   if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+  if (role !== "invigilator" && role !== "admin") {
+    return NextResponse.json({ error: "Only an invigilator can file a report." }, { status: 403 });
+  }
 
   let body;
   try {
