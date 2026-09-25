@@ -3084,8 +3084,19 @@
       var pdf = new window.jspdf.jsPDF({ unit: "pt", format: "a4" });
       var pageWidth = pdf.internal.pageSize.getWidth();
       var pageHeight = pdf.internal.pageSize.getHeight();
+      // Fit the actual captured image to the page preserving its real
+      // aspect ratio — never stretch it to force-fill A4, which would
+      // distort a letter whose content ran a little taller than usual.
+      var ratio = canvas.height / canvas.width;
+      var imgWidth = pageWidth;
+      var imgHeight = pageWidth * ratio;
+      if (imgHeight > pageHeight) {
+        imgHeight = pageHeight;
+        imgWidth = pageHeight / ratio;
+      }
+      var xOffset = (pageWidth - imgWidth) / 2;
       var imgData = canvas.toDataURL("image/png");
-      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight);
+      pdf.addImage(imgData, "PNG", xOffset, 0, imgWidth, imgHeight);
       var blob = pdf.output("blob");
       var filename = caseCode + "-" + kind + "-letter.pdf";
       var url = URL.createObjectURL(blob);
