@@ -1104,6 +1104,75 @@
     text-align: justify;
   }
   .letter-body p { margin: 0 0 12px 0; }
+
+  /* ---------------- Colored section headings + detail grid ---------------- */
+  .letter-section-heading {
+    display: table;
+    background: #150F3F;
+    color: #FCB629;
+    font-family: 'Liberation Sans', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 5px 12px;
+    border-radius: 3px;
+    margin: 18px 0 10px;
+  }
+  .letter-section-heading.alt { background: #FCB629; color: #150F3F; }
+  .letter-details-grid {
+    display: table;
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .letter-details-row { display: table-row; }
+  .letter-details-label {
+    display: table-cell;
+    width: 34%;
+    padding: 6px 10px 6px 0;
+    color: #555;
+    font-family: 'Liberation Sans', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    vertical-align: top;
+    border-bottom: 1px solid #EEE;
+  }
+  .letter-details-value {
+    display: table-cell;
+    padding: 6px 0;
+    font-weight: 700;
+    vertical-align: top;
+    border-bottom: 1px solid #EEE;
+  }
+  .letter-offense-tags { margin-bottom: 4px; }
+  .letter-offense-tag {
+    display: inline-block;
+    background: #FDEDEC;
+    color: #C0392B;
+    border: 1px solid #E8B3AE;
+    border-radius: 12px;
+    padding: 3px 11px;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin: 0 6px 6px 0;
+  }
+  .letter-account-box {
+    background: #F7F8FA;
+    border-left: 3px solid #150F3F;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  .letter-decision-box {
+    background: #E0F2E7;
+    border-left: 3px solid #009139;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
   .letter-sign-row {
     display: table;
     width: 100%;
@@ -1459,7 +1528,7 @@
 
   function classTeacherLabel(grade, section) {
     var t = findClassTeacher(grade, section);
-    return t ? t.name : "the Class Teacher";
+    return t ? t.name : "(not yet linked — add under Students & Staff)";
   }
 
   // "6-Jinnah", "6-Iqbal", ... one room option per grade+section combo,
@@ -1969,7 +2038,28 @@
   // already open. Toast and lightbox hold no user input, so they're
   // safe to rebuild freely.
   // ---------------------------------------------------------------
+  // Reads ?role= from the URL (e.g. /invigilator rewrites to
+  // /case-register.html?role=invigilator — see next.config.js). This is
+  // purely cosmetic: it customizes the login screen's heading so each
+  // role has its own bookmarkable link, but the actual password
+  // determines the real role either way, never the URL.
+  function expectedRoleFromUrl() {
+    try {
+      var v = new URLSearchParams(window.location.search).get("role");
+      if (v === "invigilator" || v === "coordinator" || v === "senior" || v === "admin") return v;
+    } catch (e) {}
+    return null;
+  }
+  var EXPECTED_ROLE_COPY = {
+    invigilator: { title: "Invigilator / Teacher Login", hint: "Enter the invigilator password to file a report." },
+    coordinator: { title: "Class Coordinator Login", hint: "Enter the class coordinator password to review your queue." },
+    senior: { title: "Senior Coordinator Login", hint: "Enter the senior coordinator password to record decisions." },
+    admin: { title: "Admin Login", hint: "Enter the admin password for full access." }
+  };
+
   function renderLoginScreen() {
+    var expectedRole = expectedRoleFromUrl();
+    var copy = EXPECTED_ROLE_COPY[expectedRole];
     return (
       '<div class="login-screen">' +
         '<div class="login-card">' +
@@ -1978,7 +2068,8 @@
             '<img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous">' +
           "</div>" +
           '<div class="brand-eyebrow" style="color:var(--muted); text-align:center; margin-bottom:4px;">Centre of Excellence (B), Sialkot</div>' +
-          '<div class="brand-title" style="color:var(--navy); text-align:center; font-size:21px; margin-bottom:20px;">Unfair Means Case Register</div>' +
+          '<div class="brand-title" style="color:var(--navy); text-align:center; font-size:21px; margin-bottom:6px;">' + esc(copy ? copy.title : "Unfair Means Case Register") + "</div>" +
+          (copy ? '<div style="color:var(--muted); text-align:center; font-size:12.5px; margin-bottom:14px;">' + esc(copy.hint) + "</div>" : '<div style="margin-bottom:14px;"></div>') +
           '<label style="font-size:13.5px; font-weight:700; color:var(--ink);">Password</label>' +
           '<input id="loginPassword" type="password" placeholder="Enter your role\'s password" style="width:100%; margin:8px 0 14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;">' +
           (state.loginError ? '<div style="color:var(--status-reported); font-size:13px; margin-bottom:10px;">' + esc(state.loginError) + "</div>" : "") +
@@ -2000,7 +2091,13 @@
       btn.textContent = "Checking…";
       login(pw).then(function () {
         state.loginError = null;
+        var expected = expectedRoleFromUrl();
+        var mismatchMsg = null;
+        if (expected && authRole !== expected) {
+          mismatchMsg = "Note: you logged in as " + roleDisplayLabel() + ", not " + (EXPECTED_ROLE_COPY[expected] ? EXPECTED_ROLE_COPY[expected].title.replace(" Login", "") : expected) + ".";
+        }
         initCapabilities();
+        if (mismatchMsg) showToast(mismatchMsg);
       }).catch(function (e) {
         state.loginError = e.message || "Incorrect password.";
         btn.disabled = false;
@@ -2663,7 +2760,10 @@
 
   function buildInitiationLetterHtml(c) {
     var memoNo = "COE/B/SLK/UMC-" + (c.caseCode || "").replace("UMC-", "");
-    var offense = (c.offenseTypes && c.offenseTypes.length) ? c.offenseTypes.join(", ") + (c.offenseOther ? " — " + c.offenseOther : "") : "Not specified at time of report.";
+    var offenseTags = (c.offenseTypes && c.offenseTypes.length)
+      ? c.offenseTypes.map(function (o) { return '<span class="letter-offense-tag">' + esc(o) + "</span>"; }).join("") +
+        (c.offenseOther ? '<span class="letter-offense-tag">' + esc(c.offenseOther) + "</span>" : "")
+      : '<span class="letter-offense-tag">Not specified at time of report</span>';
 
     var html = '<div class="letter-page" id="letterCapture">';
     html += letterHeadHtml();
@@ -2675,23 +2775,36 @@
 
     html += '<div class="letter-sop-banner"><div class="sop-title">Immediate action</div>' +
       "The examination paper has been cancelled and the answer sheet / material confiscated with immediate effect. " +
-      "This letter is to be shared via WhatsApp with the Class Teacher, <b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b>, " +
-      "and the Class Coordinator, <b>" + esc(classCoordinatorFor(c.grade)) + "</b>, without delay. " +
+      "This letter is to be shared via WhatsApp with the Class Teacher <b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b> " +
+      "and the Class Coordinator <b>" + esc(classCoordinatorFor(c.grade)) + "</b> without delay. " +
       "The confiscated answer sheet and material are to be handed over to the Class Teacher for record-keeping. " +
       "The Class Teacher is instructed to contact the parents / guardian today between 1:30 PM and 2:30 PM." +
     "</div>";
 
     html += '<div class="letter-body">';
     html += "<p>This is to formally record that during the <b>" + esc(c.subject || "examination") + "</b> examination held on <b>" +
-      esc(fmtDateOnly(c.examDate)) + "</b> in <b>" + esc(c.room || "the examination hall") + "</b>, the following candidate was reported for suspected unfair means:</p>";
-    html += "<p><b>Student:</b> " + esc(c.studentName || "—") + " &nbsp; <b>Roll No.:</b> " + esc(c.rollNo || "—") +
-      " &nbsp; <b>Class:</b> " + esc(classLabel(c)) + "</p>";
-    html += "<p><b>Reported by:</b> " + esc(c.invigilatorName || "—") + "</p>";
-    html += "<p><b>Nature of alleged unfair means:</b> " + esc(offense) + "</p>";
-    html += "<p><b>Invigilator's account:</b> " + esc(c.description || "No further details recorded.") + "</p>";
+      esc(fmtDateOnly(c.examDate)) + "</b> in <b>" + esc(c.room || "the examination hall") + "</b>, the following candidate was reported for suspected unfair means.</p>";
+
+    html += '<div class="letter-section-heading">Candidate Details</div>';
+    html += '<div class="letter-details-grid">' +
+      '<div class="letter-details-row"><div class="letter-details-label">Student</div><div class="letter-details-value">' + esc(c.studentName || "—") + "</div></div>" +
+      '<div class="letter-details-row"><div class="letter-details-label">Roll No.</div><div class="letter-details-value">' + esc(c.rollNo || "—") + "</div></div>" +
+      '<div class="letter-details-row"><div class="letter-details-label">Class</div><div class="letter-details-value">' + esc(classLabel(c)) + "</div></div>" +
+      '<div class="letter-details-row"><div class="letter-details-label">Reported by</div><div class="letter-details-value">' + esc(c.invigilatorName || "—") + "</div></div>" +
+    "</div>";
+
+    html += '<div class="letter-section-heading alt">Nature of Alleged Unfair Means</div>';
+    html += '<div class="letter-offense-tags">' + offenseTags + "</div>";
+
+    html += '<div class="letter-section-heading">Invigilator\'s Account</div>';
+    html += '<div class="letter-account-box">' + esc(c.description || "No further details recorded.") + "</div>";
+
     if (c.invigilatorAction) {
-      html += "<p><b>Invigilator's on-the-spot recommendation:</b> " + esc(c.invigilatorAction) + "</p>";
+      html += '<div class="letter-section-heading alt">On-the-Spot Recommendation</div>';
+      html += "<p>" + esc(c.invigilatorAction) + "</p>";
     }
+
+    html += '<div class="letter-section-heading">Next Steps</div>';
     html += "<p>This case (<b>Case No. " + esc(c.caseCode) + "</b>) is hereby placed on record and forwarded to the " +
       "Class Coordinator, <b>" + esc(classCoordinatorFor(c.grade)) + "</b>, for review. The matter will then be referred " +
       "to the Senior Coordinator for a final decision, in accordance with the prevailing examination rules and school policy.</p>";
@@ -2722,17 +2835,24 @@
 
     html += '<div class="letter-body">';
     html += "<p>This is to record the closure of Unfair Means Case No. <b>" + esc(c.caseCode) + "</b>, initiated on <b>" +
-      esc(fmtDateOnly(c.reportedAt)) + "</b> concerning <b>" + esc(c.studentName || "—") + "</b>, Roll No. " + esc(c.rollNo || "—") +
-      ", " + esc(classLabel(c)) + ", reported during the " + esc(c.subject || "examination") + " examination.</p>";
+      esc(fmtDateOnly(c.reportedAt)) + "</b>, reported during the " + esc(c.subject || "examination") + " examination.</p>";
 
-    html += "<p><b>Decision:</b> " + (dec.action ? esc(dec.action) + " — " : "") + esc(dec.text || "No decision text recorded.") + "</p>";
+    html += '<div class="letter-section-heading">Candidate Details</div>';
+    html += '<div class="letter-details-grid">' +
+      '<div class="letter-details-row"><div class="letter-details-label">Student</div><div class="letter-details-value">' + esc(c.studentName || "—") + "</div></div>" +
+      '<div class="letter-details-row"><div class="letter-details-label">Roll No.</div><div class="letter-details-value">' + esc(c.rollNo || "—") + "</div></div>" +
+      '<div class="letter-details-row"><div class="letter-details-label">Class</div><div class="letter-details-value">' + esc(classLabel(c)) + "</div></div>" +
+    "</div>";
+
+    html += '<div class="letter-section-heading alt">Final Decision</div>';
+    html += '<div class="letter-decision-box">' + (dec.action ? "<b>" + esc(dec.action) + "</b><br>" : "") + esc(dec.text || "No decision text recorded.") + "</div>";
     html += "<p><b>Decided by:</b> " + esc(dec.decidedBy || "—") + " &nbsp; <b>Date:</b> " + esc(fmtLongDate(dec.at)) + "</p>";
     html += "<p>This case is accordingly closed and placed on permanent record in accordance with the prevailing examination rules and school policy.</p>";
     html += "</div>";
 
     html += '<div class="letter-sop-banner"><div class="sop-title">Filing instruction</div>' +
-      "After printing, this letter (together with the Initiation Letter) is to be handed to the Class Teacher, <b>" +
-      esc(classTeacherLabel(c.grade, c.section)) + "</b>, for filing in the student's file." +
+      "After printing, this letter (together with the Initiation Letter) is to be handed to the Class Teacher " +
+      "<b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b> for filing in the student's file." +
     "</div>";
 
     html += '<div class="letter-sign-row">';
