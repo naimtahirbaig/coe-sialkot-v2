@@ -6,13 +6,19 @@
 <title>UMC Case Register — Centre of Excellence (B), Sialkot</title>
 <style>
   :root {
-    --navy: #14213D;
-    --navy-deep: #0E1930;
-    --navy-mid: #1C2E52;
-    --gold: #C9972B;
-    --gold-soft: #E7C878;
-    --paper: #F1F3F6;
-    --paper-dim: #E7EAEF;
+    /* Pulled directly from the school's own logo (Punjab Daanish Schools
+       & Centres of Excellence Authority crest) for a consistent, branded
+       look — not arbitrary picks. */
+    --navy: #150F3F;
+    --navy-deep: #0A0724;
+    --navy-mid: #241A5C;
+    --gold: #FCB629;
+    --gold-deep: #D99418;
+    --gold-soft: #FFD98A;
+    --crest-green: #009139;   /* from the Punjab government emblem */
+    --crest-red: #CA2D38;     /* the small accent diamond in the crest */
+    --paper: #F4F5F8;
+    --paper-dim: #E9EBF1;
     --card: #FFFFFF;
     --ink: #16233F;
     --muted: #5B6B84;
@@ -28,8 +34,8 @@
     --status-senior-bg: #F1E9F7;
     --status-principal: #B8860B;
     --status-principal-bg: #FBF2DC;
-    --status-closed: #1E8A78;
-    --status-closed-bg: #E2F2EF;
+    --status-closed: #009139;
+    --status-closed-bg: #E0F2E7;
     /* legacy aliases kept so nothing else in this file needs renaming */
     --status-review: #2E6FB2;
     --status-review-bg: #E4EFFA;
@@ -75,12 +81,21 @@
     padding: 32px 28px;
     width: 100%;
     max-width: 360px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    border-top: 4px solid var(--gold);
   }
+  .login-crest-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 22px;
+    margin-bottom: 16px;
+  }
+  .login-crest-row img { width: 56px; height: 56px; object-fit: contain; }
 
   /* ---------------- Top bar ---------------- */
   .topbar {
-    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    background: linear-gradient(160deg, var(--navy-mid) 0%, var(--navy) 55%, var(--navy-deep) 100%);
     padding: 18px 28px;
     padding-top: calc(18px + env(safe-area-inset-top, 0px));
     display: flex;
@@ -91,6 +106,7 @@
     position: sticky;
     top: 0;
     z-index: 40;
+    border-bottom: 3px solid var(--gold);
   }
   .brand {
     display: flex;
@@ -100,6 +116,8 @@
   .brand-eyebrow {
     font-size: 12.5px;
     color: var(--gold-soft);
+    font-weight: 600;
+    letter-spacing: 0.3px;
   }
   .brand-title {
     font-family: var(--serif);
@@ -116,8 +134,8 @@
   }
   .role-select {
     background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(231,200,120,0.4);
-    color: #F3EFE2;
+    border: 1px solid rgba(252,182,41,0.45);
+    color: #FFF3D6;
     border-radius: 8px;
     padding: 8px 10px;
     font-size: 13.5px;
@@ -132,25 +150,27 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, background 0.15s ease;
   }
   .btn-gold {
-    background: linear-gradient(155deg, var(--gold) 0%, #B5811F 100%);
-    color: #241804;
-    box-shadow: 0 1px 3px rgba(184,134,11,0.35);
+    background: linear-gradient(155deg, var(--gold) 0%, var(--gold-deep) 100%);
+    color: var(--navy);
+    box-shadow: 0 2px 5px rgba(217,148,24,0.4);
   }
-  .btn-gold:hover { background: var(--gold-soft); box-shadow: 0 2px 6px rgba(184,134,11,0.45); }
+  .btn-gold:hover { background: linear-gradient(155deg, var(--gold-soft) 0%, var(--gold) 100%); box-shadow: 0 3px 9px rgba(217,148,24,0.5); transform: translateY(-1px); }
+  .btn-gold:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(217,148,24,0.4); }
   .btn-outline {
     background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink);
+    border: 1.5px solid var(--navy);
+    color: var(--navy);
   }
-  .btn-outline:hover { background: var(--paper-dim); }
+  .btn-outline:hover { background: var(--navy); color: #fff; }
   .btn-outline-light {
     background: transparent;
-    border: 1px solid rgba(255,255,255,0.35);
-    color: #EDEFF3;
+    border: 1px solid rgba(255,255,255,0.4);
+    color: #FFFFFF;
   }
-  .btn-outline-light:hover { background: rgba(255,255,255,0.08); }
+  .btn-outline-light:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.6); }
   .btn-small { padding: 6px 11px; font-size: 12.5px; border-radius: 6px; }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -725,7 +745,7 @@
   .nav-toggle {
     display: flex;
     background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(231,200,120,0.3);
+    border: 1px solid rgba(252,182,41,0.35);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -739,7 +759,7 @@
   }
   .nav-toggle button.active {
     background: var(--gold);
-    color: #241804;
+    color: var(--navy);
   }
 
   /* ---------------- Typeahead ---------------- */
@@ -797,16 +817,17 @@
   .quick-notes-label { font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
   .quick-note-chip {
     display: inline-block;
-    border: 1px solid var(--gold);
-    background: var(--gold-bg, #FBF2DC);
+    border: 1px solid var(--gold-deep);
+    background: #FFF3D6;
     color: var(--navy);
     border-radius: 14px;
     padding: 5px 11px;
     font-size: 12px;
     margin: 0 6px 6px 0;
     cursor: pointer;
+    font-weight: 600;
   }
-  .quick-note-chip:hover { background: var(--gold); color: #fff; }
+  .quick-note-chip:hover { background: var(--gold); color: var(--navy); }
 
   /* ---------------- Evidence categories ---------------- */
   .evidence-category { margin-bottom: 16px; }
@@ -977,14 +998,14 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    border-top: 6px solid #16233F;
+    border-top: 6px solid #150F3F;
   }
   .letter-head {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 22px;
-    border-bottom: 3px double #16233F;
+    border-bottom: 3px double #150F3F;
     padding-bottom: 14px;
     margin-bottom: 4px;
   }
@@ -1010,7 +1031,7 @@
   }
   .letter-head-accent {
     height: 3px;
-    background: linear-gradient(90deg, #16233F 0%, #C9972B 50%, #16233F 100%);
+    background: linear-gradient(90deg, #150F3F 0%, #FCB629 50%, #150F3F 100%);
     margin-bottom: 18px;
   }
   .letter-evidence-row {
@@ -1037,7 +1058,7 @@
     font-size: 21px;
     font-weight: 700;
     letter-spacing: 0.5px;
-    color: #16233F;
+    color: #150F3F;
   }
   .letter-school-name .l2 {
     font-size: 15px;
@@ -1053,10 +1074,10 @@
     text-align: center;
     font-size: 17px;
     font-weight: 700;
-    color: #16233F;
+    color: #150F3F;
     padding-bottom: 8px;
     margin-bottom: 16px;
-    border-bottom: 2px solid #C9972B;
+    border-bottom: 2px solid #FCB629;
   }
   .letter-subject {
     font-size: 13.5px;
@@ -1939,13 +1960,17 @@
     return (
       '<div class="login-screen">' +
         '<div class="login-card">' +
-          '<div class="brand-eyebrow" style="color:var(--muted); margin-bottom:4px;">Centre of Excellence (B), Sialkot</div>' +
-          '<div class="brand-title" style="color:var(--ink); font-size:22px; margin-bottom:18px;">Unfair Means Case Register</div>' +
+          '<div class="login-crest-row">' +
+            '<img src="/case-register-logo-left.png" alt="Government of Punjab" crossorigin="anonymous">' +
+            '<img src="/case-register-logo-right.png" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority" crossorigin="anonymous">' +
+          "</div>" +
+          '<div class="brand-eyebrow" style="color:var(--muted); text-align:center; margin-bottom:4px;">Centre of Excellence (B), Sialkot</div>' +
+          '<div class="brand-title" style="color:var(--navy); text-align:center; font-size:21px; margin-bottom:20px;">Unfair Means Case Register</div>' +
           '<label style="font-size:13.5px; font-weight:700; color:var(--ink);">Password</label>' +
-          '<input id="loginPassword" type="password" placeholder="Enter your staff password" style="width:100%; margin:8px 0 14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;">' +
+          '<input id="loginPassword" type="password" placeholder="Enter your role\'s password" style="width:100%; margin:8px 0 14px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; font-size:14px;">' +
           (state.loginError ? '<div style="color:var(--status-reported); font-size:13px; margin-bottom:10px;">' + esc(state.loginError) + "</div>" : "") +
           '<button class="btn btn-gold" id="loginSubmitBtn" style="width:100%; justify-content:center;">Log in</button>' +
-          '<div style="font-size:12px; color:var(--muted); margin-top:14px;">Ask the exam cell for your role\'s password.</div>' +
+          '<div style="font-size:12px; color:var(--muted); margin-top:14px; text-align:center;">Ask the exam cell for your role\'s password.</div>' +
         "</div>" +
       "</div>"
     );
