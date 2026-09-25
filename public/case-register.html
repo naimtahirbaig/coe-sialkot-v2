@@ -626,24 +626,50 @@
     border: 2px solid #C0392B;
     background: #FDEDEC;
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 14px 16px;
     margin-bottom: 16px;
     color: #C0392B;
-    font-weight: 700;
-    font-size: 12.5px;
-    line-height: 1.5;
   }
-  .sop-banner .sop-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .sop-banner .sop-title { font-size: 13.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
   .letter-sop-banner {
     border: 2px solid #C0392B;
-    padding: 10px 12px;
+    padding: 12px 14px;
     margin: 10px 0 16px;
     color: #C0392B;
+  }
+  .letter-sop-banner .sop-title { font-size: 12.5px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+  .sop-item, .letter-sop-item {
+    display: table;
+    width: 100%;
+    margin-bottom: 7px;
+  }
+  .sop-item:last-child, .letter-sop-item:last-child { margin-bottom: 0; }
+  .sop-num, .letter-sop-num {
+    display: table-cell;
+    width: 22px;
+    vertical-align: top;
+  }
+  .sop-num span, .letter-sop-num span {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    background: #C0392B;
+    color: #fff;
+    border-radius: 50%;
+    text-align: center;
+    font-size: 11px;
     font-weight: 700;
-    font-size: 12px;
+  }
+  .sop-text, .letter-sop-text {
+    display: table-cell;
+    vertical-align: top;
+    font-size: 12.5px;
+    font-weight: 600;
     line-height: 1.45;
   }
-  .letter-sop-banner .sop-title { font-size: 12.5px; text-transform: uppercase; margin-bottom: 3px; }
+  .letter-sop-text { font-size: 12px; }
+  .sop-text b, .letter-sop-text b { font-weight: 800; }
   .drawer-footer {
     position: sticky;
     bottom: 0;
@@ -2639,10 +2665,10 @@
           '<div class="drawer-header"><span class="drawer-title">New incident report</span><button class="close-btn" data-action="close-drawer">&times;</button></div>' +
 
           '<div class="sop-banner"><div class="sop-title">⚠ Immediate action required</div>' +
-            "Cancel the paper immediately and confiscate the answer sheet and all related material. " +
-            "After filing this report, download or share the Initiation Letter via WhatsApp with the Class Teacher and Class Coordinator right away. " +
-            "Hand over the confiscated answer sheet and material to the Class Teacher for record-keeping. " +
-            "Instruct the Class Teacher to call the parents/guardian today between 1:30 PM and 2:30 PM." +
+            '<div class="sop-item"><div class="sop-num"><span>1</span></div><div class="sop-text"><b>Cancel &amp; confiscate</b> — cancel the paper immediately and confiscate the answer sheet and all related material.</div></div>' +
+            '<div class="sop-item"><div class="sop-num"><span>2</span></div><div class="sop-text"><b>Share via WhatsApp</b> — after filing, send the Initiation Letter to the Class Teacher and Class Coordinator right away.</div></div>' +
+            '<div class="sop-item"><div class="sop-num"><span>3</span></div><div class="sop-text"><b>Hand over evidence</b> — give the confiscated answer sheet and material to the Class Teacher for record-keeping.</div></div>' +
+            '<div class="sop-item"><div class="sop-num"><span>4</span></div><div class="sop-text"><b>Call the parents</b> — instruct the Class Teacher to call the parents/guardian today between 1:30 PM and 2:30 PM.</div></div>' +
           "</div>" +
 
           '<div class="form-grid">' +
@@ -2773,12 +2799,13 @@
 
     html += letterEvidenceHtml(c);
 
-    html += '<div class="letter-sop-banner"><div class="sop-title">Immediate action</div>' +
-      "The examination paper has been cancelled and the answer sheet / material confiscated with immediate effect. " +
-      "This letter is to be shared via WhatsApp with the Class Teacher <b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b> " +
-      "and the Class Coordinator <b>" + esc(classCoordinatorFor(c.grade)) + "</b> without delay. " +
-      "The confiscated answer sheet and material are to be handed over to the Class Teacher for record-keeping. " +
-      "The Class Teacher is instructed to contact the parents / guardian today between 1:30 PM and 2:30 PM." +
+    var ctName = esc(classTeacherLabel(c.grade, c.section));
+    var ccName = esc(classCoordinatorFor(c.grade));
+    html += '<div class="letter-sop-banner"><div class="sop-title">⚠ Immediate Action</div>' +
+      '<div class="letter-sop-item"><div class="letter-sop-num"><span>1</span></div><div class="letter-sop-text"><b>Cancelled &amp; confiscated</b> — the examination paper has been cancelled and the answer sheet / material confiscated with immediate effect.</div></div>' +
+      '<div class="letter-sop-item"><div class="letter-sop-num"><span>2</span></div><div class="letter-sop-text"><b>Share via WhatsApp</b> — with the Class Teacher, ' + ctName + ', and the Class Coordinator, ' + ccName + ', without delay.</div></div>' +
+      '<div class="letter-sop-item"><div class="letter-sop-num"><span>3</span></div><div class="letter-sop-text"><b>Hand over evidence</b> — to the Class Teacher, ' + ctName + ', for record-keeping.</div></div>' +
+      '<div class="letter-sop-item"><div class="letter-sop-num"><span>4</span></div><div class="letter-sop-text"><b>Call the parents</b> — the Class Teacher is instructed to contact the parents / guardian today between 1:30 PM and 2:30 PM.</div></div>' +
     "</div>";
 
     html += '<div class="letter-body">';
@@ -2850,9 +2877,8 @@
     html += "<p>This case is accordingly closed and placed on permanent record in accordance with the prevailing examination rules and school policy.</p>";
     html += "</div>";
 
-    html += '<div class="letter-sop-banner"><div class="sop-title">Filing instruction</div>' +
-      "After printing, this letter (together with the Initiation Letter) is to be handed to the Class Teacher " +
-      "<b>" + esc(classTeacherLabel(c.grade, c.section)) + "</b> for filing in the student's file." +
+    html += '<div class="letter-sop-banner"><div class="sop-title">📁 Filing Instruction</div>' +
+      '<div class="letter-sop-item"><div class="letter-sop-num"><span>1</span></div><div class="letter-sop-text">After printing, hand this letter (together with the Initiation Letter) to the Class Teacher, <b>' + esc(classTeacherLabel(c.grade, c.section)) + '</b>, for filing in the student\'s file.</div></div>' +
     "</div>";
 
     html += '<div class="letter-sign-row">';
