@@ -1861,6 +1861,39 @@
     } catch (e) { console.error(e); }
   }
 
+  // Admin-only. Removes a case from the register; the server copies the
+  // whole case into case_register_deletions first, so the fact that it
+  // existed, who removed it and why is not lost.
+  async function deleteCase(caseId) {
+    if (!isAdmin()) { showToast("Only an admin can delete a case."); return; }
+    var c = getCase(caseId);
+    if (!c) return;
+
+    var reason = window.prompt(
+      "Delete case " + c.caseCode + " (" + (c.studentName || "student") + ")?\n\n" +
+      "The case will be removed from the register. A record of it and of this " +
+      "deletion is kept.\n\nReason for deleting (required):"
+    );
+    if (reason === null) return;                     // cancelled
+    reason = reason.trim();
+    if (!reason) { showToast("A reason is required to delete a case."); return; }
+
+    if (!window.confirm(
+      "Are you sure? Delete " + c.caseCode + "?\n\nReason: " + reason
+    )) return;
+
+    try {
+      await apiSend("DELETE", "/cases/" + encodeURIComponent(caseId) + "?reason=" + encodeURIComponent(reason));
+      state.cases = state.cases.filter(function (x) { return x._id !== caseId; });
+      if (state.selectedId === caseId) state.selectedId = null;
+      showToast("Case " + c.caseCode + " deleted.");
+      render();
+    } catch (e) {
+      console.error(e);
+      showToast(e && e.message ? e.message : "Could not delete the case.");
+    }
+  }
+
   async function uploadFile(file, category) {
     var form = new FormData();
     form.append("file", file);
@@ -2615,6 +2648,10 @@
       html += '<button class="btn btn-outline" data-action="open-letter" data-type="closure" data-id="' + c._id + '">Closure letter</button>';
     }
     html += '<button class="btn btn-outline" data-action="print-case" data-id="' + c._id + '">Print case file</button>';
+    if (isAdmin()) {
+      html += '<button class="btn btn-outline" style="margin-left:auto; color:#b91c1c; border-color:#b91c1c;" ' +
+              'data-action="delete-case" data-id="' + c._id + '">Delete case</button>';
+    }
     html += "</div>";
 
     if (state.openAction === "advance" && state.openActionId === c._id && step) {
@@ -3538,6 +3575,7 @@
         break;
       }
       case "reopen-case": reopenCase(el.getAttribute("data-id")); break;
+      case "delete-case": deleteCase(el.getAttribute("data-id")); break;
       case "print-case": window.print(); break;
       case "open-letter":
         state.letterView = { type: el.getAttribute("data-type"), caseId: el.getAttribute("data-id") };
