@@ -71,3 +71,82 @@ export async function PATCH(request, { params }) {
   }
   return NextResponse.json({ case: data });
 }
+
+// DELETE /api/case-register/cases/:id?reason=...
+//
+// Admin only. Removes a case from the active register.
+//
+// Before deleting, the whole case row is copied into
+// case_register_deletions along with who deleted it and why. A
+// disciplinary record about a named student should not be able to
+// vanish without trace: if a parent or the authority later asks what
+// happened to a case, that log is the answer. The case itself is gone
+// from the register either way.
+//
+// Evidence photos in storage are NOT removed here — see the note at the
+// end of README-CASE-DELETE.md.
+export async function DELETE(request, { params }) {
+  const role = roleFromRequest(request);
+  if (!role) return NextResponse.json({ error: "Please log in." }, { status: 401 });
+  if (role !== "admin") {
+    return NextResponse.json(
+      { error: "Only an admin can delete a case." },
+      { status: 403 }
+    );
+  }
+
+  const { id } = params;
+  const reason = (new URL(request.url).searchParams.get("reason") || "").trim();
+
+  // Read the case first: it is the snapshot, and it confirms the case exists.
+  const { data: existing, error: readError } = await supabaseAdmin
+    .from("case_register_cases")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (readError || !existing) {
+    return NextResponse.json({ error: "Case not found." }, { status: 404 });
+  }
+
+  // Log first, delete second. If the log write fails we stop, so a case is
+  // never removed without a record of it.
+  const { error: logError } = await supabaseAdmin
+    .from("case_register_deletions")
+    .insert({
+      case_id: existing.id,
+      case_code: existing.case_code ?? null,
+      student_name: existing.student_name ?? null,
+      status_at_deletion: existing.status ?? null,
+      snapshot: existing,
+      deleted_by_role: role,
+      reason: reason || null,
+    });
+
+  if (logError) {
+    console.error("case-register delete log error", logError);
+    return NextResponse.json(
+      { error: "Could not record the deletion, so the case was not deleted." },
+      { status: 500 }
+    );
+  }
+
+  const { error: deleteError } = await supabaseAdmin
+    .from("case_register_cases")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("case-register case DELETE error", deleteError);
+    return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    deleted: {
+      id: existing.id,
+      case_code: existing.case_code ?? null,
+      student_name: existing.student_name ?? null,
+    },
+  });
+}
