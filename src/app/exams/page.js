@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { groupExams, monthName } from "@/lib/awardListExams";
+import ResultSheetsPanel from "@/components/ResultSheetsPanel";
 
 const NAVY = "#150F3F";
 const NAVY_LIGHT = "#1F1760";
@@ -107,6 +108,9 @@ export default function ExamsHub() {
                      copied={copied === `${SITE}/result-cards`} />
           </div>
         </Section>
+
+        {/* ---------------- Result sheets (admin) ---------------- */}
+        <ResultSheetsPanel />
 
         {/* ---------------- Office ---------------- */}
         <Section title="Office" note="Admin password required.">
