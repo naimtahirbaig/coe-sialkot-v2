@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { examLabel } from "@/lib/awardListExams";
 import { loadImage, drawResultCard } from "@/lib/resultCardRenderer";
 import { BASE_W, BASE_H } from "@/lib/resultCardConfig";
+import { findWarnings, drawWarningLetter, reasonText, LETTER_W, LETTER_H, WARN_PCT } from "@/lib/warningLetter";
 import { PdfContext } from "@/lib/pdfVectorContext";
 import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, buildCards } from "@/lib/resultSheets";
 
@@ -41,6 +42,10 @@ export default function ResultSheetsPanel() {
   const [cardSec, setCardSec] = useState("");
   const [cardStudent, setCardStudent] = useState("");
   const [combine, setCombine] = useState(false);
+  const [skipWarn, setSkipWarn] = useState(new Set());   // students un-ticked from the warning list
+  const [showWarn, setShowWarn] = useState(false);
+  const [letterDate, setLetterDate] = useState(() =>
+    new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }));
 
   useEffect(() => {
     if (!open || exams.length) return;
@@ -216,6 +221,77 @@ export default function ResultSheetsPanel() {
         const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
         saveBlob(blob, `${stem}.png`);
       }
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  // ------------------------------------------------------ warning letters
+  const warnings = data ? findWarnings(data, [...selected]) : [];
+  const warnPick = warnings.filter((w) => !skipWarn.has(w.key));
+  const toggleWarn = (k) => setSkipWarn((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
+  async function lettersToPdf(list, label) {
+    const logos = await getLogos();
+    const { jsPDF } = await import("jspdf");
+    const light = res === "light";
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: light });
+    const pw2 = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    for (let i = 0; i < list.length; i++) {
+      if (i) pdf.addPage();
+      if (light) {
+        drawWarningLetter(new PdfContext(pdf, pw2 / LETTER_W), list[i], { style, logos, date: letterDate });
+      } else {
+        const sc = RES[res].scale;
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(LETTER_W * sc); cv.height = Math.round(LETTER_H * sc);
+        const ctx = cv.getContext("2d"); ctx.scale(sc, sc);
+        drawWarningLetter(ctx, list[i], { style, logos, date: letterDate });
+        pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pw2, ph);
+        cv.width = 0; cv.height = 0;
+      }
+      if (i % (light ? 10 : 1) === (light ? 9 : 0)) {
+        setBusy(`${label} ${i + 1}/${list.length}`);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+    return pdf.output("blob");
+  }
+
+  // One PDF per section (ZIP), or everything in one PDF when "combine" is ticked.
+  async function downloadWarnings() {
+    if (!warnPick.length) { setError("No students to warn in this selection."); return; }
+    setError("");
+    try {
+      const groups = [];
+      warnPick.forEach((w) => {
+        let g = groups.find((x) => x.key === w.secCode);
+        if (!g) groups.push((g = { key: w.secCode, name: `${w.classNum}-${w.secName}`, items: [] }));
+        g.items.push(w);
+      });
+      const stem = safe(data.examLine);
+      if (groups.length === 1 || combine) {
+        const blob = await lettersToPdf(groups.flatMap((g) => g.items), "Building letters…");
+        saveBlob(blob, groups.length === 1
+          ? `Warning-Letters-${groups[0].name}-${stem}.pdf` : `Warning-Letters-${stem}.pdf`);
+      } else {
+        const JSZip = (await import("jszip")).default;
+        const zip = new JSZip();
+        for (let i = 0; i < groups.length; i++) {
+          zip.file(`Warning-Letters-${groups[i].name}.pdf`,
+            await lettersToPdf(groups[i].items, `Building ${groups[i].name} (${i + 1}/${groups.length})…`));
+        }
+        setBusy("Compressing…");
+        saveBlob(await zip.generateAsync({ type: "blob" }), `Warning-Letters-${stem}.zip`);
+      }
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  async function downloadOneWarning(w) {
+    setError(""); setBusy("Building letter…");
+    try {
+      saveBlob(await lettersToPdf([w], "Building letter…"),
+        `Warning-Letter-${w.classNum}-${w.secName}-${w.roll}-${w.name}`.replace(/[^\w\-]+/g, "-") + ".pdf");
     } catch (e) { setError(e.message); }
     setBusy("");
   }
@@ -406,6 +482,53 @@ export default function ResultSheetsPanel() {
                     </button>
                   </div>
                 </div>
+              </div>
+
+
+              {/* ---------------- Warning letters ---------------- */}
+              <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "#ef444455", background: "#ef44440d" }}>
+                <div>
+                  <div className="font-bold" style={{ color: "#fca5a5" }}>Warning letters</div>
+                  <p className="text-xs text-white/50">
+                    For students with overall below {WARN_PCT}%, or below {WARN_PCT}% in 2 or more subjects. Based on the marks entered so far,
+                    for the sections ticked above. Signed by Class Teacher, Senior Coordinator and Principal.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-[11px] text-white/60 mb-1">Date on letters</label>
+                    <input value={letterDate} onChange={(e) => setLetterDate(e.target.value)} className={`${input} w-48`} style={inStyle} />
+                  </div>
+                  <button disabled={!!busy || !warnPick.length} onClick={downloadWarnings}
+                          className="font-bold px-4 py-2.5 rounded-lg disabled:opacity-40" style={btn("#ef4444", "#fff")}>
+                    Warning Letters ({warnPick.length})
+                  </button>
+                  <button onClick={() => setShowWarn(!showWarn)} className="text-sm underline" style={{ color: "#fca5a5" }}>
+                    {showWarn ? "Hide list" : `Show list (${warnings.length})`}
+                  </button>
+                </div>
+                <p className="text-[11px] text-white/40">
+                  {warnings.length} student{warnings.length === 1 ? "" : "s"} qualify in the selected sections.
+                  Several sections come as a ZIP of PDFs unless “one PDF” above is ticked.
+                </p>
+                {showWarn && (
+                  <div className="rounded-lg border max-h-72 overflow-y-auto divide-y" style={{ borderColor: "#ffffff1a" }}>
+                    {warnings.length === 0 && <div className="p-3 text-sm text-white/50">Nobody qualifies in this selection.</div>}
+                    {warnings.map((w) => (
+                      <div key={w.key} className="flex items-center gap-3 px-3 py-2 text-sm" style={{ borderColor: "#ffffff10" }}>
+                        <input type="checkbox" checked={!skipWarn.has(w.key)} onChange={() => toggleWarn(w.key)} className="accent-[#ef4444]" />
+                        <div className="flex-1 min-w-0">
+                          <div className="truncate">{w.roll} · {w.name} <span className="text-white/40">({w.classNum} {w.secName})</span></div>
+                          <div className="text-[11px] text-white/50">{w.pct.toFixed(1)}% · {reasonText(w)}</div>
+                        </div>
+                        <button disabled={!!busy} onClick={() => downloadOneWarning(w)}
+                                className="text-xs rounded px-2 py-1 border disabled:opacity-40" style={{ borderColor: "#fca5a566", color: "#fca5a5" }}>
+                          PDF
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {busy && (

@@ -510,7 +510,7 @@ export function buildCards(data, selectedCodes) {
       secRanked.forEach((s, i) => { if (s.obtained !== lastScore) { lastRank = i + 1; lastScore = s.obtained; } secPos[s.id] = lastRank; });
       sec.students.forEach((st) => out.push({
         classNum: cl.class, secCode: sec.code, secName: sec.name,
-        accent: colourForSection(sec.label), position: st.position, roll: st.roll, name: st.name,
+        accent: colourForSection(sec.label), incharge: sec.incharge, position: st.position, roll: st.roll, name: st.name,
         card: {
           studentId: st.id, name: st.name, father: st.father, roll: st.roll,
           cls: `${cl.class} ${sec.name}`, sectionLabel: sec.label,
