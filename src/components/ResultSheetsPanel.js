@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { examLabel } from "@/lib/awardListExams";
-import { loadImage } from "@/lib/resultCardRenderer";
-import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages } from "@/lib/resultSheets";
+import { loadImage, drawResultCard } from "@/lib/resultCardRenderer";
+import { BASE_W, BASE_H } from "@/lib/resultCardConfig";
+import { PdfContext } from "@/lib/pdfVectorContext";
+import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, buildCards } from "@/lib/resultSheets";
 
 const NAVY = "#150F3F";
 const GOLD = "#FCB629";
@@ -16,6 +18,7 @@ const GOLD = "#FCB629";
 // Choose any sections, whole classes, or everything, then download one PDF.
 
 const RES = {
+  light: { label: "Light — tiny file, sharp print (recommended)", scale: 0 },
   std:   { label: "Standard (small file)", scale: 1.5 },
   print: { label: "Print 300 DPI", scale: 2 },
   "4k":  { label: "4K (largest)", scale: 3.0968 },
@@ -30,11 +33,14 @@ export default function ResultSheetsPanel() {
   const [selected, setSelected] = useState(new Set());
   const [level, setLevel] = useState("section");
   const [style, setStyle] = useState("colour");
-  const [res, setRes] = useState("std");
+  const [res, setRes] = useState("light");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const logosRef = useRef(null);
+  const [cardSec, setCardSec] = useState("");
+  const [cardStudent, setCardStudent] = useState("");
+  const [combine, setCombine] = useState(false);
 
   useEffect(() => {
     if (!open || exams.length) return;
@@ -85,11 +91,19 @@ export default function ResultSheetsPanel() {
       if (!pages.length) throw new Error("Nothing to print for that selection.");
       const logos = await getLogos();
       const { jsPDF } = await import("jspdf");
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      const light = res === "light";
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4", compress: light });
       const pw2 = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
       const scale = RES[res].scale;
       for (let i = 0; i < pages.length; i++) {
         setBusy(`Building PDF… page ${i + 1} of ${pages.length}`);
+        if (light) {
+          // Vector page: real text and lines, a few KB each
+          if (i) pdf.addPage();
+          pages[i].draw(new PdfContext(pdf, pw2 / PAGE_W), { style, logos });
+          if (i % 5 === 4) await new Promise((r) => setTimeout(r, 0));
+          continue;
+        }
         const cv = document.createElement("canvas");
         cv.width = Math.round(PAGE_W * scale); cv.height = Math.round(PAGE_H * scale);
         const ctx = cv.getContext("2d"); ctx.scale(scale, scale);
@@ -102,6 +116,106 @@ export default function ResultSheetsPanel() {
       const tag = { results: lvl === "class" ? "Class-wise-Results" : "Section-wise-Results", summary: `Summary-${lvl}-wise`, comparison: `Comparison-${lvl}-wise` }[kind];
       const stem = data.examLine.replace(/[^\w]+/g, "-");
       pdf.save(`${tag}-${stem}.pdf`);
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+
+  // ------------------------------------------------------- result cards
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  // Draw one card to a canvas (picture qualities and PNG)
+  function cardCanvas(item, scale, logos) {
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(BASE_W * scale); cv.height = Math.round(BASE_H * scale);
+    const ctx = cv.getContext("2d"); ctx.scale(scale, scale);
+    drawResultCard(ctx, item.card, { accent: item.accent, style, logos });
+    return cv;
+  }
+
+  // Items -> one PDF (Blob). Light = vector; otherwise a picture per page.
+  async function cardsToPdf(items, label) {
+    const logos = await getLogos();
+    const { jsPDF } = await import("jspdf");
+    const light = res === "light";
+    const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: light });
+    const pw2 = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+    for (let i = 0; i < items.length; i++) {
+      if (i) pdf.addPage();
+      if (light) {
+        drawResultCard(new PdfContext(pdf, pw2 / BASE_W), items[i].card, { accent: items[i].accent, style, logos });
+      } else {
+        const cv = cardCanvas(items[i], RES[res].scale, logos);
+        pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pw2, ph);
+        cv.width = 0; cv.height = 0;
+      }
+      if (i % (light ? 10 : 1) === (light ? 9 : 0)) {
+        setBusy(`${label} ${i + 1}/${items.length}`);
+        await new Promise((r) => setTimeout(r, 0));
+      }
+    }
+    return pdf.output("blob");
+  }
+
+  const safe = (t) => String(t).replace(/[^\w\-]+/g, "-");
+
+  // Section-wise: a PDF per selected section.  Class-wise: a PDF per class, merit order.
+  // "Combine" puts everything in one PDF; otherwise several PDFs come as a ZIP.
+  async function downloadCards(mode) {
+    if (!data || selected.size === 0) { setError("Select at least one section."); return; }
+    setError("");
+    try {
+      const items = buildCards(data, [...selected]);
+      if (!items.length) throw new Error("No students in that selection.");
+      const groups = [];
+      items.forEach((it) => {
+        const key = mode === "section" ? it.secCode : "c" + it.classNum;
+        let g = groups.find((x) => x.key === key);
+        if (!g) groups.push((g = { key, items: [],
+          name: mode === "section" ? `${it.classNum}-${it.secName}` : `Class-${it.classNum}` }));
+        g.items.push(it);
+      });
+      if (mode === "class") groups.forEach((g) => g.items.sort((a, b) =>
+        (a.position ?? 1e9) - (b.position ?? 1e9) || a.secName.localeCompare(b.secName)));
+      const stem = safe(data.examLine);
+      if (groups.length === 1 || combine) {
+        const blob = await cardsToPdf(groups.flatMap((g) => g.items), "Building cards…");
+        saveBlob(blob, groups.length === 1
+          ? `Result-Cards-${groups[0].name}-${stem}.pdf`
+          : `Result-Cards-${mode}-wise-${stem}.pdf`);
+      } else {
+        const JSZip = (await import("jszip")).default;
+        const zip = new JSZip();
+        for (let i = 0; i < groups.length; i++) {
+          const blob = await cardsToPdf(groups[i].items, `Building ${groups[i].name} (${i + 1}/${groups.length})…`);
+          zip.file(`Result-Cards-${groups[i].name}.pdf`, blob);
+        }
+        setBusy("Compressing…");
+        saveBlob(await zip.generateAsync({ type: "blob" }), `Result-Cards-${mode}-wise-${stem}.zip`);
+      }
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  const cardList = data && cardSec ? buildCards(data, [cardSec]) : [];
+  const oneItem = cardList.find((c) => String(c.card.studentId) === String(cardStudent));
+
+  async function downloadOneCard(kind) {
+    if (!oneItem) return;
+    setError(""); setBusy("Building card…");
+    try {
+      const stem = `${oneItem.classNum}-${oneItem.secName}-${oneItem.roll}-${oneItem.name}`.replace(/[^\w\-]+/g, "-");
+      if (kind === "pdf") saveBlob(await cardsToPdf([oneItem], "Building card…"), `${stem}.pdf`);
+      else {
+        const cv = cardCanvas(oneItem, res === "light" ? 2 : RES[res].scale, await getLogos());
+        const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
+        saveBlob(blob, `${stem}.png`);
+      }
     } catch (e) { setError(e.message); }
     setBusy("");
   }
@@ -232,12 +346,74 @@ export default function ResultSheetsPanel() {
                 </button>
               </div>
 
+
+              {/* ---------------- Result cards ---------------- */}
+              <div className="rounded-xl border p-4 space-y-3" style={{ borderColor: "#ffffff1a", background: "#ffffff05" }}>
+                <div>
+                  <div className="font-bold" style={{ color: GOLD }}>Result cards</div>
+                  <p className="text-xs text-white/50">
+                    Uses the sections ticked above, plus the Style and Quality you chose. Light PDF is the smallest file.
+                  </p>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <button disabled={!!busy || !nSel} onClick={() => downloadCards("section")}
+                          className="font-bold px-4 py-3 rounded-lg disabled:opacity-40 text-left" style={btn("#1DB954")}>
+                    Section-wise Cards
+                    <span className="block text-xs font-normal opacity-80">Every student of each selected section</span>
+                  </button>
+                  <button disabled={!!busy || !nSel} onClick={() => downloadCards("class")}
+                          className="font-bold px-4 py-3 rounded-lg disabled:opacity-40 text-left" style={btn("#1DB954")}>
+                    Class-wise Cards
+                    <span className="block text-xs font-normal opacity-80">Whole class together · merit order</span>
+                  </button>
+                </div>
+                <label className="flex items-center gap-2 text-xs text-white/70">
+                  <input type="checkbox" checked={combine} onChange={(e) => setCombine(e.target.checked)} className="accent-[#FCB629]" />
+                  Put everything in one PDF (otherwise several sections or classes come as a ZIP of PDFs)
+                </label>
+
+                <div className="pt-3 border-t" style={{ borderColor: "#ffffff14" }}>
+                  <div className="text-sm font-semibold mb-2">Individual card</div>
+                  <div className="flex flex-wrap gap-3 items-end">
+                    <div>
+                      <label className="block text-[11px] text-white/60 mb-1">Section</label>
+                      <select className={input} style={inStyle} value={cardSec}
+                              onChange={(e) => { setCardSec(e.target.value); setCardStudent(""); }}>
+                        <option value="">Select…</option>
+                        {data.classes.flatMap((c) => c.sections.map((s) => (
+                          <option key={s.code} value={s.code}>Class {c.class} — {s.label}</option>
+                        )))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] text-white/60 mb-1">Student</label>
+                      <select className={input} style={inStyle} value={cardStudent} disabled={!cardSec}
+                              onChange={(e) => setCardStudent(e.target.value)}>
+                        <option value="">Select…</option>
+                        {cardList.map((c) => (
+                          <option key={c.card.studentId} value={c.card.studentId}>{c.roll} · {c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button disabled={!!busy || !oneItem} onClick={() => downloadOneCard("pdf")}
+                            className="font-bold px-4 py-2.5 rounded-lg disabled:opacity-40" style={btn("#1DB954")}>
+                      Card PDF
+                    </button>
+                    <button disabled={!!busy || !oneItem} onClick={() => downloadOneCard("png")}
+                            className="font-bold px-4 py-2.5 rounded-lg disabled:opacity-40" style={btn(GOLD)}>
+                      Card PNG
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {busy && (
                 <div className="rounded-lg px-4 py-3 text-sm border" style={{ borderColor: `${GOLD}55`, color: GOLD, background: `${GOLD}14` }}>{busy}</div>
               )}
               <p className="text-[11px] text-white/40 leading-relaxed">
                 Built in your browser from live marks, so nothing is uploaded. Pass mark 40%. Positions are across the whole class.
-                Many pages at 4K make a big file — Standard is sharp enough for screen and print.
+                Light makes a tiny, sharp file; the picture-based qualities are larger.
               </p>
             </>
           )}

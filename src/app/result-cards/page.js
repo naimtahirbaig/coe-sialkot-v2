@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { examLabel } from "@/lib/awardListExams";
 import { colourForSection, SIZES, BASE_W, BASE_H } from "@/lib/resultCardConfig";
 import { drawResultCard, loadImage } from "@/lib/resultCardRenderer";
+import { drawSectionSheet, SHEET_W, SHEET_H } from "@/lib/sectionSheetRenderer";
+import { PdfContext } from "@/lib/pdfVectorContext";
 
 const NAVY = "#150F3F";
 const NAVY_LIGHT = "#1F1760";
@@ -227,6 +229,111 @@ export default function ResultCardsPage() {
     setBusy("");
   }
 
+  // ---- LIGHT PDFs: real text and shapes (vectors), not a picture ----
+  // A whole section is a few hundred KB instead of tens of MB, and it prints
+  // perfectly sharp at any size because the printer draws the text itself.
+  async function lightCardsPdf(list, filename) {
+    setBusy("Building light PDF…");
+    try {
+      const logos = await getLogos();
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true });
+      const k = pdf.internal.pageSize.getWidth() / BASE_W;
+      const accent = colourForSection(data.section.section_label);
+      for (let i = 0; i < list.length; i++) {
+        if (i > 0) pdf.addPage();
+        drawResultCard(new PdfContext(pdf, k), list[i], { accent, style, logos });
+        if (i % 10 === 9) {
+          setBusy(`Building light PDF… ${i + 1}/${list.length}`);
+          await new Promise((r) => setTimeout(r, 0));
+        }
+      }
+      pdf.save(filename);
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  function downloadOneLight() {
+    const card = data.cards.find((c) => c.studentId === studentId);
+    if (card) lightCardsPdf([card], `${fileStem(card)}-light.pdf`);
+  }
+
+  function downloadSectionLight() {
+    const sec = String(data.section.section_label).split("(")[0].trim();
+    lightCardsPdf(data.cards, `Result-Cards-${data.section.class}-${sec}-light.pdf`);
+  }
+
+  async function downloadSheetLight() {
+    setBusy("Building light PDF…");
+    try {
+      const logos = await getLogos();
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4", compress: true });
+      const k = pdf.internal.pageSize.getWidth() / SHEET_W;
+      drawSectionSheet(new PdfContext(pdf, k), data,
+        { accent: colourForSection(data.section.section_label), style, logos });
+      pdf.save(`${sheetStem()}-light.pdf`);
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  // ---- One-page section sheet (A4 landscape, every student x every subject) ----
+  async function renderSheet(scale) {
+    const logos = await getLogos();
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(SHEET_W * scale);
+    cv.height = Math.round(SHEET_H * scale);
+    const ctx = cv.getContext("2d");
+    ctx.scale(scale, scale);
+    drawSectionSheet(ctx, data, { accent: colourForSection(data.section.section_label), style, logos });
+    return cv;
+  }
+
+  function sheetStem() {
+    const sec = String(data.section.section_label).split("(")[0].trim();
+    return `Section-Sheet-${data.section.class}-${sec}`;
+  }
+
+  async function downloadSheetPng() {
+    setBusy("Rendering…");
+    try {
+      const cv = await renderSheet(SIZES[size].scale);
+      cv.toBlob((blob) => { saveBlob(blob, `${sheetStem()}.png`); setBusy(""); }, "image/png");
+    } catch (e) { setError(e.message); setBusy(""); }
+  }
+
+  async function downloadSheetPdf() {
+    setBusy("Building PDF…");
+    try {
+      const { jsPDF } = await import("jspdf");
+      const cv = await renderSheet(SIZES[size].scale);
+      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+      pdf.addImage(cv.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0,
+        pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
+      pdf.save(`${sheetStem()}.pdf`);
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
+  async function printSheet() {
+    setBusy("Preparing…");
+    try {
+      const cv = await renderSheet(SIZES.print.scale);
+      const src = cv.toDataURL("image/png");
+      const w = window.open("", "_blank", "noopener,width=1200,height=900");
+      if (!w) { setError("Your browser blocked the print window. Allow pop-ups for this site."); setBusy(""); return; }
+      w.document.write(`<!doctype html><html><head><title>${sheetStem()}</title>
+        <style>
+          @page { size: A4 landscape; margin: 0; }
+          html,body { margin:0; padding:0; }
+          img { width:100%; height:auto; display:block; }
+          @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        </style></head><body><img src="${src}" onload="window.focus();window.print();"></body></html>`);
+      w.document.close();
+    } catch (e) { setError(e.message); }
+    setBusy("");
+  }
+
   function saveBlob(blob, name) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -373,9 +480,15 @@ export default function ResultCardsPage() {
                     Download PNG
                   </button>
                   <button onClick={downloadOnePdf} disabled={!!busy}
-                          className="w-full font-bold px-4 py-2.5 rounded-lg disabled:opacity-40"
+                          className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg disabled:opacity-40"
                           style={{ background: "#1DB954", color: NAVY }}>
                     Download PDF
+                  </button>
+                  <button onClick={downloadOneLight} disabled={!!busy}
+                          className="w-full font-bold px-4 py-2.5 rounded-lg border disabled:opacity-40 text-left"
+                          style={{ borderColor: "#1DB954", color: "#1DB954", background: "transparent" }}>
+                    Light PDF
+                    <span className="block text-[11px] font-normal text-white/50">tiny file · sharp print</span>
                   </button>
                 </div>
 
@@ -389,6 +502,12 @@ export default function ResultCardsPage() {
                           style={{ background: "#1DB954", color: NAVY }}>
                     Download PDF (all)
                   </button>
+                  <button onClick={downloadSectionLight} disabled={!!busy}
+                          className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg border disabled:opacity-40 text-left"
+                          style={{ borderColor: "#1DB954", color: "#1DB954", background: "transparent" }}>
+                    Light PDF (all)
+                    <span className="block text-[11px] font-normal text-white/50">tiny file · sharp print</span>
+                  </button>
                   <button onClick={downloadSectionPngZip} disabled={!!busy}
                           className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg disabled:opacity-40"
                           style={{ background: GOLD, color: NAVY }}>
@@ -398,6 +517,36 @@ export default function ResultCardsPage() {
                           className="w-full font-bold px-4 py-2.5 rounded-lg border disabled:opacity-40"
                           style={{ borderColor: "#ffffff33", color: "#fff", background: "transparent" }}>
                     Print all
+                  </button>
+                </div>
+
+                <div className="rounded-xl border p-4" style={{ borderColor: `${GOLD}33`, background: "#ffffff06" }}>
+                  <h3 className="font-bold mb-1" style={{ color: GOLD }}>
+                    Section on one page
+                  </h3>
+                  <p className="text-xs text-white/50 mb-3">
+                    All {data.cards.length} students, all {data.subjectCount} subjects — A4 landscape
+                  </p>
+                  <button onClick={printSheet} disabled={!!busy}
+                          className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg border disabled:opacity-40"
+                          style={{ borderColor: "#ffffff33", color: "#fff", background: "transparent" }}>
+                    Print
+                  </button>
+                  <button onClick={downloadSheetPdf} disabled={!!busy}
+                          className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg disabled:opacity-40"
+                          style={{ background: "#1DB954", color: NAVY }}>
+                    Download PDF
+                  </button>
+                  <button onClick={downloadSheetPng} disabled={!!busy}
+                          className="w-full mb-2 font-bold px-4 py-2.5 rounded-lg disabled:opacity-40"
+                          style={{ background: GOLD, color: NAVY }}>
+                    Download PNG
+                  </button>
+                  <button onClick={downloadSheetLight} disabled={!!busy}
+                          className="w-full font-bold px-4 py-2.5 rounded-lg border disabled:opacity-40 text-left"
+                          style={{ borderColor: "#1DB954", color: "#1DB954", background: "transparent" }}>
+                    Light PDF
+                    <span className="block text-[11px] font-normal text-white/50">tiny file · sharp print</span>
                   </button>
                 </div>
 
@@ -411,7 +560,7 @@ export default function ResultCardsPage() {
                 <p className="text-[11px] text-white/40 leading-relaxed">
                   Cards are drawn in your browser, so nothing is uploaded anywhere.
                   A whole section at 4K takes a minute or two and a large PDF —
-                  choose Print 300 DPI for a smaller file that still prints sharply.
+                  the Light PDF buttons make a tiny file (a whole section is a few hundred KB) that prints just as sharp.
                 </p>
               </div>
             </div>

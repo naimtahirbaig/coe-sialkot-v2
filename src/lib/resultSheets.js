@@ -6,7 +6,7 @@
 // at any resolution.
 
 import { bandFor } from "./resultCardConfig";
-import { colourForSection } from "./resultCardConfig";
+import { colourForSection, overallRemark } from "./resultCardConfig";
 
 export const PAGE_W = 1754;   // A4 landscape on a 1240-wide grid
 export const PAGE_H = 1240;
@@ -487,4 +487,38 @@ function drawRanking(ctx, spec, o) {
     }
   });
   footer(ctx, "Ranked by overall average % of the students who appeared.  ▼ = share of those students who passed (40% and above).", 1, 1);
+}
+
+// ------------------------------------------------------------ result cards
+
+// One entry per student of the selected sections, with the card in exactly
+// the shape drawResultCard() expects (same fields as /api/award-list/result-cards).
+export function buildCards(data, selectedCodes) {
+  const sel = new Set(selectedCodes);
+  const out = [];
+  data.classes.forEach((cl) => {
+    const ranked = cl.sections.flatMap((s) => s.students)
+      .filter((s) => s.entered > 0).sort((a, b) => b.obtained - a.obtained);
+    const top3 = ranked.slice(0, 3).map((s) => ({
+      name: s.name, father: s.father, score: `${s.obtained}/${s.outOf} (${s.pct.toFixed(2)}%)`,
+    }));
+    cl.sections.forEach((sec) => {
+      if (!sel.has(sec.code)) return;
+      sec.students.forEach((st) => out.push({
+        classNum: cl.class, secCode: sec.code, secName: sec.name,
+        accent: colourForSection(sec.label), position: st.position, roll: st.roll, name: st.name,
+        card: {
+          studentId: st.id, name: st.name, father: st.father, roll: st.roll,
+          cls: `${cl.class} ${sec.name}`, sectionLabel: sec.label,
+          exam: data.exam.name, examLine: data.examLine,
+          position: st.entered > 0 ? `${st.position} / ${cl.ranked}` : "—",
+          complete: st.entered === cl.subjects.length,
+          subjects: cl.subjects.map((sub) => ({ name: sub, max: sec.max[sub] ?? null, obtained: st.marks[sub] ?? null })),
+          top3,
+          remark: st.pct === null ? "Result not yet complete." : overallRemark(st.pct),
+        },
+      }));
+    });
+  });
+  return out;
 }
