@@ -121,6 +121,15 @@ export async function GET(req) {
   });
   const classSize = ranked.length;
 
+  // Position within this section only (ties share a rank)
+  const secRanked = ranked.filter((s) => s.section_id === section.id);
+  const secPositions = {};
+  let lastSec = null, lastSecRank = 0;
+  secRanked.forEach((s, i) => {
+    if (s.obtained !== lastSec) { lastSecRank = i + 1; lastSec = s.obtained; }
+    secPositions[s.id] = lastSecRank;
+  });
+
   const top3 = ranked.slice(0, 3).map((s) => ({
     name: s.student_name,
     father: s.father_name,
@@ -144,6 +153,7 @@ export async function GET(req) {
         exam: exam.name,
         examLine: examLabel,
         position: s.entered > 0 ? `${positions[s.id]} / ${classSize}` : "—",
+        sectionPosition: s.entered > 0 ? `${secPositions[s.id]} / ${secRanked.length}` : "—",
         complete: s.entered === subjects.length,
         subjects: subjects.map((sub) => ({
           name: sub,

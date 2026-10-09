@@ -114,14 +114,21 @@ export function drawResultCard(ctx, card, { accent, style = "colour", logos }) {
   // Student info table
   let y = 342;
   const rh = 44, c1 = 300, c2 = 620, c3 = 900;
+  // Marks obtained / total, over the subjects that have a mark (same basis as the %)
+  let infoObt = 0, infoMax = 0, infoAny = false;
+  card.subjects.forEach((s) => {
+    if (s.obtained === null || s.obtained === undefined) return;
+    infoObt += Number(s.obtained); infoMax += Number(s.max || 0); infoAny = true;
+  });
   const infoRows = [
     ["Student Name:", card.name, "Roll Number:", card.roll],
     ["Father's Name:", card.father, "Class:", card.cls],
-    ["Examination:", card.exam, "Position in Class:", card.position],
+    ["Examination:", card.exam, "Position in Section:", card.sectionPosition || "—"],
+    ["Marks Obtained:", infoAny ? `${infoObt} / ${infoMax}` : "—", "Position in Class:", card.position],
   ];
   infoRows.forEach((row, i) => {
     const yy = y + i * rh;
-    if (i === 2 && !ink) {
+    if (i >= 2 && !ink) {
       ctx.fillStyle = "#FAF0BE";
       ctx.fillRect(c3 + 2, yy + 2, Rx - c3 - 4, rh - 4);
     }
@@ -135,13 +142,13 @@ export function drawResultCard(ctx, card, { accent, style = "colour", logos }) {
     text(ctx, row[1], c1 + 16, mid, { font: fitText(ctx, row[1], c2 - c1 - 32, 400, 21), fill: INK });
     text(ctx, row[2], c2 + 16, mid, { font: F(700, 21), fill: INK });
     text(ctx, row[3], c3 + 16, mid, {
-      font: F(i === 2 ? 700 : 400, 21),
-      fill: i === 2 && ink ? accent : INK,
+      font: F(i >= 2 ? 700 : 400, 21),
+      fill: i >= 2 && ink ? accent : INK,
     });
   });
 
   // Academic performance
-  y = y + 3 * rh + 26;
+  y = y + infoRows.length * rh + 26;
   text(ctx, "ACADEMIC PERFORMANCE", L, y + 14, { font: F(700, 28), fill: accent });
   y += 40;
 

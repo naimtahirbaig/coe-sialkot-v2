@@ -504,6 +504,10 @@ export function buildCards(data, selectedCodes) {
     }));
     cl.sections.forEach((sec) => {
       if (!sel.has(sec.code)) return;
+      // Position within the section (ties share a rank)
+      const secRanked = sec.students.filter((s) => s.entered > 0).sort((a, b) => b.obtained - a.obtained);
+      const secPos = {}; let lastScore = null, lastRank = 0;
+      secRanked.forEach((s, i) => { if (s.obtained !== lastScore) { lastRank = i + 1; lastScore = s.obtained; } secPos[s.id] = lastRank; });
       sec.students.forEach((st) => out.push({
         classNum: cl.class, secCode: sec.code, secName: sec.name,
         accent: colourForSection(sec.label), position: st.position, roll: st.roll, name: st.name,
@@ -512,6 +516,7 @@ export function buildCards(data, selectedCodes) {
           cls: `${cl.class} ${sec.name}`, sectionLabel: sec.label,
           exam: data.exam.name, examLine: data.examLine,
           position: st.entered > 0 ? `${st.position} / ${cl.ranked}` : "—",
+          sectionPosition: st.entered > 0 ? `${secPos[st.id]} / ${secRanked.length}` : "—",
           complete: st.entered === cl.subjects.length,
           subjects: cl.subjects.map((sub) => ({ name: sub, max: sec.max[sub] ?? null, obtained: st.marks[sub] ?? null })),
           top3,
