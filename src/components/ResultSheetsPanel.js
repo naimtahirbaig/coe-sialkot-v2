@@ -6,7 +6,7 @@ import { loadImage, drawResultCard } from "@/lib/resultCardRenderer";
 import { BASE_W, BASE_H } from "@/lib/resultCardConfig";
 import { findWarnings, drawWarningLetter, reasonText, LETTER_W, LETTER_H, WARN_PCT } from "@/lib/warningLetter";
 import { PdfContext } from "@/lib/pdfVectorContext";
-import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, buildCards } from "@/lib/resultSheets";
+import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, remarksPages, buildCards } from "@/lib/resultSheets";
 
 const NAVY = "#150F3F";
 const GOLD = "#FCB629";
@@ -42,6 +42,7 @@ export default function ResultSheetsPanel() {
   const [cardSec, setCardSec] = useState("");
   const [cardStudent, setCardStudent] = useState("");
   const [combine, setCombine] = useState(false);
+  const [roomy, setRoomy] = useState(false);          // parents' remarks: more writing space
   const [skipWarn, setSkipWarn] = useState(new Set());   // students un-ticked from the warning list
   const [showWarn, setShowWarn] = useState(false);
   const [letterDate, setLetterDate] = useState(() =>
@@ -91,6 +92,7 @@ export default function ResultSheetsPanel() {
       const units = buildUnits(data, [...selected], lvl);
       const pages =
         kind === "results" ? resultPages(data, units)
+        : kind === "remarks" ? remarksPages(data, units, { comfortable: roomy })
         : kind === "summary" ? summaryPages(data, units, lvl)
         : comparisonPages(data, units, lvl);
       if (!pages.length) throw new Error("Nothing to print for that selection.");
@@ -118,7 +120,7 @@ export default function ResultSheetsPanel() {
         cv.width = 0; cv.height = 0;
         await new Promise((r) => setTimeout(r, 0));
       }
-      const tag = { results: lvl === "class" ? "Class-wise-Results" : "Section-wise-Results", summary: `Summary-${lvl}-wise`, comparison: `Comparison-${lvl}-wise` }[kind];
+      const tag = { remarks: "Parents-Remarks-Sheets", results: lvl === "class" ? "Class-wise-Results" : "Section-wise-Results", summary: `Summary-${lvl}-wise`, comparison: `Comparison-${lvl}-wise` }[kind];
       const stem = data.examLine.replace(/[^\w]+/g, "-");
       pdf.save(`${tag}-${stem}.pdf`);
     } catch (e) { setError(e.message); }
@@ -420,6 +422,15 @@ export default function ResultSheetsPanel() {
                   Comparison Sheet
                   <span className="block text-xs font-normal opacity-80">Subject-wise averages · overall ranking</span>
                 </button>
+                <button disabled={!!busy || !nSel} onClick={() => makePdf("remarks", "section")}
+                        className="font-bold px-4 py-3 rounded-lg disabled:opacity-40 text-left sm:col-span-2" style={btn("#38bdf8")}>
+                  Parents&apos; Remarks Sheet
+                  <span className="block text-xs font-normal opacity-80">One sheet per section · result at a glance · tick box, remarks &amp; signature</span>
+                </button>
+                <label className="sm:col-span-2 -mt-1 flex items-center gap-2 text-xs text-white/70">
+                  <input type="checkbox" checked={roomy} onChange={(e) => setRoomy(e.target.checked)} className="accent-[#FCB629]" />
+                  More writing space (large sections print on two pages instead of one)
+                </label>
               </div>
 
 

@@ -527,3 +527,134 @@ export function buildCards(data, selectedCodes) {
   });
   return out;
 }
+
+// ------------------------------------------------- parents' remarks sheet
+
+// One sheet per section: every student with the result at a glance, then
+// space for the parent to tick a box, write remarks and sign.
+// Compact = the whole section on one page. "More space" = at most 28
+// students a page (a 50-student section becomes two pages) so there is
+// room to write comfortably.
+export function remarksPages(data, units, { comfortable = false } = {}) {
+  const pages = [];
+  units.forEach((u) => {
+    const ranked = u.students.filter((s) => s.entered > 0).sort((a, b) => b.obtained - a.obtained);
+    const secPos = {}; let last = null, rank = 0;
+    ranked.forEach((s, i) => { if (s.obtained !== last) { rank = i + 1; last = s.obtained; } secPos[s.id] = rank; });
+    const rows = u.students.map((s) => ({ ...s, secPos: s.entered > 0 ? secPos[s.id] : null, secSize: ranked.length }));
+    const parts = chunk(rows, comfortable ? 28 : 64);
+    let offset = 0;
+    parts.forEach((part, i) => {
+      const start = offset; offset += part.length;
+      pages.push({
+        draw: (ctx, o) => drawRemarks(ctx, { unit: u, rows: part, start, examLine: data.examLine, pageNo: i + 1, pageCount: parts.length }, o),
+      });
+    });
+  });
+  return pages;
+}
+
+function drawRemarks(ctx, spec, o) {
+  const { unit, rows, examLine, pageNo, pageCount, start = 0 } = spec;
+  const colour = o.style === "colour", accent = unit.accent, M = 30, W = PAGE_W;
+  const HEAD_H = header(ctx, o, accent, `PARENTS' REMARKS SHEET  ·  ${unit.title}`, "", "", o.logos);
+  put(ctx, `${examLine}   |   Class Incharge: ${unit.incharge || "—"}   |   Students: ${unit.students.length}`,
+      W / 2, 90, F("normal", 15), colour ? "#ffffffcc" : MUTED, "center");
+
+  // columns
+  const tableW = W - M * 2;
+  const defs = [
+    ["sno", 44, "center"], ["roll", 60, "center"], ["name", 206, "left"], ["father", 196, "left"],
+    ["obt", 108, "center"], ["pct", 62, "center"], ["grd", 52, "center"], ["spos", 70, "center"], ["cpos", 76, "center"],
+    ["t1", 84, "center"], ["t2", 88, "center"], ["t3", 84, "center"],
+    ["rem", 0, "left"], ["sig", 176, "center"], ["date", 100, "center"],
+  ];
+  const fixed = defs.reduce((a, d) => a + d[1], 0);
+  const cols = []; let x = M;
+  defs.forEach(([k, w, al]) => { const ww = w || tableW - fixed; cols.push({ key: k, x, w: ww, align: al }); x += ww; });
+
+  const top = HEAD_H + 14, hdrH = 54, footH = 30;
+  const avail = PAGE_H - top - hdrH - footH - 10;
+  const rowH = Math.max(14, Math.min(40, avail / Math.max(rows.length, 1)));
+  const fs = Math.max(9.5, Math.min(15, rowH * 0.6));
+
+  // header (two groups: result | parents)
+  ctx.fillStyle = colour ? accent : "#fff"; ctx.fillRect(M, top, tableW, hdrH);
+  if (!colour) { ctx.fillStyle = accent; ctx.fillRect(M, top + hdrH - 2, tableW, 2); }
+  const hInk = colour ? "#fff" : accent;
+  const two = (c, a, b) => {
+    const cx = c.x + c.w / 2;
+    put(ctx, a, cx, top + hdrH / 2 - 9, F("bold", 13), hInk, "center");
+    put(ctx, b, cx, top + hdrH / 2 + 9, F("bold", 13), hInk, "center");
+  };
+  cols.forEach((c) => {
+    const cx = c.align === "left" ? c.x + 8 : c.x + c.w / 2, mid = top + hdrH / 2;
+    switch (c.key) {
+      case "sno": put(ctx, "S#", cx, mid, F("bold", 14), hInk, "center"); break;
+      case "roll": put(ctx, "Roll", cx, mid, F("bold", 14), hInk, "center"); break;
+      case "name": put(ctx, "Student", cx, mid, F("bold", 14), hInk); break;
+      case "father": put(ctx, "Father", cx, mid, F("bold", 14), hInk); break;
+      case "obt": two(c, "Obtained", "/ Total"); break;
+      case "pct": put(ctx, "%", cx, mid, F("bold", 14), hInk, "center"); break;
+      case "grd": put(ctx, "Grade", cx, mid, F("bold", 13), hInk, "center"); break;
+      case "spos": two(c, "Section", "Position"); break;
+      case "cpos": two(c, "Class", "Position"); break;
+      case "t1": two(c, "Satisfied", ""); break;
+      case "t2": two(c, "Needs", "Improvement"); break;
+      case "t3": two(c, "Will Meet", "Teacher"); break;
+      case "rem": put(ctx, "Parent's / Guardian's Remarks", cx, mid, F("bold", 14), hInk); break;
+      case "sig": put(ctx, "Signature", cx, mid, F("bold", 14), hInk, "center"); break;
+      case "date": put(ctx, "Date", cx, mid, F("bold", 14), hInk, "center"); break;
+      default: break;
+    }
+  });
+
+  const y0 = top + hdrH, box = Math.min(rowH * 0.5, 16);
+  const firstRem = cols.find((c) => c.key === "rem").x;
+  rows.forEach((r, i) => {
+    const y = y0 + i * rowH, cy = y + rowH / 2;
+    if (i % 2 === 1) { ctx.fillStyle = colour ? accent + "12" : "#F6F7FA"; ctx.fillRect(M, y, tableW, rowH); }
+    const band = bandFor(r.pct);
+    cols.forEach((c) => {
+      const cx = c.align === "left" ? c.x + 8 : c.x + c.w / 2;
+      switch (c.key) {
+        case "sno": put(ctx, start + i + 1, cx, cy, F("normal", fs), MUTED, "center"); break;
+        case "roll": put(ctx, r.roll, cx, cy, F("normal", fs), INK, "center"); break;
+        case "name": put(ctx, r.name, cx, cy, F("bold", fit(ctx, r.name, c.w - 14, "bold", fs)), INK); break;
+        case "father": put(ctx, r.father, cx, cy, F("normal", fit(ctx, r.father, c.w - 14, "normal", fs)), INK); break;
+        case "obt": put(ctx, r.entered ? `${r.obtained} / ${r.outOf}` : "—", cx, cy, F("bold", fs), INK, "center"); break;
+        case "pct": put(ctx, fmt(r.pct), cx, cy, F("normal", fs), INK, "center"); break;
+        case "grd":
+          if (!band) put(ctx, "—", cx, cy, F("normal", fs), MUTED, "center");
+          else if (colour) {
+            const bw = Math.min(c.w - 8, 34), bh = Math.min(rowH - 3, 18);
+            ctx.fillStyle = band.colour; ctx.beginPath();
+            ctx.roundRect ? ctx.roundRect(cx - bw / 2, cy - bh / 2, bw, bh, 4) : ctx.rect(cx - bw / 2, cy - bh / 2, bw, bh);
+            ctx.fill(); put(ctx, band.grade, cx, cy, F("bold", Math.min(fs, 12)), "#fff", "center");
+          } else put(ctx, band.grade, cx, cy, F("bold", fs), band.colour, "center");
+          break;
+        case "spos": put(ctx, r.secPos ? `${r.secPos} / ${r.secSize}` : "—", cx, cy, F("normal", fs), INK, "center"); break;
+        case "cpos": put(ctx, r.position ? `${r.position} / ${unit.classRanked}` : "—", cx, cy, F("normal", fs), INK, "center"); break;
+        case "t1": case "t2": case "t3":
+          ctx.strokeStyle = "#6B7280"; ctx.lineWidth = 1.1;
+          ctx.strokeRect(cx - box / 2, cy - box / 2, box, box);
+          break;
+        default: break;
+      }
+    });
+    ctx.fillStyle = HAIR; ctx.fillRect(M, y + rowH - 0.5, tableW, 0.6);
+  });
+
+  const tableH = hdrH + rowH * rows.length;
+  ctx.strokeStyle = colour ? accent : "#9AA3B2"; ctx.lineWidth = 1.2; ctx.strokeRect(M, top, tableW, tableH);
+  ctx.strokeStyle = HAIR; ctx.lineWidth = 0.7;
+  cols.forEach((c, i) => { if (i) { ctx.beginPath(); ctx.moveTo(c.x, top + (colour ? hdrH : 0)); ctx.lineTo(c.x, top + tableH); ctx.stroke(); } });
+  // heavier rule between the result block and the parents' block
+  ctx.strokeStyle = colour ? accent : "#9AA3B2"; ctx.lineWidth = 1.6;
+  const t1x = cols.find((c) => c.key === "t1").x;
+  ctx.beginPath(); ctx.moveTo(t1x, top + (colour ? hdrH : 0)); ctx.lineTo(t1x, top + tableH); ctx.stroke();
+
+  footer(ctx,
+    "Parents are requested to see the result card, tick one box, write remarks and sign.        Class Teacher: ____________________        Remarks sheet collected on: ___ / ___ / ______",
+    pageNo, pageCount);
+}
