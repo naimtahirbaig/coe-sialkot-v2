@@ -21,7 +21,13 @@ const PANEL = "#F4F6F9";
 
 // ------------------------------------------------------------------ data
 
-export function findWarnings(data, selectedCodes) {
+// opts (all optional, chosen by the user on the Exams page):
+//   overallOn / overallPct   — warn when overall % is below this
+//   subjectOn / subjectPct / minSubjects — warn when at least minSubjects
+//                               subjects are below subjectPct
+// With both switched on, a student qualifies if EITHER rule applies.
+export function findWarnings(data, selectedCodes, opts = {}) {
+  const { overallOn = true, overallPct = WARN_PCT, subjectOn = true, subjectPct = WARN_PCT, minSubjects = WARN_MIN_SUBJECTS } = opts;
   const out = [];
   buildCards(data, selectedCodes).forEach((it) => {
     const c = it.card;
@@ -31,19 +37,19 @@ export function findWarnings(data, selectedCodes) {
       if (s.obtained === null || s.obtained === undefined) return;
       obtained += Number(s.obtained); outOf += Number(s.max || 0); entered++;
       const p = s.max ? (Number(s.obtained) / Number(s.max)) * 100 : null;
-      if (p !== null && p < WARN_PCT) low.push({ name: s.name, max: s.max, obtained: s.obtained, pct: p });
+      if (p !== null && p < subjectPct) low.push({ name: s.name, max: s.max, obtained: s.obtained, pct: p });
     });
     if (!entered || !outOf) return;
     const pct = (obtained / outOf) * 100;
-    const overallLow = pct < WARN_PCT;
-    const manyLow = low.length >= WARN_MIN_SUBJECTS;
+    const overallLow = !!overallOn && pct < overallPct;
+    const manyLow = !!subjectOn && low.length >= minSubjects;
     if (!overallLow && !manyLow) return;
     out.push({
       key: String(c.studentId),
       secCode: it.secCode, secName: it.secName, classNum: it.classNum,
       incharge: it.incharge, name: c.name, father: c.father, roll: c.roll, cls: c.cls,
       examLine: c.examLine, position: c.position, sectionPosition: c.sectionPosition,
-      obtained, outOf, pct, low, overallLow, manyLow, subjectsEntered: entered, subjectsTotal: c.subjects.length,
+      obtained, outOf, pct, low, overallLow, manyLow, overallPct, subjectPct, minSubjects, subjectsEntered: entered, subjectsTotal: c.subjects.length,
     });
   });
   return out;
@@ -51,8 +57,8 @@ export function findWarnings(data, selectedCodes) {
 
 export function reasonText(w) {
   const r = [];
-  if (w.overallLow) r.push(`overall below ${WARN_PCT}%`);
-  if (w.manyLow) r.push(`below ${WARN_PCT}% in ${w.low.length} subjects`);
+  if (w.overallLow) r.push(`overall below ${w.overallPct}%`);
+  if (w.manyLow) r.push(`below ${w.subjectPct}% in ${w.low.length} subjects`);
   return r.join(" · ");
 }
 
@@ -173,8 +179,8 @@ export function drawWarningLetter(ctx, w, { style = "colour", logos = {}, date =
   ctx.fillStyle = NAVY; ctx.fillRect(L, y + 16, 270, 2.5);
   y += 42;
   const reasons = [];
-  if (w.overallLow) reasons.push(`Overall result is ${w.pct.toFixed(1)}%, which is below the minimum of ${WARN_PCT}%.`);
-  if (w.manyLow) reasons.push(`Marks are below ${WARN_PCT}% in ${w.low.length} subjects, as shown below.`);
+  if (w.overallLow) reasons.push(`Overall result is ${w.pct.toFixed(1)}%, which is below the required ${w.overallPct}%.`);
+  if (w.manyLow) reasons.push(`Marks are below ${w.subjectPct}% in ${w.low.length} subjects, as shown below.`);
   reasons.forEach((r) => {
     ctx.fillStyle = RED; ctx.fillRect(L + 6, y - 5, 10, 10);
     y = para(ctx, r, L + 32, y, R - L - 32, F("normal", 22), INK, 32);
@@ -184,7 +190,9 @@ export function drawWarningLetter(ctx, w, { style = "colour", logos = {}, date =
   const lowSorted = [...w.low].sort((a, b) => a.pct - b.pct);
   const tableBottom = 1272;
   if (lowSorted.length) {
-    y += 8;
+    y += 6;
+    put(ctx, `Subjects below ${w.subjectPct}%`, L, y + 8, F("bold", 18), MUTED);
+    y += 26;
     const rowH = Math.max(24, Math.min(36, (tableBottom - y) / (lowSorted.length + 1)));
     const fs = Math.max(15, Math.min(20, rowH * 0.56));
     const cols = [[L, 725], [725, 885], [885, 1045], [1045, R]];

@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { examLabel } from "@/lib/awardListExams";
 import { loadImage, drawResultCard } from "@/lib/resultCardRenderer";
 import { BASE_W, BASE_H } from "@/lib/resultCardConfig";
-import { findWarnings, drawWarningLetter, reasonText, LETTER_W, LETTER_H, WARN_PCT } from "@/lib/warningLetter";
+import { findWarnings, drawWarningLetter, reasonText, LETTER_W, LETTER_H } from "@/lib/warningLetter";
 import { PdfContext } from "@/lib/pdfVectorContext";
-import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, remarksPages, buildCards } from "@/lib/resultSheets";
+import { PAGE_W, PAGE_H, buildUnits, resultPages, summaryPages, comparisonPages, remarksPages, topperPages, buildCards } from "@/lib/resultSheets";
 
 const NAVY = "#150F3F";
 const GOLD = "#FCB629";
@@ -43,6 +43,12 @@ export default function ResultSheetsPanel() {
   const [cardStudent, setCardStudent] = useState("");
   const [combine, setCombine] = useState(false);
   const [roomy, setRoomy] = useState(false);          // parents' remarks: more writing space
+  // Warning-letter rules, chosen by the user (defaults: 50% overall, 2+ subjects below 50%)
+  const [wOverallOn, setWOverallOn] = useState(true);
+  const [wOverallPct, setWOverallPct] = useState(50);
+  const [wSubjectOn, setWSubjectOn] = useState(true);
+  const [wSubjectPct, setWSubjectPct] = useState(50);
+  const [wMinSubjects, setWMinSubjects] = useState(2);
   const [skipWarn, setSkipWarn] = useState(new Set());   // students un-ticked from the warning list
   const [showWarn, setShowWarn] = useState(false);
   const [letterDate, setLetterDate] = useState(() =>
@@ -93,34 +99,37 @@ export default function ResultSheetsPanel() {
       const pages =
         kind === "results" ? resultPages(data, units)
         : kind === "remarks" ? remarksPages(data, units, { comfortable: roomy })
+        : kind === "toppers" ? topperPages(data, units)
         : kind === "summary" ? summaryPages(data, units, lvl)
         : comparisonPages(data, units, lvl);
       if (!pages.length) throw new Error("Nothing to print for that selection.");
       const logos = await getLogos();
       const { jsPDF } = await import("jspdf");
       const light = res === "light";
-      const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4", compress: light });
-      const pw2 = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+      const orient = (pg) => (pg.portrait ? "portrait" : "landscape");
+      const pdf = new jsPDF({ orientation: orient(pages[0]), unit: "pt", format: "a4", compress: light });
       const scale = RES[res].scale;
       for (let i = 0; i < pages.length; i++) {
         setBusy(`Building PDF… page ${i + 1} of ${pages.length}`);
+        const portrait = !!pages[i].portrait;
+        const gw = portrait ? PAGE_H : PAGE_W, gh = portrait ? PAGE_W : PAGE_H;   // drawing grid
+        if (i) pdf.addPage("a4", orient(pages[i]));
+        const pw2 = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
         if (light) {
           // Vector page: real text and lines, a few KB each
-          if (i) pdf.addPage();
-          pages[i].draw(new PdfContext(pdf, pw2 / PAGE_W), { style, logos });
+          pages[i].draw(new PdfContext(pdf, pw2 / gw), { style, logos });
           if (i % 5 === 4) await new Promise((r) => setTimeout(r, 0));
           continue;
         }
         const cv = document.createElement("canvas");
-        cv.width = Math.round(PAGE_W * scale); cv.height = Math.round(PAGE_H * scale);
+        cv.width = Math.round(gw * scale); cv.height = Math.round(gh * scale);
         const ctx = cv.getContext("2d"); ctx.scale(scale, scale);
         pages[i].draw(ctx, { style, logos });
-        if (i) pdf.addPage();
         pdf.addImage(cv.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, pw2, ph);
         cv.width = 0; cv.height = 0;
         await new Promise((r) => setTimeout(r, 0));
       }
-      const tag = { remarks: "Parents-Remarks-Sheets", results: lvl === "class" ? "Class-wise-Results" : "Section-wise-Results", summary: `Summary-${lvl}-wise`, comparison: `Comparison-${lvl}-wise` }[kind];
+      const tag = { toppers: "Section-Toppers", remarks: "Parents-Remarks-Sheets", results: lvl === "class" ? "Class-wise-Results" : "Section-wise-Results", summary: `Summary-${lvl}-wise`, comparison: `Comparison-${lvl}-wise` }[kind];
       const stem = data.examLine.replace(/[^\w]+/g, "-");
       pdf.save(`${tag}-${stem}.pdf`);
     } catch (e) { setError(e.message); }
@@ -228,7 +237,12 @@ export default function ResultSheetsPanel() {
   }
 
   // ------------------------------------------------------ warning letters
-  const warnings = data ? findWarnings(data, [...selected]) : [];
+  const num = (v, d) => { const n = parseFloat(v); return Number.isFinite(n) ? n : d; };
+  const warnOpts = {
+    overallOn: wOverallOn, overallPct: num(wOverallPct, 50),
+    subjectOn: wSubjectOn, subjectPct: num(wSubjectPct, 50), minSubjects: Math.max(1, Math.round(num(wMinSubjects, 2))),
+  };
+  const warnings = data && (wOverallOn || wSubjectOn) ? findWarnings(data, [...selected], warnOpts) : [];
   const warnPick = warnings.filter((w) => !skipWarn.has(w.key));
   const toggleWarn = (k) => setSkipWarn((p) => { const n = new Set(p); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
@@ -431,6 +445,11 @@ export default function ResultSheetsPanel() {
                   <input type="checkbox" checked={roomy} onChange={(e) => setRoomy(e.target.checked)} className="accent-[#FCB629]" />
                   More writing space (large sections print on two pages instead of one)
                 </label>
+                <button disabled={!!busy || !nSel} onClick={() => makePdf("toppers", "section")}
+                        className="font-bold px-4 py-3 rounded-lg disabled:opacity-40 text-left sm:col-span-2" style={btn("#facc15")}>
+                  Section Toppers Form
+                  <span className="block text-xs font-normal opacity-80">1st, 2nd &amp; 3rd of each section · one page per section · photo box for each</span>
+                </button>
               </div>
 
 
@@ -501,9 +520,35 @@ export default function ResultSheetsPanel() {
                 <div>
                   <div className="font-bold" style={{ color: "#fca5a5" }}>Warning letters</div>
                   <p className="text-xs text-white/50">
-                    For students with overall below {WARN_PCT}%, or below {WARN_PCT}% in 2 or more subjects. Based on the marks entered so far,
+                    Choose the rules below. A student gets a letter if <b>any</b> rule you switch on applies. Based on the marks entered so far,
                     for the sections ticked above. Signed by Class Teacher, Senior Coordinator and Principal.
                   </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg border p-3" style={{ borderColor: wOverallOn ? "#ef444488" : "#ffffff1a" }}>
+                    <label className="flex items-center gap-2 text-sm font-semibold">
+                      <input type="checkbox" checked={wOverallOn} onChange={(e) => setWOverallOn(e.target.checked)} className="accent-[#ef4444]" />
+                      Overall result below
+                      <input type="number" min="1" max="100" value={wOverallPct} onChange={(e) => setWOverallPct(e.target.value)}
+                             disabled={!wOverallOn} className="w-16 rounded px-2 py-1 text-center text-white border outline-none disabled:opacity-40"
+                             style={inStyle} />
+                      %
+                    </label>
+                  </div>
+                  <div className="rounded-lg border p-3" style={{ borderColor: wSubjectOn ? "#ef444488" : "#ffffff1a" }}>
+                    <label className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                      <input type="checkbox" checked={wSubjectOn} onChange={(e) => setWSubjectOn(e.target.checked)} className="accent-[#ef4444]" />
+                      Below
+                      <input type="number" min="1" max="100" value={wSubjectPct} onChange={(e) => setWSubjectPct(e.target.value)}
+                             disabled={!wSubjectOn} className="w-16 rounded px-2 py-1 text-center text-white border outline-none disabled:opacity-40"
+                             style={inStyle} />
+                      % in at least
+                      <input type="number" min="1" max="9" value={wMinSubjects} onChange={(e) => setWMinSubjects(e.target.value)}
+                             disabled={!wSubjectOn} className="w-14 rounded px-2 py-1 text-center text-white border outline-none disabled:opacity-40"
+                             style={inStyle} />
+                      subjects
+                    </label>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-end gap-3">
                   <div>

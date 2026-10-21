@@ -658,3 +658,172 @@ function drawRemarks(ctx, spec, o) {
     "Parents are requested to see the result card, tick one box, write remarks and sign.        Class Teacher: ____________________        Remarks sheet collected on: ___ / ___ / ______",
     pageNo, pageCount);
 }
+
+// ------------------------------------------------------- section toppers
+
+// One portrait page per section: the 1st, 2nd and 3rd position holders of
+// that section, each with a box for a passport-size photo. Ties share a
+// position, so a section can show more than three students (up to five).
+export function topperPages(data, units) {
+  const pages = [];
+  units.forEach((u) => {
+    const ranked = u.students.filter((s) => s.entered > 0).sort((a, b) => b.obtained - a.obtained);
+    const list = []; let last = null, rank = 0;
+    ranked.forEach((s, i) => {
+      if (s.obtained !== last) { rank = i + 1; last = s.obtained; }
+      list.push({ ...s, secPos: rank });
+    });
+    const tops = list.filter((s) => s.secPos <= 3).slice(0, 5);
+    pages.push({
+      portrait: true,
+      draw: (ctx, o) => drawToppers(ctx, { unit: u, tops, examLine: data.examLine, sectionSize: ranked.length }, o),
+    });
+  });
+  return pages;
+}
+
+const MEDAL = { 1: "#C9922A", 2: "#7B8594", 3: "#A9642B" };
+const ORD = { 1: "1st", 2: "2nd", 3: "3rd" };
+
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function dashedRect(ctx, x, y, w, h, colour) {
+  ctx.fillStyle = colour;
+  const dash = 9, gap = 6, t = 1.6;
+  for (let px = x; px < x + w; px += dash + gap) {
+    const len = Math.min(dash, x + w - px);
+    ctx.fillRect(px, y, len, t); ctx.fillRect(px, y + h - t, len, t);
+  }
+  for (let py = y; py < y + h; py += dash + gap) {
+    const len = Math.min(dash, y + h - py);
+    ctx.fillRect(x, py, t, len); ctx.fillRect(x + w - t, py, t, len);
+  }
+}
+
+function drawToppers(ctx, spec, o) {
+  const { unit, tops, examLine, sectionSize } = spec;
+  const colour = o.style === "colour", accent = unit.accent, lg = o.logos || {};
+  const W = 1240, H = 1754, L = 85, R = 1155;
+
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = GOLD; ctx.fillRect(0, 0, W, 22);
+  ctx.fillStyle = NAVY; ctx.fillRect(0, 22, W, 12);
+  ctx.fillStyle = NAVY; ctx.fillRect(0, H - 22, W, 22);
+
+  // Letterhead
+  if (lg.punjab) ctx.drawImage(lg.punjab, L, 62, 108, 108);
+  if (lg.authority) {
+    ctx.save(); ctx.beginPath(); ctx.arc(R - 54, 116, 54, 0, Math.PI * 2); ctx.clip();
+    ctx.drawImage(lg.authority, R - 108, 62, 108, 108); ctx.restore();
+  }
+  put(ctx, "CENTRE OF EXCELLENCE SIALKOT", W / 2, 98, F("bold", 44), NAVY, "center");
+  put(ctx, "BOYS CAMPUS", W / 2, 144, F("bold", 26), INK, "center");
+  put(ctx, "Punjab Daanish Schools & Centres of Excellence Authority", W / 2, 180, F("normal", 18), MUTED, "center");
+  ctx.fillStyle = GOLD; ctx.fillRect(L, 206, R - L, 3);
+  ctx.fillStyle = NAVY; ctx.fillRect(L, 212, R - L, 1.5);
+
+  // Title band in the section colour
+  if (colour) {
+    ctx.fillStyle = accent; ctx.fillRect(L, 236, R - L, 66);
+    ctx.fillStyle = GOLD; ctx.fillRect(L, 298, R - L, 4);
+    put(ctx, "SECTION TOPPERS", W / 2, 268, F("bold", 38), "#fff", "center");
+  } else {
+    ctx.strokeStyle = accent; ctx.lineWidth = 4; ctx.strokeRect(L, 236, R - L, 66);
+    put(ctx, "SECTION TOPPERS", W / 2, 268, F("bold", 38), accent, "center");
+  }
+  put(ctx, `${unit.title}   ·   ${examLine}`, W / 2, 330, F("bold", 22), INK, "center");
+  put(ctx, `Class Incharge: ${unit.incharge || "—"}   |   Students with results: ${sectionSize}`, W / 2, 360, F("normal", 18), MUTED, "center");
+
+  // Cards
+  const top = 392, bottom = 1536, gap = 18, n = Math.max(tops.length, 1);
+  const cardH = (bottom - top - gap * (n - 1)) / n;
+  const DESIGN_H = 392;
+  const k = Math.min(1, cardH / DESIGN_H);
+  const wl = (R - L) / k;                         // design width after scaling
+
+  tops.forEach((t, idx) => {
+    const y0 = top + idx * (cardH + gap);
+    const medal = MEDAL[t.secPos] || NAVY;
+    ctx.save();
+    ctx.translate(L, y0);
+    ctx.scale(k, k);
+
+    // card
+    if (colour) { ctx.fillStyle = "#F8F9FC"; rrect(ctx, 0, 0, wl, DESIGN_H, 10); ctx.fill(); }
+    ctx.strokeStyle = colour ? medal : "#9AA3B2"; ctx.lineWidth = 2.5;
+    rrect(ctx, 0, 0, wl, DESIGN_H, 10); ctx.stroke();
+    ctx.fillStyle = medal; ctx.fillRect(0, 0, 14, DESIGN_H);
+
+    // photo box (passport proportions)
+    const ph = DESIGN_H - 44, pw = Math.round(ph * 0.78), px = 34, py = 22;
+    ctx.fillStyle = "#fff"; ctx.fillRect(px, py, pw, ph);
+    dashedRect(ctx, px, py, pw, ph, "#7B8594");
+    put(ctx, "PHOTO", px + pw / 2, py + ph / 2 - 14, F("bold", 28), "#B6BDC9", "center");
+    put(ctx, "Passport size", px + pw / 2, py + ph / 2 + 18, F("normal", 17), "#9AA3B2", "center");
+    put(ctx, "paste or print here", px + pw / 2, py + ph / 2 + 42, F("normal", 15), "#9AA3B2", "center");
+
+    // right-hand side
+    const rx = px + pw + 34, rw = wl - rx - 22;
+    // position pill
+    const pill = `${ORD[t.secPos] || t.secPos + "th"} POSITION IN SECTION`;
+    ctx.fillStyle = colour ? medal : "#fff"; rrect(ctx, rx, 22, 392, 46, 23); ctx.fill();
+    if (!colour) { ctx.strokeStyle = medal; ctx.lineWidth = 2.5; rrect(ctx, rx, 22, 392, 46, 23); ctx.stroke(); }
+    put(ctx, pill, rx + 196, 45, F("bold", 21), colour ? "#fff" : medal, "center");
+    put(ctx, `Class position: ${t.position ? `${t.position} / ${unit.classRanked}` : "—"}`, wl - 22, 45, F("bold", 21), INK, "right");
+
+    // name
+    const nameSize = (() => { let sz = 38; ctx.font = F("bold", sz); while (sz > 22 && ctx.measureText(t.name).width > rw) { sz -= 1; ctx.font = F("bold", sz); } return sz; })();
+    put(ctx, t.name, rx, 110, F("bold", nameSize), NAVY);
+    put(ctx, `S/O ${t.father}`, rx, 148, F("normal", 22), MUTED);
+
+    // stat boxes
+    const band = bandFor(t.pct);
+    const stats = [["ROLL NO.", t.roll], ["MARKS", `${t.obtained} / ${t.outOf}`], ["PERCENTAGE", `${t.pct.toFixed(2)}%`], ["GRADE", band ? band.grade : "—"]];
+    const sw = (rw - 3 * 12) / 4;
+    stats.forEach((st, i) => {
+      const sx = rx + i * (sw + 12);
+      const hot = i === 3 && band && colour;
+      ctx.fillStyle = hot ? band.colour : "#fff"; ctx.fillRect(sx, 168, sw, 68);
+      ctx.strokeStyle = HAIR; ctx.lineWidth = 1.5; ctx.strokeRect(sx, 168, sw, 68);
+      put(ctx, st[0], sx + sw / 2, 186, F("bold", 14), hot ? "#fff" : MUTED, "center");
+      put(ctx, st[1], sx + sw / 2, 214, F("bold", 26), hot ? "#fff" : INK, "center");
+    });
+
+    // subjects
+    put(ctx, "SUBJECT-WISE MARKS", rx, 258, F("bold", 15), NAVY);
+    ctx.fillStyle = NAVY; ctx.fillRect(rx, 268, 150, 2);
+    const subs = unit.subjects, cols = 3, cw = (rw - (cols - 1) * 10) / cols, rh = 30;
+    subs.forEach((sub, i) => {
+      const cx = rx + (i % cols) * (cw + 10), cy = 280 + Math.floor(i / cols) * (rh + 4);
+      if (colour) { ctx.fillStyle = "#EEF1F6"; ctx.fillRect(cx, cy, cw, rh); }
+      else { ctx.strokeStyle = HAIR; ctx.lineWidth = 1; ctx.strokeRect(cx, cy, cw, rh); }
+      const v = t.marks[sub], mx = unit.max[sub];
+      ctx.font = F("normal", 15);
+      let label = shortName(sub);
+      put(ctx, label, cx + 8, cy + rh / 2, F("normal", 15), INK);
+      put(ctx, v === null || v === undefined ? "—" : `${v} / ${mx ?? ""}`, cx + cw - 8, cy + rh / 2, F("bold", 16), INK, "right");
+    });
+    ctx.restore();
+  });
+
+  if (!tops.length) put(ctx, "No results have been entered for this section yet.", W / 2, 700, F("normal", 24), MUTED, "center");
+
+  // Signatures
+  const sy = 1612, colW = (R - L) / 3;
+  [["Class Teacher", unit.incharge || ""], ["Dr Naim Tahir Baig", "Senior Coordinator"], ["Sir Shahbaz Hassan", "Principal"]].forEach((s, i) => {
+    const cx = L + colW * i + colW / 2;
+    ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx - 150, sy); ctx.lineTo(cx + 150, sy); ctx.stroke();
+    put(ctx, s[0], cx, sy + 26, F("bold", 21), INK, "center");
+    if (s[1]) put(ctx, s[1], cx, sy + 52, F("normal", 18), MUTED, "center");
+  });
+  put(ctx, "This is a computer-generated document. Positions are within the section; ties share a position.", W / 2, 1718, F("normal", 14), MUTED, "center");
+}
