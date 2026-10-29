@@ -26,3 +26,11 @@ create table if not exists public.online_test_attempts (
 );
 alter table public.online_test_attempts enable row level security;
 -- No policies on purpose: only the server (service-role key) can read/write.
+
+-- Active / Closed switch per test (added later; safe to run again).
+create table if not exists public.online_test_settings (
+  test_slug  text primary key,
+  is_open    boolean not null default true,
+  updated_at timestamptz not null default now()
+);
+alter table public.online_test_settings enable row level security;

@@ -25,6 +25,7 @@ export default function OnlineTestResults() {
   const [test, setTest] = useState(TESTS[0].slug);
   const [rows, setRows] = useState(null);
   const [roster, setRoster] = useState([]);
+  const [open, setOpen] = useState(null); // true = Active, false = Closed
   const [passPct, setPassPct] = useState("70");
   const [incAbsent, setIncAbsent] = useState(true);
   const [letterDate, setLetterDate] = useState(() =>
@@ -43,6 +44,8 @@ export default function OnlineTestResults() {
       const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Failed");
       setRows(j.results); setRoster(j.roster || []);
+      const st = await fetch(`/api/online-test/status?test=${encodeURIComponent(test)}`, { cache: "no-store" }).then((x) => x.json());
+      setOpen(st.open !== false);
     } catch (err) { setRows(null); setMsg(err.message); }
     setBusy(false);
   }
@@ -159,6 +162,16 @@ export default function OnlineTestResults() {
     } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
     setBusy(false);
   }
+  async function setActive(next) {
+    if (!next && !window.confirm("Close this test? Students who have not started will no longer be able to begin it. Anyone already taking it can still finish.")) return;
+    const r = await fetch("/api/online-test/status", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw },
+      body: JSON.stringify({ test, open: next }),
+    });
+    const j = await r.json();
+    if (!r.ok) { setMsg(j.error || "Could not change the status"); return; }
+    setOpen(j.open); setMsg("");
+  }
   async function reset(row) {
     if (!window.confirm(`Delete ${row.student_name}'s attempt (${row.status})? They will be able to take the test again.`)) return;
     const r = await fetch("/api/online-test/reset", {
@@ -207,6 +220,15 @@ export default function OnlineTestResults() {
         <button type="submit" style={btnGo} disabled={busy || !pw}>{busy ? "Loading…" : "Show results"}</button>
         {rows && <button type="button" style={btn} onClick={excel}>Download Excel</button>}
       </form>
+      {rows && open !== null && (
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 8, background: open ? "#E8F6EE" : "#FBEAEA", border: `1.5px solid ${open ? green : red}` }}>
+          <b style={{ color: open ? green : red, fontSize: 16 }}>{open ? "● Test is ACTIVE" : "● Test is CLOSED"}</b>
+          <span style={{ fontSize: 13, color: "#5b5a70", marginRight: "auto" }}>
+            {open ? "Students can start it." : "Students cannot start it. The test page shows “closed”."}
+          </span>
+          <button style={open ? { ...btn, color: red, borderColor: red } : btnGo} onClick={() => setActive(!open)}>{open ? "Close test" : "Make active"}</button>
+        </div>
+      )}
       {rows && (
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "end", marginBottom: 12, fontSize: 13 }}>
           <label>Warning letters: warn below %<br /><input value={passPct} onChange={(e) => setPassPct(e.target.value)} style={{ padding: 6, width: 70 }} /></label>

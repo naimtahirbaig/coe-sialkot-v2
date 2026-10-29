@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { fetchAll } from "@/lib/fetchAll";
 import { TEACHER_NAMES } from "@/lib/awardListTeachers";
+import { isTestOpen } from "@/lib/onlineTestStatus";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,7 +59,7 @@ export async function GET(req) {
   }));
 
   return NextResponse.json(
-    { sections: out, teachers: TEACHER_NAMES },
+    { sections: out, teachers: TEACHER_NAMES, open: await isTestOpen(supabase, test) },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { TEACHER_NAMES } from "@/lib/awardListTeachers";
+import { isTestOpen } from "@/lib/onlineTestStatus";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,6 +24,9 @@ export async function POST(req) {
   }
 
   const supabase = getSupabaseAdmin();
+  if (!(await isTestOpen(supabase, test))) {
+    return NextResponse.json({ error: "This test is closed. It is not accepting new attempts." }, { status: 403 });
+  }
   const { data: st } = await supabase
     .from("award_students").select("id, section_id, roll_no, student_name")
     .eq("id", studentId).single();

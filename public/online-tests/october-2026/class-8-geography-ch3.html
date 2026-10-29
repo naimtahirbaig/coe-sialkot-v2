@@ -361,7 +361,7 @@ function startCamera(){
       $("camHead").textContent="Camera is on";
       $("camMsg").textContent="Keep your face inside the frame. Five photographs will be taken at random moments and printed on your result card..";
       $("btnCam").textContent="Camera on";$("btnCam").disabled=true;
-      $("btnStart").disabled=false;
+      $("btnStart").disabled=testClosed;
       s.getVideoTracks()[0].addEventListener("ended",function(){camDropped=true;});
    })
    .catch(function(e){
@@ -395,13 +395,19 @@ document.addEventListener("visibilitychange",function(){
 
 /* ============ start ============ */
 var student={},started=null;
-var TEST_SLUG="oct-2026-class-8-geography-ch3",CLASS_NUM=8,attemptToken=null,studentId=null,roster=[];
+var TEST_SLUG="oct-2026-class-8-geography-ch3",CLASS_NUM=8,attemptToken=null,studentId=null,roster=[],testClosed=false;
+function closedUI(){
+  $("setupErr").textContent="This test is CLOSED. It is not accepting new attempts.";
+  ["fTeacher","fSection","fStudent","btnStart"].forEach(function(i){$(i).disabled=true;});
+  var h=document.querySelector("#setup h2.section");if(h)h.textContent="This test is closed";
+}
 function opt(v,t,dis){var o=document.createElement("option");o.value=v;o.textContent=t;if(dis)o.disabled=true;return o;}
 fetch("/api/online-test/roster?class="+CLASS_NUM+"&test="+encodeURIComponent(TEST_SLUG),{cache:"no-store"})
  .then(function(r){return r.json();})
  .then(function(d){
    if(d.error)throw new Error(d.error);
    roster=d.sections;
+   if(d.open===false){testClosed=true;closedUI();}
    var t=$("fTeacher");t.innerHTML="";t.appendChild(opt("","Choose your teacher"));
    d.teachers.forEach(function(n){t.appendChild(opt(n,n));});
    var c=$("fSection");c.innerHTML="";c.appendChild(opt("","Choose your section"));
@@ -425,6 +431,7 @@ $("fStudent").addEventListener("change",function(){
 var student={},started=null,starting=false;
 $("btnStart").addEventListener("click",function(){
   if(starting)return;
+  if(testClosed){closedUI();return;}
   var t=$("fTeacher").value,so=$("fStudent").options[$("fStudent").selectedIndex],
       c=$("fClass").value,r=$("fRoll").value;
   if(!t||!so||!so.value||!c){$("setupErr").textContent="Choose your teacher, section and name before starting.";return;}
@@ -434,7 +441,7 @@ $("btnStart").addEventListener("click",function(){
     body:JSON.stringify({test:TEST_SLUG,studentId:so.value,teacher:t,"class":CLASS_NUM})})
   .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
   .then(function(x){
-    if(!x.ok){throw new Error(x.j.error||"Could not start");}
+    if(!x.ok){if(x.j.error&&/closed/i.test(x.j.error)){testClosed=true;closedUI();}throw new Error(x.j.error||"Could not start");}
     attemptToken=x.j.token;studentId=so.value;
     student={teacher:t,name:so.dataset.name,cls:c,roll:r};
     $("setupErr").textContent="";
@@ -445,7 +452,7 @@ $("btnStart").addEventListener("click",function(){
     show(0);
   })
   .catch(function(e){
-    starting=false;$("btnStart").disabled=false;
+    starting=false;$("btnStart").disabled=testClosed;
     $("setupErr").textContent=e.message==="Failed to fetch"?"No internet connection — the test cannot start. Try again.":e.message;
   });
 });

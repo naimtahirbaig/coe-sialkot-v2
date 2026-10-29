@@ -42,6 +42,11 @@ footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
 <i>Start test</i>
 </a>
 </main>
+<script>
+fetch("/api/online-test/status?test=oct-2026-class-8-geography-ch3",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){
+  if(d.open===false){var a=document.querySelector("a.test");a.removeAttribute("href");a.style.opacity=".6";a.style.cursor="default";a.style.pointerEvents="none";a.querySelector("i").textContent="Closed";a.querySelector("i").style.background="#B3261E";}
+}).catch(function(){});
+</script>
 <footer>Use a device with a working camera. Each student can take a test only once — no retake. Do not switch tabs during the test.</footer>
 </body>
 </html>
