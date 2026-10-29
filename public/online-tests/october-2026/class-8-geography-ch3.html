@@ -54,6 +54,10 @@ h2.section::after{content:"";display:block;width:46px;height:4px;background:var(
 label{display:block;font-size:12.5px;color:var(--navy-2);margin-bottom:5px}
 input[type=text]{width:100%;padding:11px 13px;font-size:15px;font-family:inherit;color:var(--navy);
   background:var(--white);border:1.5px solid var(--line);border-radius:2px}
+select{width:100%;padding:11px 13px;font-size:15px;font-family:inherit;color:var(--navy);background:#fff;border:1.5px solid rgba(21,15,63,.25);border-radius:8px}
+select:focus{outline:3px solid var(--gold);outline-offset:0;border-color:var(--navy)}
+select:disabled{opacity:.55}
+input[readonly]{background:#F2F1F7}
 input[type=text]:focus{outline:3px solid var(--gold);outline-offset:0;border-color:var(--navy)}
 .rules{margin:24px 0 0;padding:16px 20px;background:var(--mist);border-left:5px solid var(--green)}
 .rules ul{margin:8px 0 0;padding-left:20px;font-size:14px}
@@ -180,15 +184,18 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
   <!-- ================= SETUP ================= -->
   <section class="panel" id="setup">
     <h2 class="section">Before you begin</h2>
-    <p class="lede">Fill in your own details below. Your teacher will not fill these for you — write them exactly as they appear on your school record.</p>
+    <p class="lede">Choose your teacher, your section and your own name from the lists below. Pick carefully — your single attempt starts the moment you press Start.</p>
 
     <div class="field-grid">
-      <div><label for="fTeacher">Teacher name</label><input type="text" id="fTeacher" autocomplete="off" placeholder="Write your teacher's name"></div>
-      <div><label for="fStudent">Student name</label><input type="text" id="fStudent" autocomplete="off" placeholder="Write your full name"></div>
-      <div><label for="fClass">Class &amp; section</label><input type="text" id="fClass" autocomplete="off" placeholder="e.g. 8-A"></div>
-      <div><label for="fRoll">Roll number</label><input type="text" id="fRoll" autocomplete="off" placeholder="e.g. 042"></div>
+      <div><label for="fTeacher">Teacher name</label><select id="fTeacher"><option value="">Loading…</option></select></div>
+      <div><label for="fSection">Class &amp; section</label><select id="fSection"><option value="">Loading…</option></select></div>
+      <div><label for="fStudent">Student name</label><select id="fStudent" disabled><option value="">Choose your section first</option></select></div>
+      <div><label for="fRoll">Roll number</label><input type="text" id="fRoll" readonly placeholder="Filled in automatically"></div>
     </div>
+    <input type="hidden" id="fClass">
+    <p class="lede" style="margin-top:12px;font-size:13px">Names come from the school record. A student can take this test <b>only once</b> — there is no retake and no correction. Students who have already taken it are shown as “(done)” and cannot be chosen.</p>
 
+    
     <div class="rules">
       <b>How this test works</b>
       <ul>
@@ -204,7 +211,7 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
       <span class="cam-dot" id="camDot"></span>
       <div class="cam-txt">
         <b id="camHead">Camera check required</b>
-        <span id="camMsg">This is a proctored test. Your camera must stay on for the whole paper, and five photographs of you will be taken at random moments and printed on your result card so your teacher can verify who sat the test. The photos stay on this device — nothing is uploaded anywhere.</span>
+        <span id="camMsg">This is a proctored test. Your camera must stay on for the whole paper, and five photographs of you will be taken at random moments and printed on your result card so your teacher can verify who sat the test. The result card, with these photos, is saved automatically to the school record when you finish.</span>
         <div class="help" id="camHelp">
           If the camera cannot start, the page is probably being opened straight from a folder. Ask your teacher to serve the folder locally, for example with <code>python -m http.server</code>, and then open <code>http://localhost:8000</code>.
         </div>
@@ -261,10 +268,10 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
     <div class="shots" id="shots"></div>
     <p class="flags" id="rFlags"></p>
 
+    <p class="flags noprint" id="saveStatus" style="font-weight:700">Saving your result…</p>
     <div class="btn-row noprint">
       <button class="btn go" id="btnDownload">Download result card</button>
       <button class="btn ghost" id="btnPrint">Print</button>
-      <button class="btn ghost" id="btnAgain">Take a new test</button>
     </div>
 
     <details class="review" id="reviewBox" open>
@@ -340,7 +347,7 @@ function startCamera(){
       $("preview").srcObject=s;
       $("camDot").className="cam-dot on";
       $("camHead").textContent="Camera is on";
-      $("camMsg").textContent="Keep your face inside the frame. Five photographs will be taken at random moments and printed on your result card. They stay on this device.";
+      $("camMsg").textContent="Keep your face inside the frame. Five photographs will be taken at random moments and printed on your result card..";
       $("btnCam").textContent="Camera on";$("btnCam").disabled=true;
       $("btnStart").disabled=false;
       s.getVideoTracks()[0].addEventListener("ended",function(){camDropped=true;});
@@ -376,17 +383,59 @@ document.addEventListener("visibilitychange",function(){
 
 /* ============ start ============ */
 var student={},started=null;
+var TEST_SLUG="oct-2026-class-8-geography-ch3",CLASS_NUM=8,attemptToken=null,studentId=null,roster=[];
+function opt(v,t,dis){var o=document.createElement("option");o.value=v;o.textContent=t;if(dis)o.disabled=true;return o;}
+fetch("/api/online-test/roster?class="+CLASS_NUM+"&test="+encodeURIComponent(TEST_SLUG),{cache:"no-store"})
+ .then(function(r){return r.json();})
+ .then(function(d){
+   if(d.error)throw new Error(d.error);
+   roster=d.sections;
+   var t=$("fTeacher");t.innerHTML="";t.appendChild(opt("","Choose your teacher"));
+   d.teachers.forEach(function(n){t.appendChild(opt(n,n));});
+   var c=$("fSection");c.innerHTML="";c.appendChild(opt("","Choose your section"));
+   roster.forEach(function(sec,i){c.appendChild(opt(String(i),"Class "+sec.label));});
+ })
+ .catch(function(e){$("setupErr").textContent="Could not load the student list ("+e.message+"). Check your internet and reload this page.";});
+$("fSection").addEventListener("change",function(){
+  var st=$("fStudent");st.innerHTML="";$("fRoll").value="";$("fClass").value="";
+  if(this.value===""){st.disabled=true;st.appendChild(opt("","Choose your section first"));return;}
+  var sec=roster[Number(this.value)];$("fClass").value=sec.label;
+  st.disabled=false;st.appendChild(opt("","Choose your name"));
+  sec.students.forEach(function(x){
+    var o=opt(String(x.id),(x.done?"(done) ":"")+x.name,x.done);o.dataset.roll=x.roll;o.dataset.name=x.name;st.appendChild(o);
+  });
+});
+$("fStudent").addEventListener("change",function(){
+  var o=this.options[this.selectedIndex];$("fRoll").value=(o&&o.dataset.roll)||"";
+});
+
+/* ============ start ============ */
+var student={},started=null,starting=false;
 $("btnStart").addEventListener("click",function(){
-  var t=$("fTeacher").value.trim(),s=$("fStudent").value.trim(),
-      c=$("fClass").value.trim(),r=$("fRoll").value.trim();
-  if(!t||!s||!c||!r){$("setupErr").textContent="Fill in all four boxes above before starting.";return;}
+  if(starting)return;
+  var t=$("fTeacher").value,so=$("fStudent").options[$("fStudent").selectedIndex],
+      c=$("fClass").value,r=$("fRoll").value;
+  if(!t||!so||!so.value||!c){$("setupErr").textContent="Choose your teacher, section and name before starting.";return;}
   if(!camOK){$("setupErr").textContent="The camera must be on before the test can start.";return;}
-  student={teacher:t,name:s,cls:c,roll:r};
-  started=new Date();
-  $("setup").classList.add("hidden");
-  $("test").classList.remove("hidden");
-  window.addEventListener("beforeunload",guard);
-  show(0);
+  starting=true;$("btnStart").disabled=true;$("setupErr").textContent="Claiming your attempt…";
+  fetch("/api/online-test/start",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({test:TEST_SLUG,studentId:so.value,teacher:t,"class":CLASS_NUM})})
+  .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+  .then(function(x){
+    if(!x.ok){throw new Error(x.j.error||"Could not start");}
+    attemptToken=x.j.token;studentId=so.value;
+    student={teacher:t,name:so.dataset.name,cls:c,roll:r};
+    $("setupErr").textContent="";
+    started=new Date();
+    $("setup").classList.add("hidden");
+    $("test").classList.remove("hidden");
+    window.addEventListener("beforeunload",guard);
+    show(0);
+  })
+  .catch(function(e){
+    starting=false;$("btnStart").disabled=false;
+    $("setupErr").textContent=e.message==="Failed to fetch"?"No internet connection — the test cannot start. Try again.":e.message;
+  });
 });
 function guard(e){e.preventDefault();e.returnValue="";}
 
@@ -657,6 +706,7 @@ function render(store){
   g.textAlign="left";
 
   cardURL=c.toDataURL("image/png");
+  autoSave();
 }
 
 $("btnDownload").addEventListener("click",function(){
@@ -667,7 +717,38 @@ $("btnDownload").addEventListener("click",function(){
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 });
 $("btnPrint").addEventListener("click",function(){window.print();});
-$("btnAgain").addEventListener("click",function(){location.reload();});
+
+/* ============ auto-save to the school record (+ copy to this device) ============ */
+var saved=false,saving=false;
+function autoSave(){
+  if(saved||saving)return;saving=true;
+  var jpg=$("card").toDataURL("image/jpeg",0.85);
+  var body=JSON.stringify({test:TEST_SLUG,studentId:studentId,token:attemptToken,
+    correct:res.correct,wrong:res.wrong,skipped:res.skip,pct:res.pct,grade:res.grade,
+    tabSwitches:tabSwitches,cameraDropped:!!camDropped,card:jpg,
+    answers:res.rows.map(function(r){return {n:r.n,q:r.q,mine:r.mine,right:r.right,ok:r.ok};})});
+  var tries=0;
+  (function go(){
+    tries++;
+    fetch("/api/online-test/finish",{method:"POST",headers:{"Content-Type":"application/json"},body:body})
+    .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+    .then(function(x){
+      if(!x.ok)throw new Error(x.j.error||"Save failed");
+      saved=true;saving=false;
+      $("saveStatus").style.color="#007a3a";
+      $("saveStatus").textContent="✓ Your result card has been saved to the school record. This test cannot be taken again.";
+      try{$("btnDownload").click();}catch(e){}
+    })
+    .catch(function(){
+      if(tries<5){setTimeout(go,2500*tries);}
+      else{saving=false;$("saveStatus").style.color="#B3261E";
+        $("saveStatus").textContent="Could not reach the school record. Keep this page open, check your internet, then press “Save again”. Also download your card as a backup.";
+        if(!$("btnSaveAgain")){var b=document.createElement("button");b.className="btn go";b.id="btnSaveAgain";b.textContent="Save again";
+          b.addEventListener("click",function(){b.remove();$("saveStatus").style.color="";$("saveStatus").textContent="Saving your result…";autoSave();});
+          $("saveStatus").parentNode.insertBefore(b,$("saveStatus").nextSibling);}}
+    });
+  })();
+}
 </script>
 </body>
 </html>
