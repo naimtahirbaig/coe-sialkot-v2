@@ -7,7 +7,7 @@ export const revalidate = 0;
 // GET /api/online-test/card?id=<attempt id>&adminPassword=...  → the saved card image
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
-  const pw = searchParams.get("adminPassword");
+  const pw = req.headers.get("x-admin-password") || searchParams.get("adminPassword");
   if (!pw || pw !== process.env.ADMIN_PASSWORD) {
     return NextResponse.json({ error: "Enter the admin password." }, { status: 401 });
   }
