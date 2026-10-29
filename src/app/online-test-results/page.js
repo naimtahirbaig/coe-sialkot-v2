@@ -40,22 +40,65 @@ export default function OnlineTestResults() {
     setBusy(false);
   }
 
-  async function cardBlob(row) {
+  async function cardJpeg(row) {
     const r = await fetch(`/api/online-test/card?id=${row.id}`, { headers: { "x-admin-password": pw }, cache: "no-store" });
     if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || "No card saved"); }
-    return URL.createObjectURL(await r.blob());
+    return await r.blob();
+  }
+  function loadImg(blob) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(blob), im = new Image();
+      im.onload = () => res({ im, url }); im.onerror = () => rej(new Error("Bad image"));
+      im.src = url;
+    });
+  }
+  async function cardPng(row) {
+    const { im, url } = await loadImg(await cardJpeg(row));
+    const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    c.getContext("2d").drawImage(im, 0, 0); URL.revokeObjectURL(url);
+    return await new Promise((res) => c.toBlob(res, "image/png"));
+  }
+  const fileBase = (r) => `ResultCard_${r.section_label.replace(/\s+/g, "")}_${r.roll_no}_${r.student_name.replace(/\s+/g, "")}`;
+  function save(blob, name) {
+    const url = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
   }
   async function view(row) {
-    try { setMsg(""); setCard({ url: await cardBlob(row), row }); } catch (err) { setMsg(`${row.student_name}: ${err.message}`); }
+    try { setMsg(""); setCard({ url: URL.createObjectURL(await cardJpeg(row)), row }); } catch (err) { setMsg(`${row.student_name}: ${err.message}`); }
   }
   async function download(row) {
+    try { save(await cardPng(row), fileBase(row) + ".png"); } catch (err) { setMsg(`${row.student_name}: ${err.message}`); }
+  }
+  async function bulk(kind, sec, list) {
+    const done = list.filter((r) => r.status === "submitted");
+    if (!done.length) { setMsg(`Class ${sec}: no finished results yet.`); return; }
+    setBusy(true); setMsg("");
     try {
-      const url = await cardBlob(row);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `ResultCard_${row.section_label.replace(/\s+/g, "")}_${row.roll_no}_${row.student_name.replace(/\s+/g, "")}.jpg`;
-      document.body.appendChild(a); a.click(); a.remove();
-    } catch (err) { setMsg(`${row.student_name}: ${err.message}`); }
+      if (kind === "png") {
+        const JSZip = (await import("jszip")).default, zip = new JSZip();
+        for (let i = 0; i < done.length; i++) {
+          setMsg(`Class ${sec}: preparing card ${i + 1} of ${done.length}…`);
+          zip.file(fileBase(done[i]) + ".png", await cardPng(done[i]));
+        }
+        save(await zip.generateAsync({ type: "blob" }), `ResultCards_Class${sec.replace(/\s+/g, "")}_PNG.zip`);
+      } else {
+        const { jsPDF } = await import("jspdf");
+        let doc = null;
+        for (let i = 0; i < done.length; i++) {
+          setMsg(`Class ${sec}: adding card ${i + 1} of ${done.length}…`);
+          const { im, url } = await loadImg(await cardJpeg(done[i]));
+          const w = 595, h = Math.round((595 * im.naturalHeight) / im.naturalWidth);
+          if (!doc) doc = new jsPDF({ unit: "pt", format: [w, h], compress: true });
+          else doc.addPage([w, h]);
+          doc.addImage(im, "JPEG", 0, 0, w, h);
+          URL.revokeObjectURL(url);
+        }
+        doc.save(`ResultCards_Class${sec.replace(/\s+/g, "")}.pdf`);
+      }
+      setMsg(`Class ${sec}: ${done.length} card${done.length > 1 ? "s" : ""} downloaded.`);
+    } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
+    setBusy(false);
   }
   async function reset(row) {
     if (!window.confirm(`Delete ${row.student_name}'s attempt (${row.status})? They will be able to take the test again.`)) return;
@@ -106,7 +149,7 @@ export default function OnlineTestResults() {
         {rows && <button type="button" style={btn} onClick={excel}>Download Excel</button>}
       </form>
 
-      {msg && <p style={{ color: red, fontWeight: 600 }}>{msg}</p>}
+      {msg && <p style={{ color: /preparing|adding|downloaded/.test(msg) ? green : red, fontWeight: 600 }}>{msg}</p>}
       {rows && (
         <p style={{ fontSize: 14 }}>
           <b>{submitted}</b> submitted · <b>{rows.length - submitted}</b> not finished (started, but the page was closed) · {rows.length} in total
@@ -116,7 +159,11 @@ export default function OnlineTestResults() {
 
       {names.map((n) => (
         <div key={n} style={{ marginBottom: 26 }}>
-          <h2 style={{ fontSize: 18, margin: "18px 0 8px", borderLeft: `6px solid ${gold}`, paddingLeft: 10 }}>Class {n}</h2>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", margin: "18px 0 8px" }}>
+            <h2 style={{ fontSize: 18, margin: 0, borderLeft: `6px solid ${gold}`, paddingLeft: 10, marginRight: "auto" }}>Class {n}</h2>
+            <button style={btn} disabled={busy} onClick={() => bulk("png", n, sections[n])}>Bulk PNG (zip)</button>
+            <button style={btn} disabled={busy} onClick={() => bulk("pdf", n, sections[n])}>Bulk PDF</button>
+          </div>
           <div style={{ overflowX: "auto" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 820 }}>
               <thead><tr>
@@ -136,7 +183,7 @@ export default function OnlineTestResults() {
                       <td style={td}>{ok ? notes(r) : ""}</td>
                       <td style={{ ...td, whiteSpace: "nowrap" }}>
                         {ok && <><button style={btn} onClick={() => view(r)}>View card</button>{" "}
-                        <button style={btn} onClick={() => download(r)}>Download</button>{" "}</>}
+                        <button style={btn} onClick={() => download(r)}>PNG</button>{" "}</>}
                         <button style={{ ...btn, color: red, borderColor: red }} onClick={() => reset(r)}>Reset</button>
                       </td>
                     </tr>
@@ -155,7 +202,7 @@ export default function OnlineTestResults() {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
               <b>{card.row.student_name} — Class {card.row.section_label}</b>
               <span>
-                <button style={btn} onClick={() => download(card.row)}>Download</button>{" "}
+                <button style={btn} onClick={() => download(card.row)}>PNG</button>{" "}
                 <button style={btnGo} onClick={() => { URL.revokeObjectURL(card.url); setCard(null); }}>Close</button>
               </span>
             </div>
