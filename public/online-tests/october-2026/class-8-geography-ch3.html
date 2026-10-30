@@ -275,6 +275,8 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
       <div class="stat"><b id="rSkip">0</b>Not attempted</div>
     </div>
 
+    <div id="cmpBox" class="hidden" style="margin:26px 0"></div>
+
     <h2 class="section" style="margin-top:30px">Proctoring photographs</h2>
     <p class="lede">Captured automatically during the paper.</p>
     <div class="shots" id="shots"></div>
@@ -395,6 +397,7 @@ document.addEventListener("visibilitychange",function(){
 
 /* ============ start ============ */
 var student={},started=null;
+var previous=[];
 var TEST_SLUG="oct-2026-class-8-geography-ch3",CLASS_NUM=8,attemptToken=null,studentId=null,roster=[],testClosed=false;
 function closedUI(){
   $("setupErr").textContent="This test is CLOSED. It is not accepting new attempts.";
@@ -442,7 +445,7 @@ $("btnStart").addEventListener("click",function(){
   .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
   .then(function(x){
     if(!x.ok){if(x.j.error&&/closed/i.test(x.j.error)){testClosed=true;closedUI();}throw new Error(x.j.error||"Could not start");}
-    attemptToken=x.j.token;studentId=so.value;
+    attemptToken=x.j.token;studentId=so.value;previous=x.j.previous||[];
     student={teacher:t,name:so.dataset.name,cls:c,roll:r};
     $("setupErr").textContent="";
     started=new Date();
@@ -539,6 +542,7 @@ function finish(){
   var flags=[];
   if(tabSwitches>0)flags.push("left the test window "+tabSwitches+" time"+(tabSwitches>1?"s":""));
   if(camDropped)flags.push("camera stopped before the paper ended");
+  showCmp();
   $("rFlags").textContent=flags.length?"Proctor notes: "+flags.join("; ")+".":"Proctor notes: none.";
 
   var sh=$("shots");sh.innerHTML="";
@@ -568,6 +572,56 @@ function finish(){
 
 /* ============ downloadable result card ============ */
 var cardURL=null;
+
+/* ============ comparison with the student's earlier results ============ */
+function cmpRows(){return previous.slice(-3);}
+function cmpHeight(){var n=cmpRows().length;return n?(106+(n+1)*44):0;}
+function fmtD(s){var d=new Date(s);if(isNaN(d))return "";
+  return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear();}
+function cmpLines(){
+  var p=cmpRows();if(!p.length)return [];
+  var rows=p.map(function(r){return {t:r.short,d:fmtD(r.date),m:r.correct+" / "+r.total,p:r.pct+"%",g:r.grade||"",c:"",now:false,dd:0};});
+  var dd=Math.round((res.pct-p[p.length-1].pct)*10)/10;
+  rows.push({t:"This test (latest)",d:fmtD(res.end),m:res.correct+" / "+TOTAL,p:res.pct+"%",g:res.grade,
+    c:(dd>0?"+":dd<0?"-":"")+Math.abs(dd).toFixed(1)+" pts",now:true,dd:dd});
+  return rows;
+}
+function drawCmp(g,W,y0){
+  var rows=cmpLines(),n=rows.length-1;
+  g.textAlign="left";
+  g.fillStyle=NAVY;g.font="bold 22px Georgia, serif";
+  g.fillText("Progress in "+SUBJECT+" — compared with earlier result"+(n>1?"s":""),62,y0+22);
+  g.fillStyle=GOLD;g.fillRect(62,y0+34,46,4);
+  var x0=60,w=W-120,y=y0+52;
+  g.fillStyle=NAVY;g.fillRect(x0,y,w,34);
+  g.fillStyle="#fff";g.font="bold 14px Helvetica, Arial, sans-serif";
+  [["Test",76],["Date",440],["Marks",560],["Percentage",650],["Grade",760],["Change",830]].forEach(function(c){g.fillText(c[0],c[1],y+22);});
+  y+=34;
+  rows.forEach(function(r,i){
+    g.fillStyle=r.now?"#FFF3D0":(i%2?"#F5F4FA":"#FFFFFF");g.fillRect(x0,y,w,44);
+    g.fillStyle=NAVY;
+    fitTextLeft(g,r.t,76,y+28,350,15,r.now?"bold":"","Helvetica, Arial, sans-serif");
+    g.font=(r.now?"bold ":"")+"15px Helvetica, Arial, sans-serif";
+    g.fillStyle=NAVY2;g.fillText(r.d,440,y+28);
+    g.fillStyle=NAVY;g.fillText(r.m,560,y+28);g.fillText(r.p,650,y+28);g.fillText(r.g,760,y+28);
+    if(r.now){g.font="bold 16px Helvetica, Arial, sans-serif";g.fillStyle=r.dd>0?GREEN:(r.dd<0?RED:NAVY2);g.fillText(r.c,830,y+28);}
+    y+=44;
+  });
+  g.strokeStyle=NAVY;g.lineWidth=1.2;g.strokeRect(x0,y0+52,w,34+rows.length*44);
+}
+function showCmp(){
+  var box=$("cmpBox"),rows=cmpLines();
+  if(!rows.length){box.classList.add("hidden");return;}
+  var h='<h2 class="section">Progress in '+SUBJECT+'</h2><div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:520px;font-size:14px">'+
+    '<tr style="background:#150F3F;color:#fff;text-align:left"><th style="padding:8px">Test</th><th>Date</th><th>Marks</th><th>%</th><th>Grade</th><th>Change</th></tr>';
+  rows.forEach(function(r){
+    var col=r.dd>0?"#007a3a":(r.dd<0?"#B3261E":"#2A2065");
+    h+='<tr style="background:'+(r.now?"#FFF3D0":"#fff")+';font-weight:'+(r.now?"700":"400")+';border-bottom:1px solid #e3e1ee"><td style="padding:8px">'+
+      r.t.replace(/</g,"&lt;")+'</td><td>'+r.d+'</td><td>'+r.m+'</td><td>'+r.p+'</td><td>'+r.g+'</td><td style="color:'+col+'">'+r.c+'</td></tr>';
+  });
+  box.innerHTML=h+'</table></div>';box.classList.remove("hidden");
+}
+
 function drawCard(){
   var jobs=[{k:"punjab",s:LOGO_PUNJAB},{k:"daanish",s:LOGO_DAANISH},{k:"dev",s:HEADSHOT}];
   photos.slice(0,5).forEach(function(p,i){jobs.push({k:"p"+i,s:p.src});});
@@ -605,7 +659,7 @@ function circleImage(g,im,x,y,d){
   g.drawImage(im,x,y,d,d);g.restore();
 }
 function render(store){
-  var c=$("card"),g=c.getContext("2d"),W=c.width,H=c.height;
+  var c=$("card"),cmpD=cmpHeight();c.height=1460+cmpD;var g=c.getContext("2d"),W=c.width,H=c.height;
   g.fillStyle=WHITE;g.fillRect(0,0,W,H);
 
   /* ---- navy masthead ---- */
@@ -661,6 +715,9 @@ function render(store){
     fitTextLeft(g,String(cl[1]),cx,py+96,92,27,"bold","Georgia, serif");
     cx+=100;
   });
+
+  /* ---- comparison with earlier results (pushes the rest down) ---- */
+  if(cmpD){drawCmp(g,W,640);g.translate(0,cmpD);}
 
   /* ---- photos ---- */
   g.fillStyle=NAVY;g.font="bold 22px Georgia, serif";
@@ -732,7 +789,7 @@ $("btnDownload").addEventListener("click",function(){
   if(!cardURL)cardURL=$("card").toDataURL("image/png");
   var a=document.createElement("a");
   a.href=cardURL;
-  a.download="ResultCard_"+SUBJECT.replace(/\s+/g,"")+"_"+(student.roll||"roll")+"_"+(student.name||"student").replace(/\s+/g,"")+".png";
+  a.download="ResultCard_"+(previous.length?"Attempt"+(previous.length+1)+"_":"")+SUBJECT.replace(/\s+/g,"")+"_"+(student.roll||"roll")+"_"+(student.name||"student").replace(/\s+/g,"")+".png";
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 });
 $("btnPrint").addEventListener("click",function(){window.print();});

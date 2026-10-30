@@ -43,9 +43,44 @@ footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
 </a>
 </main>
 <script>
-fetch("/api/online-test/status?test=oct-2026-class-8-geography-ch3",{cache:"no-store"}).then(function(r){return r.json();}).then(function(d){
-  if(d.open===false){var a=document.querySelector("a.test");a.removeAttribute("href");a.style.opacity=".6";a.style.cursor="default";a.style.pointerEvents="none";a.querySelector("i").textContent="Closed";a.querySelector("i").style.background="#B3261E";}
-}).catch(function(){});
+(function(){
+var MONTH="October 2026";
+var BUILTIN=[{slug:"oct-2026-class-8-geography-ch3",classNum:8,subject:"Geography",chapter:"Chapter 3",
+  sub:"Environmental Pollution · 52 timed MCQs · camera required",url:"/online-tests/october-2026/class-8-geography-ch3.html"}];
+function ord(n){return n+(n===11||n===12||n===13?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));}
+function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+function render(items,closed){
+  var main=document.querySelector("main");main.innerHTML="";
+  var classes=[];items.forEach(function(t){if(classes.indexOf(t.classNum)<0)classes.push(t.classNum);});
+  classes.sort(function(a,b){return a-b;});
+  classes.forEach(function(c){
+    main.appendChild(el("h2","","Class "+ord(c)));
+    items.filter(function(t){return t.classNum===c;}).forEach(function(t){
+      var isClosed=!!closed[t.slug];
+      var a=el("a","test");
+      if(!isClosed)a.href=t.url;else{a.style.opacity=".6";a.style.pointerEvents="none";}
+      var d=el("div");d.appendChild(el("b","",t.subject+(t.chapter?" – "+t.chapter:"")));
+      d.appendChild(el("span","",t.sub));a.appendChild(d);
+      var i=el("i","",isClosed?"Closed":"Start test");if(isClosed)i.style.background="#B3261E";
+      a.appendChild(i);main.appendChild(a);
+    });
+  });
+}
+Promise.all([
+  fetch("/api/online-test/list?month="+encodeURIComponent(MONTH),{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {tests:[]};}),
+  Promise.all(BUILTIN.map(function(t){return fetch("/api/online-test/status?test="+t.slug,{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {open:true};});}))
+]).then(function(res){
+  var closed={};
+  BUILTIN.forEach(function(t,i){if(res[1][i].open===false)closed[t.slug]=true;});
+  var items=BUILTIN.slice();
+  (res[0].tests||[]).forEach(function(t){
+    items.push({slug:t.slug,classNum:t.classNum,subject:t.subject,chapter:t.chapter,url:t.url,
+      sub:t.total+" timed MCQs · "+t.perQ+" seconds each · camera required"});
+    if(!t.open)closed[t.slug]=true;
+  });
+  render(items,closed);
+});
+})();
 </script>
 <footer>Use a device with a working camera. Each student can take a test only once — no retake. Do not switch tabs during the test.</footer>
 </body>

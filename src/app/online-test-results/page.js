@@ -1,8 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import OnlineTestCreator from "@/components/OnlineTestCreator";
 import { drawOnlineTestWarning, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
 
-const TESTS = [
+const BUILTIN = [
   { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 (October 2026)", classNum: 8, total: 52,
     title: "Geography, Chapter 3 (Class 8) — Online MCQs Test, October 2026" },
 ];
@@ -22,7 +23,17 @@ function notes(r) {
 
 export default function OnlineTestResults() {
   const [pw, setPw] = useState("");
-  const [test, setTest] = useState(TESTS[0].slug);
+  const [custom, setCustom] = useState([]);
+  const TESTS = [...BUILTIN, ...custom];
+  const [test, setTest] = useState(BUILTIN[0].slug);
+  const [showCreate, setShowCreate] = useState(false);
+  const [retestBelow, setRetestBelow] = useState("70");
+  useEffect(() => {
+    fetch("/api/online-test/list", { cache: "no-store" }).then((r) => r.json()).then((d) => {
+      setCustom((d.tests || []).map((t) => ({ slug: t.slug, label: `Class ${t.classNum} — ${t.subject}${t.chapter ? " " + t.chapter : ""} (${t.month})`,
+        classNum: t.classNum, total: t.total, title: t.title, custom: true, month: t.month })));
+    }).catch(() => {});
+  }, []);
   const [rows, setRows] = useState(null);
   const [roster, setRoster] = useState([]);
   const [open, setOpen] = useState(null); // true = Active, false = Closed
@@ -162,6 +173,40 @@ export default function OnlineTestResults() {
     } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
     setBusy(false);
   }
+  function onCreated(j, f) {
+    setCustom((c) => [...c, { slug: j.slug, label: `Class ${j.classNum} — ${f.subject}${f.chapter ? " " + f.chapter : ""} (${f.month})`,
+      classNum: j.classNum, total: j.paperSize, title: j.title, custom: true, month: f.month }]);
+    setTest(j.slug); setRows(null); setOpen(null);
+  }
+  async function deleteTest() {
+    if (!window.confirm("Delete this test permanently? (Only possible while nobody has started it.)")) return;
+    const r = await fetch("/api/online-test/delete", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw }, body: JSON.stringify({ test }) });
+    const j = await r.json();
+    if (!r.ok) { setMsg(j.error || "Could not delete"); return; }
+    setCustom((c) => c.filter((t) => t.slug !== test)); setTest(BUILTIN[0].slug); setRows(null); setOpen(null); setMsg("Test deleted.");
+  }
+  async function retest(secKey) {
+    const below = Number(retestBelow);
+    if (!(below > 0 && below <= 100)) { setMsg("Enter a retest percentage between 1 and 100."); return; }
+    const inScope = rows.filter((r) => !secKey || `${r.class} ${r.section_label}` === secKey);
+    const n = inScope.filter((r) => r.status !== "submitted" || Number(r.percentage) < below).length;
+    const where = secKey ? `Class ${secKey}` : "the whole class";
+    if (!n) { setMsg(`${where}: nobody scored below ${below}%.`); return; }
+    if (!window.confirm(`Give a retest to ${n} student${n > 1 ? "s" : ""} in ${where} (scored below ${below}%, or started but did not finish)?\n\nTheir old results are saved in an archive and removed from this list. They will be able to take the test again.`)) return;
+    setBusy(true); setMsg("");
+    try {
+      const cur = TESTS.find((t) => t.slug === test);
+      const body = { test, below };
+      if (secKey) { const [c, ...rest] = secKey.split(" "); body.classNum = Number(c); body.section = rest.join(" "); }
+      else body.classNum = cur.classNum;
+      const r = await fetch("/api/online-test/retest", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "Failed");
+      await load();
+      setMsg(`Retest given to ${j.count} student${j.count === 1 ? "" : "s"} in ${where}. They can take the test again now.`);
+    } catch (err) { setMsg(err.message); }
+    setBusy(false);
+  }
   async function setActive(next) {
     if (!next && !window.confirm("Close this test? Students who have not started will no longer be able to begin it. Anyone already taking it can still finish.")) return;
     const r = await fetch("/api/online-test/status", {
@@ -172,15 +217,27 @@ export default function OnlineTestResults() {
     if (!r.ok) { setMsg(j.error || "Could not change the status"); return; }
     setOpen(j.open); setMsg("");
   }
-  async function reset(row) {
-    if (!window.confirm(`Delete ${row.student_name}'s attempt (${row.status})? They will be able to take the test again.`)) return;
-    const r = await fetch("/api/online-test/reset", {
-      method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw },
-      body: JSON.stringify({ id: row.id }),
-    });
-    const j = await r.json();
-    if (!r.ok) { setMsg(j.error || "Reset failed"); return; }
-    setRows((rs) => rs.filter((x) => x.id !== row.id));
+  // "Allow retest": the old result is archived (kept in the database), and
+  // the students listed can take the test again.
+  async function retestStudents(list, label) {
+    if (!list.length) { setMsg("Nobody to retest here."); return; }
+    if (!window.confirm(`Allow a retest for ${label} (${list.length} student${list.length > 1 ? "s" : ""})?\n\nTheir current result and card are archived and removed from this page, and they can take the test again. This cannot be undone from this page.`)) return;
+    setBusy(true); setMsg("");
+    try {
+      const ids = list.map((x) => x.id);
+      for (let i = 0; i < ids.length; i += 200) {
+        const r = await fetch("/api/online-test/reset", {
+          method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw },
+          body: JSON.stringify({ ids: ids.slice(i, i + 200) }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || "Retest failed");
+      }
+      const gone = new Set(ids);
+      setRows((rs) => rs.filter((x) => !gone.has(x.id)));
+      setMsg(`Retest given to ${label}. They can take the test again now.`);
+    } catch (err) { setMsg(`${label}: ${err.message}`); }
+    setBusy(false);
   }
   async function excel() {
     const XLSX = await import("xlsx");
@@ -218,6 +275,7 @@ export default function OnlineTestResults() {
           <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} style={{ padding: 8 }} autoComplete="off" />
         </label>
         <button type="submit" style={btnGo} disabled={busy || !pw}>{busy ? "Loading…" : "Show results"}</button>
+        <button type="button" style={btn} disabled={!pw} title={pw ? "" : "Enter the admin password first"} onClick={() => setShowCreate((v) => !v)}>＋ Create new test</button>
         {rows && <button type="button" style={btn} onClick={excel}>Download Excel</button>}
       </form>
       {rows && open !== null && (
@@ -227,6 +285,7 @@ export default function OnlineTestResults() {
             {open ? "Students can start it." : "Students cannot start it. The test page shows “closed”."}
           </span>
           <button style={open ? { ...btn, color: red, borderColor: red } : btnGo} onClick={() => setActive(!open)}>{open ? "Close test" : "Make active"}</button>
+          {TESTS.find((t) => t.slug === test)?.custom && rows.length === 0 && <button style={{ ...btn, color: red, borderColor: red }} onClick={deleteTest}>Delete test</button>}
         </div>
       )}
       {rows && (
@@ -238,12 +297,18 @@ export default function OnlineTestResults() {
             also warn students who did not take / finish the test
           </label>
           <span style={{ paddingBottom: 6, color: "#5b5a70" }}>Bulk PNG / Bulk PDF now include the warning letters.</span>
+          <span style={{ display: "flex", gap: 8, alignItems: "end", marginLeft: "auto" }}>
+            <label>Retest below %<br /><input value={retestBelow} onChange={(e) => setRetestBelow(e.target.value)} style={{ padding: 6, width: 70 }} /></label>
+            <button style={btn} disabled={busy} onClick={() => retest(null)}>Retest whole class</button>
+          </span>
         </div>
       )}
       <form onSubmit={(e) => e.preventDefault()} style={{ display: "none" }}>
       </form>
 
-      {msg && <p style={{ color: /preparing|adding|downloaded/.test(msg) ? green : red, fontWeight: 600 }}>{msg}</p>}
+      {showCreate && pw && <OnlineTestCreator pw={pw} onCreated={onCreated} onClose={() => setShowCreate(false)} />}
+
+      {msg && <p style={{ color: /preparing|adding|downloaded|Retest given|Test deleted/.test(msg) ? green : red, fontWeight: 600 }}>{msg}</p>}
       {rows && (
         <p style={{ fontSize: 14 }}>
           <b>{submitted}</b> submitted · <b>{rows.length - submitted}</b> not finished (started, but the page was closed) · {rows.length} in total
@@ -256,6 +321,7 @@ export default function OnlineTestResults() {
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", margin: "18px 0 8px" }}>
             <h2 style={{ fontSize: 18, margin: 0, borderLeft: `6px solid ${gold}`, paddingLeft: 10, marginRight: "auto" }}>Class {n}</h2>
             <button style={btn} disabled={busy} onClick={() => warnOnly(n)}>Warning letters</button>
+            <button style={btn} disabled={busy} onClick={() => retest(n)}>Retest section</button>
             <button style={btn} disabled={busy} onClick={() => bulk("png", n, sections[n])}>Bulk PNG (zip)</button>
             <button style={btn} disabled={busy} onClick={() => bulk("pdf", n, sections[n])}>Bulk PDF</button>
           </div>
@@ -279,7 +345,7 @@ export default function OnlineTestResults() {
                       <td style={{ ...td, whiteSpace: "nowrap" }}>
                         {ok && <><button style={btn} onClick={() => view(r)}>View card</button>{" "}
                         <button style={btn} onClick={() => download(r)}>PNG</button>{" "}</>}
-                        <button style={{ ...btn, color: red, borderColor: red }} onClick={() => reset(r)}>Reset</button>
+                        <button style={{ ...btn, color: red, borderColor: red }} disabled={busy} onClick={() => retestStudents([r], r.student_name)}>Retest</button>
                       </td>
                     </tr>
                   );

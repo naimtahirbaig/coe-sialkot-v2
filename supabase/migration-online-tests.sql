@@ -34,3 +34,27 @@ create table if not exists public.online_test_settings (
   updated_at timestamptz not null default now()
 );
 alter table public.online_test_settings enable row level security;
+
+-- Tests created from the admin page (question bank stored here).
+create table if not exists public.online_test_defs (
+  slug        text primary key,
+  title       text not null,
+  class_num   int  not null,
+  subject     text not null,
+  chapter     text,
+  month_label text not null,
+  per_q       int  not null default 15,
+  paper_size  int  not null,
+  questions   jsonb not null,     -- [[question, [opt1, opt2, ...], correctIndex], ...]
+  created_at  timestamptz not null default now()
+);
+alter table public.online_test_defs enable row level security;
+
+-- Old attempts are kept here when a retest is given.
+create table if not exists public.online_test_attempt_history (
+  id          uuid primary key default gen_random_uuid(),
+  archived_at timestamptz not null default now(),
+  reason      text,
+  data        jsonb not null
+);
+alter table public.online_test_attempt_history enable row level security;

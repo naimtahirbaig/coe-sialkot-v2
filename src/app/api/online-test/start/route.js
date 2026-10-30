@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { TEACHER_NAMES } from "@/lib/awardListTeachers";
 import { isTestOpen } from "@/lib/onlineTestStatus";
+import { previousResults } from "@/lib/onlineTests";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -57,7 +58,10 @@ export async function POST(req) {
     }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+  // Earlier results in this subject, for the comparison on the result card.
+  const previous = await previousResults(supabase, st.id, test);
   return NextResponse.json({
+    previous,
     token,
     student: { name: st.student_name, roll: st.roll_no, section: String(sec.section_label).split("(")[0].trim() },
   });
