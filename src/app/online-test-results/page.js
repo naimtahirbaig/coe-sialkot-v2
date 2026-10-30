@@ -9,8 +9,8 @@ const BUILTIN = [
 ];
 
 const navy = "#150F3F", gold = "#F3B129", green = "#007a3a", red = "#B3261E";
-const th = { textAlign: "left", padding: "8px 10px", background: navy, color: "#fff", fontSize: 12.5, whiteSpace: "nowrap" };
-const td = { padding: "8px 10px", borderBottom: "1px solid #e3e1ee", fontSize: 14, verticalAlign: "middle" };
+const th = { textAlign: "left", padding: "8px 10px", background: navy, color: "#fff", fontSize: 13, whiteSpace: "nowrap" };
+const td = { padding: "8px 10px", borderBottom: "1px solid #D5D2E6", fontSize: 14, verticalAlign: "middle", background: "#fff", color: "#14122E" };
 const btn = { padding: "6px 12px", borderRadius: 6, border: `1px solid ${navy}`, background: "#fff", color: navy, cursor: "pointer", fontSize: 13, fontWeight: 600 };
 const btnGo = { ...btn, background: navy, color: "#fff" };
 
@@ -261,7 +261,8 @@ export default function OnlineTestResults() {
   const submitted = (rows || []).filter((r) => r.status === "submitted").length;
 
   return (
-    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px", fontFamily: "system-ui, sans-serif", color: navy }}>
+    <div style={{ position: "fixed", inset: 0, overflowY: "auto", background: "#F3F2F9", zIndex: 40, colorScheme: "light" }}>
+    <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px", fontFamily: "system-ui, sans-serif", color: "#14122E" }}>
       <h1 style={{ margin: "0 0 4px", fontSize: 26 }}>Online test results</h1>
       <div style={{ height: 4, width: 60, background: gold, marginBottom: 18 }} />
 
@@ -281,7 +282,7 @@ export default function OnlineTestResults() {
       {rows && open !== null && (
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 8, background: open ? "#E8F6EE" : "#FBEAEA", border: `1.5px solid ${open ? green : red}` }}>
           <b style={{ color: open ? green : red, fontSize: 16 }}>{open ? "● Test is ACTIVE" : "● Test is CLOSED"}</b>
-          <span style={{ fontSize: 13, color: "#5b5a70", marginRight: "auto" }}>
+          <span style={{ fontSize: 13, color: "#3E3C58", marginRight: "auto" }}>
             {open ? "Students can start it." : "Students cannot start it. The test page shows “closed”."}
           </span>
           <button style={open ? { ...btn, color: red, borderColor: red } : btnGo} onClick={() => setActive(!open)}>{open ? "Close test" : "Make active"}</button>
@@ -296,7 +297,7 @@ export default function OnlineTestResults() {
             <input type="checkbox" checked={incAbsent} onChange={(e) => setIncAbsent(e.target.checked)} />
             also warn students who did not take / finish the test
           </label>
-          <span style={{ paddingBottom: 6, color: "#5b5a70" }}>Bulk PNG / Bulk PDF now include the warning letters.</span>
+          <span style={{ paddingBottom: 6, color: "#3E3C58" }}>Bulk PNG / Bulk PDF now include the warning letters.</span>
           <span style={{ display: "flex", gap: 8, alignItems: "end", marginLeft: "auto" }}>
             <label>Retest below %<br /><input value={retestBelow} onChange={(e) => setRetestBelow(e.target.value)} style={{ padding: 6, width: 70 }} /></label>
             <button style={btn} disabled={busy} onClick={() => retest(null)}>Retest whole class</button>
@@ -372,6 +373,7 @@ export default function OnlineTestResults() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

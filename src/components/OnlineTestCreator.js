@@ -107,7 +107,7 @@ export default function OnlineTestCreator({ pw, defaultMonth, onCreated, onClose
           </p>
           <button style={btnGo} onClick={() => navigator.clipboard && navigator.clipboard.writeText(origin + done.url)}>Copy link</button>{" "}
           <button style={btn} onClick={() => { setDone(null); setQuestions(null); setFileName(""); setF((x) => ({ ...x, subject: "", chapter: "", paperSize: "" })); }}>Create another</button>
-          <p style={{ fontSize: 13, color: "#5b5a70" }}>The test is <b>Active</b>. It also appears on the Online Tests page and in the list above.</p>
+          <p style={{ fontSize: 13, color: "#3E3C58" }}>The test is <b>Active</b>. It also appears on the Online Tests page and in the list above.</p>
         </div>
       ) : (
         <>
@@ -129,7 +129,7 @@ export default function OnlineTestCreator({ pw, defaultMonth, onCreated, onClose
             <div style={{ marginTop: 8 }}>
               <input type="file" accept=".xlsx,.xls,.csv" onChange={onFile} />
             </div>
-            <p style={{ margin: "6px 0 0", color: "#5b5a70" }}>Put more questions in the file than one paper needs — each student then gets a different random set, in a random order.</p>
+            <p style={{ margin: "6px 0 0", color: "#3E3C58" }}>Put more questions in the file than one paper needs — each student then gets a different random set, in a random order.</p>
           </div>
 
           {questions && !errors.length && (
