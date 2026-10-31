@@ -58,3 +58,8 @@ create table if not exists public.online_test_attempt_history (
   data        jsonb not null
 );
 alter table public.online_test_attempt_history enable row level security;
+
+-- Resume after a power cut / dropped internet: the paper, answers so far and
+-- photos are saved while the student sits the test.
+alter table public.online_test_attempts add column if not exists progress jsonb;
+alter table public.online_test_attempts add column if not exists last_seen timestamptz;

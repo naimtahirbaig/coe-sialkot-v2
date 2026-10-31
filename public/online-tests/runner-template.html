@@ -353,7 +353,7 @@ function startCamera(){
       $("camHead").textContent="Camera is on";
       $("camMsg").textContent="Keep your face inside the frame. Five photographs will be taken at random moments and printed on your result card..";
       $("btnCam").textContent="Camera on";$("btnCam").disabled=true;
-      $("btnStart").disabled=testClosed;
+      $("btnStart").disabled=(testClosed&&!anyResume);
       s.getVideoTracks()[0].addEventListener("ended",function(){camDropped=true;});
    })
    .catch(function(e){
@@ -387,7 +387,7 @@ document.addEventListener("visibilitychange",function(){
 
 /* ============ start ============ */
 var student={},started=null;
-var previous=[];
+var previous=[],RESUME=null,anyResume=false,startIdx=0,prgInflight=false,prgDirty=false,paperSaved=false,photosSent=0,prgStop=false;
 var TEST_SLUG=DEF.slug,CLASS_NUM=DEF.classNum,attemptToken=null,studentId=null,roster=[],testClosed=false;
 function closedUI(){
   $("setupErr").textContent="This test is CLOSED. It is not accepting new attempts.";
@@ -400,7 +400,8 @@ fetch("/api/online-test/roster?class="+CLASS_NUM+"&test="+encodeURIComponent(TES
  .then(function(d){
    if(d.error)throw new Error(d.error);
    roster=d.sections;
-   if(d.open===false){testClosed=true;closedUI();}
+   roster.forEach(function(sec){sec.students.forEach(function(x){if(x.resume)anyResume=true;});});
+   if(d.open===false){testClosed=true;if(!anyResume)closedUI();else $("setupErr").textContent="This test is CLOSED. Only students who already started it can resume.";}
    var t=$("fTeacher");t.innerHTML="";t.appendChild(opt("","Choose your teacher"));
    d.teachers.forEach(function(n){t.appendChild(opt(n,n));});
    var c=$("fSection");c.innerHTML="";c.appendChild(opt("","Choose your section"));
@@ -413,7 +414,7 @@ $("fSection").addEventListener("change",function(){
   var sec=roster[Number(this.value)];$("fClass").value=sec.label;
   st.disabled=false;st.appendChild(opt("","Choose your name"));
   sec.students.forEach(function(x){
-    var o=opt(String(x.id),(x.done?"(done) ":"")+x.name,x.done);o.dataset.roll=x.roll;o.dataset.name=x.name;st.appendChild(o);
+    var o=opt(String(x.id),(x.done?"(done) ":(x.resume?"(resume) ":""))+x.name,x.done||(testClosed&&!x.resume));o.dataset.roll=x.roll;o.dataset.name=x.name;o.dataset.resume=x.resume?"1":"";st.appendChild(o);
   });
 });
 $("fStudent").addEventListener("change",function(){
@@ -424,28 +425,30 @@ $("fStudent").addEventListener("change",function(){
 var student={},started=null,starting=false;
 $("btnStart").addEventListener("click",function(){
   if(starting)return;
-  if(testClosed){closedUI();return;}
+  if(testClosed&&!anyResume){closedUI();return;}
   var t=$("fTeacher").value,so=$("fStudent").options[$("fStudent").selectedIndex],
       c=$("fClass").value,r=$("fRoll").value;
   if(!t||!so||!so.value||!c){$("setupErr").textContent="Choose your teacher, section and name before starting.";return;}
   if(!camOK){$("setupErr").textContent="The camera must be on before the test can start.";return;}
   starting=true;$("btnStart").disabled=true;$("setupErr").textContent="Claiming your attempt…";
   fetch("/api/online-test/start",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({test:TEST_SLUG,studentId:so.value,teacher:t,"class":CLASS_NUM})})
+    body:JSON.stringify({test:TEST_SLUG,studentId:so.value,teacher:t,"class":CLASS_NUM,token:getTok(so.value)})})
   .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
   .then(function(x){
     if(!x.ok){if(x.j.error&&/closed/i.test(x.j.error)){testClosed=true;closedUI();}throw new Error(x.j.error||"Could not start");}
-    attemptToken=x.j.token;studentId=so.value;previous=x.j.previous||[];
+    attemptToken=x.j.token;studentId=so.value;previous=x.j.previous||[];storeTok(so.value,attemptToken);
+    RESUME=x.j.resume||null;if(RESUME)applyResume(RESUME);
     student={teacher:t,name:so.dataset.name,cls:c,roll:r};
     $("setupErr").textContent="";
     started=new Date();
     $("setup").classList.add("hidden");
     $("test").classList.remove("hidden");
     window.addEventListener("beforeunload",guard);
-    show(0);
+    if(RESUME&&RESUME.started)started=new Date(RESUME.started);
+    show(startIdx);saveProgress();
   })
   .catch(function(e){
-    starting=false;$("btnStart").disabled=testClosed;
+    starting=false;$("btnStart").disabled=(testClosed&&!anyResume);
     $("setupErr").textContent=e.message==="Failed to fetch"?"No internet connection — the test cannot start. Try again.":e.message;
   });
 });
@@ -473,7 +476,7 @@ function show(i){
     b.addEventListener("click",function(){choose(n,b);});
     li.appendChild(b);ul.appendChild(li);
   });
-  if(shotAt.indexOf(i)!==-1)setTimeout(function(){snap("Question "+(i+1));},350);
+  if(shotAt.indexOf(i)!==-1&&!photos.some(function(p){return p.at==="Question "+(i+1);}))setTimeout(function(){snap("Question "+(i+1));},350);
   paint();clearInterval(tick);tick=setInterval(step,100);
 }
 function paint(){
@@ -495,7 +498,7 @@ function choose(n,btn){
   btn.classList.add("picked");
   setTimeout(next,380);
 }
-function next(){ if(idx+1<TOTAL){show(idx+1);} else {finish();} }
+function next(){ if(idx+1<TOTAL){show(idx+1);saveProgress();} else {finish();} }
 
 /* ============ result ============ */
 var res={};
@@ -610,6 +613,43 @@ function showCmp(){
       r.t.replace(/</g,"&lt;")+'</td><td>'+r.d+'</td><td>'+r.m+'</td><td>'+r.p+'</td><td>'+r.g+'</td><td style="color:'+col+'">'+r.c+'</td></tr>';
   });
   box.innerHTML=h+'</table></div>';box.classList.remove("hidden");
+}
+
+
+/* ============ save progress + resume (power cut / dropped internet) ============ */
+function tokKey(id){return "otk:"+TEST_SLUG+":"+id;}
+function getTok(id){try{return localStorage.getItem(tokKey(id))||"";}catch(e){return "";}}
+function storeTok(id,t){try{localStorage.setItem(tokKey(id),t);}catch(e){}}
+function clearTok(id){try{localStorage.removeItem(tokKey(id));}catch(e){}}
+function applyResume(r){
+  paper=r.paper.map(function(p,i){
+    var o={q:p.q,opts:p.o.map(function(x){return {text:x[0],correct:!!x[1]};})};
+    if(r.picks&&r.picks[i]>=0)o.picked=r.picks[i];
+    return o;
+  });
+  tabSwitches=r.tabSwitches||0;
+  photos=r.photos||[];
+  if(r.shotAt&&r.shotAt.length)shotAt=r.shotAt;
+  startIdx=Math.max(0,Math.min(r.idx||0,paper.length-1));
+  paperSaved=true;photosSent=photos.length;
+}
+function saveProgress(){
+  if(!attemptToken||prgStop)return;
+  if(prgInflight){prgDirty=true;return;}
+  prgInflight=true;prgDirty=false;
+  var sentPhotos=photos.length,withPaper=!paperSaved;
+  var body={test:TEST_SLUG,studentId:studentId,token:attemptToken,idx:idx,tabSwitches:tabSwitches,camDropped:!!camDropped,
+    shotAt:shotAt,picks:paper.map(function(q){return q.picked===undefined?-1:q.picked;})};
+  if(withPaper)body.paper=paper.map(function(q){return {q:q.q,o:q.opts.map(function(o){return [o.text,o.correct?1:0];})};});
+  if(sentPhotos!==photosSent)body.photos=photos;
+  fetch("/api/online-test/progress",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+  .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+  .then(function(x){
+    if(!x.ok){if(x.j&&x.j.superseded){prgStop=true;return;}throw new Error("save failed");}
+    prgInflight=false;if(withPaper)paperSaved=true;photosSent=sentPhotos;
+    if(prgDirty)saveProgress();
+  })
+  .catch(function(){prgInflight=false;setTimeout(saveProgress,3000);});
 }
 
 function drawCard(){
@@ -800,7 +840,7 @@ function autoSave(){
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
     .then(function(x){
       if(!x.ok)throw new Error(x.j.error||"Save failed");
-      saved=true;saving=false;
+      saved=true;saving=false;clearTok(studentId);
       $("saveStatus").style.color="#007a3a";
       $("saveStatus").textContent="✓ Your result card has been saved to the school record. This test cannot be taken again.";
       try{$("btnDownload").click();}catch(e){}

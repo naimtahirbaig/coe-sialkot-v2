@@ -36,14 +36,15 @@ export async function GET(req) {
     );
     attempts = await fetchAll((opts) =>
       supabase.from("online_test_attempts")
-        .select("id, student_id", opts)
+        .select("id, student_id, status", opts)
         .eq("test_slug", test)
         .order("id", { ascending: true })
     );
   } catch (e) {
     return NextResponse.json({ error: String(e.message || e) }, { status: 500 });
   }
-  const done = new Set(attempts.map((a) => String(a.student_id)));
+  const done = new Set(attempts.filter((a) => a.status === "submitted").map((a) => String(a.student_id)));
+  const resume = new Set(attempts.filter((a) => a.status !== "submitted").map((a) => String(a.student_id)));
 
   const out = (sections || []).map((s) => ({
     id: s.id,
@@ -55,6 +56,7 @@ export async function GET(req) {
         roll: st.roll_no,
         name: st.student_name,
         done: done.has(String(st.id)),
+        resume: resume.has(String(st.id)),
       })),
   }));
 

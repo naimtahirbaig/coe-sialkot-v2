@@ -28,7 +28,7 @@ export async function POST(req) {
   if (row.status === "submitted") {
     return NextResponse.json({ ok: true, already: true });
   }
-  const { error } = await supabase.from("online_test_attempts").update({
+  const fields = {
     status: "submitted",
     finished_at: new Date().toISOString(),
     correct: num(b.correct), wrong: num(b.wrong), skipped: num(b.skipped),
@@ -38,7 +38,14 @@ export async function POST(req) {
     camera_dropped: !!b.cameraDropped,
     answers: Array.isArray(b.answers) ? b.answers.slice(0, 200) : null,
     card_image: card || null,
-  }).eq("id", row.id).eq("status", "in_progress");
+  };
+  let { error } = await supabase.from("online_test_attempts")
+    .update({ ...fields, progress: null }).eq("id", row.id).eq("status", "in_progress");
+  if (error) {
+    // The progress column may not exist yet — save the result regardless.
+    ({ error } = await supabase.from("online_test_attempts")
+      .update(fields).eq("id", row.id).eq("status", "in_progress"));
+  }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
