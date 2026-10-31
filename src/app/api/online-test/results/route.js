@@ -14,11 +14,16 @@ export async function GET(req) {
   }
   const test = searchParams.get("test");
   const supabase = getSupabaseAdmin();
-  let q = supabase.from("online_test_attempts")
-    .select("id, test_slug, student_id, student_name, roll_no, class, section_label, teacher_name, status, started_at, finished_at, correct, wrong, skipped, percentage, grade, tab_switches, camera_dropped")
-    .order("section_label").order("roll_no");
-  if (test) q = q.eq("test_slug", test);
-  const { data, error } = await q;
+  const BASE = "id, test_slug, student_id, student_name, roll_no, class, section_label, teacher_name, status, started_at, finished_at, correct, wrong, skipped, percentage, grade, tab_switches, camera_dropped";
+  const run = (cols) => {
+    let q = supabase.from("online_test_attempts").select(cols).order("section_label").order("roll_no");
+    if (test) q = q.eq("test_slug", test);
+    return q;
+  };
+  // Face-check columns exist only after the latest migration — fall back so
+  // this page never breaks before it has been run.
+  let { data, error } = await run(BASE + ", face_events, no_face_secs, multi_face");
+  if (error) ({ data, error } = await run(BASE));
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   // Whole class roster (with father's name and class teacher) so the office
   // page can also list students who never started the test.

@@ -295,6 +295,11 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
   </footer>
 </div>
 
+<div id="faceOverlay" style="display:none;position:fixed;inset:0;z-index:99;background:#150F3F;color:#fff;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px">
+  <h2 style="margin:0;font-family:Georgia,serif;color:#F3B129">Test paused — no face detected</h2>
+  <p style="margin:0;max-width:460px;line-height:1.5">Look at the camera so that your face is inside the frame. The test continues by itself, and the timer stays stopped until you are back.</p>
+  <video id="faceVid" autoplay muted playsinline style="width:min(320px,80vw);border:3px solid #F3B129;border-radius:12px;background:#000"></video>
+</div>
 <canvas id="grab" class="hidden" width="480" height="360"></canvas>
 <canvas id="card" class="hidden" width="1000" height="1460"></canvas>
 
@@ -353,7 +358,7 @@ function startCamera(){
       $("camHead").textContent="Camera is on";
       $("camMsg").textContent="Keep your face inside the frame. Five photographs will be taken at random moments and printed on your result card..";
       $("btnCam").textContent="Camera on";$("btnCam").disabled=true;
-      $("btnStart").disabled=(testClosed&&!anyResume);
+      beginFaceGate();updateStartBtn();
       s.getVideoTracks()[0].addEventListener("ended",function(){camDropped=true;});
    })
    .catch(function(e){
@@ -371,7 +376,7 @@ function camFail(msg){
   $("camHead").textContent="Camera blocked — test locked";
   $("camMsg").textContent=msg;
   $("camHelp").className="help show";
-  $("btnCam").disabled=false;$("btnCam").textContent="Try camera again";
+  $("btnCam").disabled=false;$("btnCam").textContent="Try camera again";faceGateOK=false;
   $("btnStart").disabled=true;
 }
 function snap(label){
@@ -430,6 +435,7 @@ $("btnStart").addEventListener("click",function(){
       c=$("fClass").value,r=$("fRoll").value;
   if(!t||!so||!so.value||!c){$("setupErr").textContent="Choose your teacher, section and name before starting.";return;}
   if(!camOK){$("setupErr").textContent="The camera must be on before the test can start.";return;}
+  if(!faceGateOK){$("setupErr").textContent="Your face must be visible to the camera before the test can start.";return;}
   starting=true;$("btnStart").disabled=true;$("setupErr").textContent="Claiming your attempt…";
   fetch("/api/online-test/start",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({test:TEST_SLUG,studentId:so.value,teacher:t,"class":CLASS_NUM,token:getTok(so.value)})})
@@ -445,10 +451,10 @@ $("btnStart").addEventListener("click",function(){
     $("test").classList.remove("hidden");
     window.addEventListener("beforeunload",guard);
     if(RESUME&&RESUME.started)started=new Date(RESUME.started);
-    show(startIdx);saveProgress();
+    show(startIdx);saveProgress();startFaceWatch();
   })
   .catch(function(e){
-    starting=false;$("btnStart").disabled=(testClosed&&!anyResume);
+    starting=false;updateStartBtn();
     $("setupErr").textContent=e.message==="Failed to fetch"?"No internet connection — the test cannot start. Try again.":e.message;
   });
 });
@@ -459,7 +465,7 @@ var idx=0,left=PER_Q,tick=null,locked=false;
 var CIRC=2*Math.PI*47;
 $("ringBar").style.strokeDasharray=CIRC;
 function show(i){
-  idx=i;locked=false;left=PER_Q;
+  idx=i;locked=facePaused;left=PER_Q;
   var q=paper[i];
   $("qNow").textContent=i+1;
   $("bar").style.width=(i/TOTAL*100)+"%";
@@ -477,7 +483,7 @@ function show(i){
     li.appendChild(b);ul.appendChild(li);
   });
   if(shotAt.indexOf(i)!==-1&&!photos.some(function(p){return p.at==="Question "+(i+1);}))setTimeout(function(){snap("Question "+(i+1));},350);
-  paint();clearInterval(tick);tick=setInterval(step,100);
+  paint();clearInterval(tick);if(!facePaused)tick=setInterval(step,100);
 }
 function paint(){
   $("tNum").textContent=Math.ceil(left);
@@ -503,7 +509,7 @@ function next(){ if(idx+1<TOTAL){show(idx+1);saveProgress();} else {finish();} }
 /* ============ result ============ */
 var res={};
 function finish(){
-  clearInterval(tick);
+  clearInterval(tick);stopFaceWatch();
   window.removeEventListener("beforeunload",guard);
   if(stream)snap("Final");
 
@@ -535,6 +541,9 @@ function finish(){
   var flags=[];
   if(tabSwitches>0)flags.push("left the test window "+tabSwitches+" time"+(tabSwitches>1?"s":""));
   if(camDropped)flags.push("camera stopped before the paper ended");
+  if(faceEvents>0)flags.push("face not visible "+faceEvents+" time"+(faceEvents>1?"s":"")+" ("+Math.round(noFaceSecs)+" s)");
+  if(multiFace>0)flags.push("more than one face seen "+multiFace+" time"+(multiFace>1?"s":""));
+  if(faceUnavailable)flags.push("face check unavailable on this device");
   showCmp();
   $("rFlags").textContent=flags.length?"Proctor notes: "+flags.join("; ")+".":"Proctor notes: none.";
 
@@ -627,7 +636,7 @@ function applyResume(r){
     if(r.picks&&r.picks[i]>=0)o.picked=r.picks[i];
     return o;
   });
-  tabSwitches=r.tabSwitches||0;
+  tabSwitches=r.tabSwitches||0;faceEvents=r.faceEvents||0;noFaceSecs=r.noFaceSecs||0;multiFace=r.multiFace||0;
   photos=r.photos||[];
   if(r.shotAt&&r.shotAt.length)shotAt=r.shotAt;
   startIdx=Math.max(0,Math.min(r.idx||0,paper.length-1));
@@ -638,7 +647,7 @@ function saveProgress(){
   if(prgInflight){prgDirty=true;return;}
   prgInflight=true;prgDirty=false;
   var sentPhotos=photos.length,withPaper=!paperSaved;
-  var body={test:TEST_SLUG,studentId:studentId,token:attemptToken,idx:idx,tabSwitches:tabSwitches,camDropped:!!camDropped,
+  var body={test:TEST_SLUG,studentId:studentId,token:attemptToken,idx:idx,tabSwitches:tabSwitches,camDropped:!!camDropped,faceEvents:faceEvents,noFaceSecs:Math.round(noFaceSecs),multiFace:multiFace,
     shotAt:shotAt,picks:paper.map(function(q){return q.picked===undefined?-1:q.picked;})};
   if(withPaper)body.paper=paper.map(function(q){return {q:q.q,o:q.opts.map(function(o){return [o.text,o.correct?1:0];})};});
   if(sentPhotos!==photosSent)body.photos=photos;
@@ -650,6 +659,85 @@ function saveProgress(){
     if(prgDirty)saveProgress();
   })
   .catch(function(){prgInflight=false;setTimeout(saveProgress,3000);});
+}
+
+
+/* ============ face check (camera turns "ready" only when a face is seen; test pauses when it is gone) ============ */
+var faceGateOK=false,faceUnavailable=false,faceLibP=null,faceOpts=null;
+var faceEvents=0,noFaceSecs=0,multiFace=0,facePaused=false,faceMiss=0,faceHit=0,faceMulti=0,pauseStart=0,pauseIdx=0;
+var faceTimer=null,gateTimer=null,faceBusy=false,pausedLocked=false;
+function updateStartBtn(){$("btnStart").disabled=!(camOK&&faceGateOK)||(testClosed&&!anyResume);}
+function loadFaceLib(){
+  if(faceLibP)return faceLibP;
+  faceLibP=new Promise(function(res,rej){
+    var to=setTimeout(function(){rej(new Error("timeout"));},25000);
+    var s=document.createElement("script");s.src="/online-tests/vendor/face/face-api.js";
+    s.onload=function(){
+      faceapi.nets.tinyFaceDetector.loadFromUri("/online-tests/vendor/face").then(function(){
+        faceOpts=new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:0.45});clearTimeout(to);res();
+      }).catch(function(e){clearTimeout(to);rej(e);});
+    };
+    s.onerror=function(){clearTimeout(to);rej(new Error("load"));};
+    document.head.appendChild(s);
+  });
+  return faceLibP;
+}
+function countFaces(){return faceapi.detectAllFaces($("preview"),faceOpts).then(function(r){return r.length;});}
+function beginFaceGate(){
+  clearInterval(gateTimer);faceHit=0;faceGateOK=false;
+  $("camHead").textContent="Camera is on — looking for your face…";
+  $("camMsg").textContent="Face the camera so your face is inside the frame. The Start button unlocks when your face is detected.";
+  loadFaceLib().then(function(){
+    gateTimer=setInterval(function(){
+      if(faceBusy||!stream)return;faceBusy=true;
+      countFaces().then(function(n){
+        faceBusy=false;faceHit=n>=1?faceHit+1:0;
+        if(faceHit>=3){
+          clearInterval(gateTimer);faceGateOK=true;
+          $("camHead").textContent="Camera is on — face detected ✓";
+          $("camMsg").textContent="Good. Keep your face in the frame for the whole test. Five photographs will be taken at random moments and printed on your result card.";
+          updateStartBtn();
+        }
+      }).catch(function(){faceBusy=false;});
+    },600);
+  }).catch(function(){
+    faceUnavailable=true;faceGateOK=true;
+    $("camHead").textContent="Camera is on (face check unavailable)";
+    $("camMsg").textContent="The face check could not start on this device, so the test will run without it.";
+    updateStartBtn();
+  });
+}
+function startFaceWatch(){
+  if(faceUnavailable||!faceOpts)return;
+  clearInterval(faceTimer);faceMiss=0;faceHit=0;faceMulti=0;
+  if(stream)$("faceVid").srcObject=stream;
+  faceTimer=setInterval(function(){
+    var pv=$("preview");if(pv.paused)pv.play().catch(function(){});
+    if(faceBusy||!stream)return;faceBusy=true;
+    countFaces().then(function(n){
+      faceBusy=false;
+      if(n===0){faceHit=0;faceMiss++;faceMulti=0;if(faceMiss>=5&&!facePaused)pauseForFace();}
+      else{
+        faceMiss=0;faceHit++;
+        if(facePaused&&faceHit>=2)resumeFromFace();
+        if(n>1){faceMulti++;if(faceMulti===3){multiFace++;saveProgress();}}else faceMulti=0;
+      }
+    }).catch(function(){faceBusy=false;});
+  },700);
+}
+function stopFaceWatch(){clearInterval(faceTimer);if(facePaused)resumeFromFace(true);}
+function pauseForFace(){
+  facePaused=true;faceEvents++;pauseStart=Date.now();pauseIdx=idx;
+  pausedLocked=locked;locked=true;clearInterval(tick);
+  $("faceOverlay").style.display="flex";saveProgress();
+}
+function resumeFromFace(quiet){
+  if(!facePaused)return;
+  facePaused=false;noFaceSecs+=(Date.now()-pauseStart)/1000;
+  $("faceOverlay").style.display="none";
+  if(quiet)return;
+  locked=(idx===pauseIdx)?pausedLocked:false;
+  if(!locked){clearInterval(tick);tick=setInterval(step,100);}
 }
 
 function drawCard(){
@@ -804,6 +892,9 @@ function render(store){
   var note="Proctor notes: none.",fl=[];
   if(tabSwitches>0)fl.push("left the test window "+tabSwitches+" time"+(tabSwitches>1?"s":""));
   if(camDropped)fl.push("camera stopped early");
+  if(faceEvents>0)fl.push("face not visible "+faceEvents+"x ("+Math.round(noFaceSecs)+" s)");
+  if(multiFace>0)fl.push("2+ faces seen "+multiFace+"x");
+  if(faceUnavailable)fl.push("face check unavailable");
   if(fl.length)note="Proctor notes: "+fl.join("; ")+".";
   g.fillText(note,196,fy+156);
   g.textAlign="right";
@@ -831,7 +922,7 @@ function autoSave(){
   var jpg=$("card").toDataURL("image/jpeg",0.85);
   var body=JSON.stringify({test:TEST_SLUG,studentId:studentId,token:attemptToken,
     correct:res.correct,wrong:res.wrong,skipped:res.skip,pct:res.pct,grade:res.grade,
-    tabSwitches:tabSwitches,cameraDropped:!!camDropped,card:jpg,
+    tabSwitches:tabSwitches,cameraDropped:!!camDropped,faceEvents:faceEvents,noFaceSecs:Math.round(noFaceSecs),multiFace:multiFace,card:jpg,
     answers:res.rows.map(function(r){return {n:r.n,q:r.q,mine:r.mine,right:r.right,ok:r.ok};})});
   var tries=0;
   (function go(){

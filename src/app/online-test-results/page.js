@@ -18,6 +18,8 @@ function notes(r) {
   const n = [];
   if (r.tab_switches > 0) n.push(`left window ${r.tab_switches}×`);
   if (r.camera_dropped) n.push("camera stopped");
+  if (r.face_events > 0) n.push(`no face ${r.face_events}× (${r.no_face_secs || 0}s)`);
+  if (r.multi_face > 0) n.push(`2+ faces ${r.multi_face}×`);
   return n.join(", ") || "none";
 }
 

@@ -39,12 +39,19 @@ export async function POST(req) {
     answers: Array.isArray(b.answers) ? b.answers.slice(0, 200) : null,
     card_image: card || null,
   };
-  let { error } = await supabase.from("online_test_attempts")
-    .update({ ...fields, progress: null }).eq("id", row.id).eq("status", "in_progress");
-  if (error) {
-    // The progress column may not exist yet — save the result regardless.
+  const face = {
+    face_events: num(b.faceEvents), no_face_secs: num(b.noFaceSecs), multi_face: num(b.multiFace),
+  };
+  // Newer columns may not exist yet (migration not run): fall back step by
+  // step so the result is ALWAYS saved.
+  const attempts = [
+    { ...fields, ...face, progress: null }, { ...fields, ...face }, { ...fields, progress: null }, fields,
+  ];
+  let error = null;
+  for (const upd of attempts) {
     ({ error } = await supabase.from("online_test_attempts")
-      .update(fields).eq("id", row.id).eq("status", "in_progress"));
+      .update(upd).eq("id", row.id).eq("status", "in_progress"));
+    if (!error) break;
   }
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

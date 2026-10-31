@@ -63,3 +63,8 @@ alter table public.online_test_attempt_history enable row level security;
 -- photos are saved while the student sits the test.
 alter table public.online_test_attempts add column if not exists progress jsonb;
 alter table public.online_test_attempts add column if not exists last_seen timestamptz;
+
+-- Face check: how often the face was missing / more than one face was seen.
+alter table public.online_test_attempts add column if not exists face_events int;
+alter table public.online_test_attempts add column if not exists no_face_secs int;
+alter table public.online_test_attempts add column if not exists multi_face int;

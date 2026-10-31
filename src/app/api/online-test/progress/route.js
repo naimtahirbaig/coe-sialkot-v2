@@ -31,6 +31,9 @@ export async function POST(req) {
   if (Number.isInteger(b.idx)) next.idx = b.idx;
   if (Number.isFinite(Number(b.tabSwitches))) next.tabSwitches = Number(b.tabSwitches);
   next.camDropped = !!b.camDropped;
+  if (Number.isFinite(Number(b.faceEvents))) next.faceEvents = Number(b.faceEvents);
+  if (Number.isFinite(Number(b.noFaceSecs))) next.noFaceSecs = Number(b.noFaceSecs);
+  if (Number.isFinite(Number(b.multiFace))) next.multiFace = Number(b.multiFace);
   if (Array.isArray(b.shotAt)) next.shotAt = b.shotAt.slice(0, 10).map(Number);
   if (Array.isArray(b.photos)) {
     const ok = b.photos.slice(0, 8).filter((p) => typeof p?.src === "string" && p.src.startsWith("data:image/") && p.src.length < 400_000);
