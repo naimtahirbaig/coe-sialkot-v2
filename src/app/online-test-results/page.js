@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import OnlineTestCreator from "@/components/OnlineTestCreator";
-import { drawOnlineTestWarning, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
+import { drawOnlineTestWarning, loadUrduFont, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
 
 const BUILTIN = [
   { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 (October 2026)", classNum: 8, total: 52,
@@ -41,6 +41,7 @@ export default function OnlineTestResults() {
   const [open, setOpen] = useState(null); // true = Active, false = Closed
   const [passPct, setPassPct] = useState("70");
   const [incAbsent, setIncAbsent] = useState(true);
+  const [bilingual, setBilingual] = useState(true);
   const [bulkLetters, setBulkLetters] = useState("warning"); // warning | advisory | none
   const [letterDate, setLetterDate] = useState(() =>
     new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }));
@@ -115,6 +116,7 @@ export default function OnlineTestResults() {
     const t = TESTS.find((x) => x.slug === test);
     const load = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
     const logos = { authority: await load("/coe-logo.png"), punjab: await load("/punjab-logo.png") };
+    const bi = bilingual && (await loadUrduFont());
     const { jsPDF } = await import("jspdf");
     const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4", compress: true });
     const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
@@ -124,7 +126,7 @@ export default function OnlineTestResults() {
       const cv = document.createElement("canvas");
       cv.width = Math.round(OT_LETTER_W * 1.3); cv.height = Math.round(OT_LETTER_H * 1.3);
       const ctx = cv.getContext("2d"); ctx.scale(1.3, 1.3);
-      drawOnlineTestWarning(ctx, list[i], { logos, date: letterDate, testTitle: t.title, tone });
+      drawOnlineTestWarning(ctx, list[i], { logos, date: letterDate, testTitle: t.title, tone, bilingual: bi });
       pdf.addImage(cv.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, pw, ph);
       cv.width = 0; cv.height = 0;
       await new Promise((r) => setTimeout(r, 0));
@@ -303,6 +305,10 @@ export default function OnlineTestResults() {
           <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}>
             <input type="checkbox" checked={incAbsent} onChange={(e) => setIncAbsent(e.target.checked)} />
             also include students who did not take / finish the test
+          </label>
+          <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}>
+            <input type="checkbox" checked={bilingual} onChange={(e) => setBilingual(e.target.checked)} />
+            letters in English + Urdu
           </label>
           <label>Bulk PNG / Bulk PDF include<br />
             <select value={bulkLetters} onChange={(e) => setBulkLetters(e.target.value)} style={{ padding: 6 }}>
