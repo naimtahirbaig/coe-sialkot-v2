@@ -182,6 +182,35 @@ export default function OnlineTestResults() {
     } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
     setBusy(false);
   }
+  // every section in ONE zip: a folder per section with its result cards (PNG) + letters PDF
+  async function bulkAll() {
+    const secs = names.filter((n) => sections[n].some((r) => r.status === "submitted"));
+    if (!secs.length) { setMsg("No finished results yet."); return; }
+    setBusy(true); setMsg("");
+    try {
+      const JSZip = (await import("jszip")).default, zip = new JSZip();
+      const tone = bulkLetters === "advisory" ? "advisory" : "warning";
+      const lname = LNAME[tone][1];
+      let cards = 0, letters = 0;
+      for (let s = 0; s < secs.length; s++) {
+        const sec = secs[s], folder = zip.folder(`Class ${sec}`);
+        const done = sections[sec].filter((r) => r.status === "submitted");
+        for (let i = 0; i < done.length; i++) {
+          setMsg(`Preparing Class ${sec} (${s + 1} of ${secs.length}): card ${i + 1} of ${done.length}…`);
+          folder.file(fileBase(done[i]) + ".png", await cardPng(done[i])); cards++;
+        }
+        const warn = bulkLetters === "none" ? [] : lettersFor(sec);
+        if (warn.length) {
+          const blob = await lettersPdf(warn, (i, n) => setMsg(`Preparing Class ${sec} (${s + 1} of ${secs.length}): ${lname} letter ${i} of ${n}…`), tone);
+          folder.file(`${LNAME[tone][0]}Letters_Class${sec.replace(/\s+/g, "")}.pdf`, blob); letters += warn.length;
+        }
+      }
+      setMsg("Preparing the zip file…");
+      save(await zip.generateAsync({ type: "blob" }), `AllSections_ResultCards${bulkLetters === "none" ? "" : "_" + LNAME[tone][0] + "Letters"}.zip`);
+      setMsg(`Downloaded: ${secs.length} section folder${secs.length > 1 ? "s" : ""}, ${cards} result cards` + (bulkLetters === "none" ? "." : `, ${letters} ${lname} letters.`));
+    } catch (err) { setMsg(err.message); }
+    setBusy(false);
+  }
   function onCreated(j, f) {
     setCustom((c) => [...c, { slug: j.slug, label: `Class ${j.classNum} — ${f.subject}${f.chapter ? " " + f.chapter : ""} (${f.month})`,
       classNum: j.classNum, total: j.paperSize, title: j.title, custom: true, month: f.month }]);
@@ -317,6 +346,7 @@ export default function OnlineTestResults() {
               <option value="none">No letters</option>
             </select>
           </label>
+          <button style={btnGo} disabled={busy} onClick={bulkAll}>Download ALL sections (zip)</button>
           <span style={{ display: "flex", gap: 8, alignItems: "end", marginLeft: "auto" }}>
             <label>Retest below %<br /><input value={retestBelow} onChange={(e) => setRetestBelow(e.target.value)} style={{ padding: 6, width: 70 }} /></label>
             <button style={btn} disabled={busy} onClick={() => retest(null)}>Retest whole class</button>
@@ -328,7 +358,7 @@ export default function OnlineTestResults() {
 
       {showCreate && pw && <OnlineTestCreator pw={pw} onCreated={onCreated} onClose={() => setShowCreate(false)} />}
 
-      {msg && <p style={{ color: /preparing|adding|downloaded|Retest given|Test deleted/.test(msg) ? green : red, fontWeight: 600 }}>{msg}</p>}
+      {msg && <p style={{ color: /preparing|adding|downloaded|Retest given|Test deleted/i.test(msg) ? green : red, fontWeight: 600 }}>{msg}</p>}
       {rows && (
         <p style={{ fontSize: 14 }}>
           <b>{submitted}</b> submitted · <b>{rows.length - submitted}</b> not finished (started, but the page was closed) · {rows.length} in total
