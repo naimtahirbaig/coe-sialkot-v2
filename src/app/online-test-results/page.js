@@ -41,6 +41,7 @@ export default function OnlineTestResults() {
   const [open, setOpen] = useState(null); // true = Active, false = Closed
   const [passPct, setPassPct] = useState("70");
   const [incAbsent, setIncAbsent] = useState(true);
+  const [bulkLetters, setBulkLetters] = useState("warning"); // warning | advisory | none
   const [letterDate, setLetterDate] = useState(() =>
     new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }));
   const [msg, setMsg] = useState("");
@@ -109,7 +110,8 @@ export default function OnlineTestResults() {
     });
     return out.sort((x, y) => Number(x.roll) - Number(y.roll));
   }
-  async function lettersPdf(list, onStep) {
+  const LNAME = { warning: ["Warning", "warning"], advisory: ["Advisory", "advisory"] };
+  async function lettersPdf(list, onStep, tone = "warning") {
     const t = TESTS.find((x) => x.slug === test);
     const load = (src) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
     const logos = { authority: await load("/coe-logo.png"), punjab: await load("/punjab-logo.png") };
@@ -122,21 +124,22 @@ export default function OnlineTestResults() {
       const cv = document.createElement("canvas");
       cv.width = Math.round(OT_LETTER_W * 1.3); cv.height = Math.round(OT_LETTER_H * 1.3);
       const ctx = cv.getContext("2d"); ctx.scale(1.3, 1.3);
-      drawOnlineTestWarning(ctx, list[i], { logos, date: letterDate, testTitle: t.title });
+      drawOnlineTestWarning(ctx, list[i], { logos, date: letterDate, testTitle: t.title, tone });
       pdf.addImage(cv.toDataURL("image/jpeg", 0.9), "JPEG", 0, 0, pw, ph);
       cv.width = 0; cv.height = 0;
       await new Promise((r) => setTimeout(r, 0));
     }
     return pdf.output("blob");
   }
-  async function warnOnly(sec) {
+  async function warnOnly(sec, tone = "warning") {
+    const nm = LNAME[tone][1];
     const list = lettersFor(sec);
-    if (!list.length) { setMsg(`Class ${sec}: no warning letters needed.`); return; }
+    if (!list.length) { setMsg(`Class ${sec}: no ${nm} letters needed.`); return; }
     setBusy(true); setMsg("");
     try {
-      const blob = await lettersPdf(list, (i, n) => setMsg(`Class ${sec}: preparing letter ${i} of ${n}…`));
-      save(blob, `WarningLetters_Class${sec.replace(/\s+/g, "")}.pdf`);
-      setMsg(`Class ${sec}: ${list.length} warning letter${list.length > 1 ? "s" : ""} downloaded.`);
+      const blob = await lettersPdf(list, (i, n) => setMsg(`Class ${sec}: preparing letter ${i} of ${n}…`), tone);
+      save(blob, `${LNAME[tone][0]}Letters_Class${sec.replace(/\s+/g, "")}.pdf`);
+      setMsg(`Class ${sec}: ${list.length} ${nm} letter${list.length > 1 ? "s" : ""} downloaded.`);
     } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
     setBusy(false);
   }
@@ -145,15 +148,17 @@ export default function OnlineTestResults() {
     if (!done.length) { setMsg(`Class ${sec}: no finished results yet.`); return; }
     setBusy(true); setMsg("");
     try {
-      const warn = lettersFor(sec);
-      const warnBlob = warn.length ? await lettersPdf(warn, (i, n) => setMsg(`Class ${sec}: preparing warning letter ${i} of ${n}…`)) : null;
+      const tone = bulkLetters === "advisory" ? "advisory" : "warning";
+      const lname = LNAME[tone][1], lfile = `${LNAME[tone][0]}Letters_Class${sec.replace(/\s+/g, "")}.pdf`;
+      const warn = bulkLetters === "none" ? [] : lettersFor(sec);
+      const warnBlob = warn.length ? await lettersPdf(warn, (i, n) => setMsg(`Class ${sec}: preparing ${lname} letter ${i} of ${n}…`), tone) : null;
       if (kind === "png") {
         const JSZip = (await import("jszip")).default, zip = new JSZip();
         for (let i = 0; i < done.length; i++) {
           setMsg(`Class ${sec}: preparing card ${i + 1} of ${done.length}…`);
           zip.file(fileBase(done[i]) + ".png", await cardPng(done[i]));
         }
-        if (warnBlob) zip.file(`WarningLetters_Class${sec.replace(/\s+/g, "")}.pdf`, warnBlob);
+        if (warnBlob) zip.file(lfile, warnBlob);
         save(await zip.generateAsync({ type: "blob" }), `ResultCards_Class${sec.replace(/\s+/g, "")}_PNG.zip`);
       } else {
         const { jsPDF } = await import("jspdf");
@@ -168,10 +173,10 @@ export default function OnlineTestResults() {
           URL.revokeObjectURL(url);
         }
         doc.save(`ResultCards_Class${sec.replace(/\s+/g, "")}.pdf`);
-        if (warnBlob) { await new Promise((r) => setTimeout(r, 800)); save(warnBlob, `WarningLetters_Class${sec.replace(/\s+/g, "")}.pdf`); }
+        if (warnBlob) { await new Promise((r) => setTimeout(r, 800)); save(warnBlob, lfile); }
       }
       setMsg(`Class ${sec}: ${done.length} card${done.length > 1 ? "s" : ""} downloaded` +
-        (warn.length ? `, with ${warn.length} warning letter${warn.length > 1 ? "s" : ""} (${kind === "png" ? "inside the zip" : "second file"}).` : ", no warning letters needed."));
+        (bulkLetters === "none" ? "." : warn.length ? `, with ${warn.length} ${lname} letter${warn.length > 1 ? "s" : ""} (${kind === "png" ? "inside the zip" : "second file"}).` : `, no ${lname} letters needed.`));
     } catch (err) { setMsg(`Class ${sec}: ${err.message}`); }
     setBusy(false);
   }
@@ -297,9 +302,15 @@ export default function OnlineTestResults() {
           <label>Letter date<br /><input value={letterDate} onChange={(e) => setLetterDate(e.target.value)} style={{ padding: 6, width: 160 }} /></label>
           <label style={{ display: "flex", gap: 6, alignItems: "center", paddingBottom: 6 }}>
             <input type="checkbox" checked={incAbsent} onChange={(e) => setIncAbsent(e.target.checked)} />
-            also warn students who did not take / finish the test
+            also include students who did not take / finish the test
           </label>
-          <span style={{ paddingBottom: 6, color: "#3E3C58" }}>Bulk PNG / Bulk PDF now include the warning letters.</span>
+          <label>Bulk PNG / Bulk PDF include<br />
+            <select value={bulkLetters} onChange={(e) => setBulkLetters(e.target.value)} style={{ padding: 6 }}>
+              <option value="warning">Warning letters</option>
+              <option value="advisory">Advisory letters (lenient)</option>
+              <option value="none">No letters</option>
+            </select>
+          </label>
           <span style={{ display: "flex", gap: 8, alignItems: "end", marginLeft: "auto" }}>
             <label>Retest below %<br /><input value={retestBelow} onChange={(e) => setRetestBelow(e.target.value)} style={{ padding: 6, width: 70 }} /></label>
             <button style={btn} disabled={busy} onClick={() => retest(null)}>Retest whole class</button>
@@ -323,7 +334,8 @@ export default function OnlineTestResults() {
         <div key={n} style={{ marginBottom: 26 }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", margin: "18px 0 8px" }}>
             <h2 style={{ fontSize: 18, margin: 0, borderLeft: `6px solid ${gold}`, paddingLeft: 10, marginRight: "auto" }}>Class {n}</h2>
-            <button style={btn} disabled={busy} onClick={() => warnOnly(n)}>Warning letters</button>
+            <button style={btn} disabled={busy} onClick={() => warnOnly(n, "warning")}>Warning letters</button>
+            <button style={btn} disabled={busy} onClick={() => warnOnly(n, "advisory")}>Advisory letters</button>
             <button style={btn} disabled={busy} onClick={() => retest(n)}>Retest section</button>
             <button style={btn} disabled={busy} onClick={() => bulk("png", n, sections[n])}>Bulk PNG (zip)</button>
             <button style={btn} disabled={busy} onClick={() => bulk("pdf", n, sections[n])}>Bulk PDF</button>

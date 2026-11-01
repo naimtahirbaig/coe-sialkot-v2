@@ -27,7 +27,10 @@ function para(ctx, str, x, y, maxW, font, fill, lh) {
 
 // w: { name, father, roll, cls, incharge, kind: "failed" | "absent",
 //      correct, total, pct, grade, passPct }
-export function drawOnlineTestWarning(ctx, w, { logos = {}, date = "", testTitle = "" } = {}) {
+export function drawOnlineTestWarning(ctx, w, { logos = {}, date = "", testTitle = "", tone = "warning" } = {}) {
+  // tone "advisory" = the lenient version: friendly wording, navy and gold only.
+  const adv = tone === "advisory";
+  const ACC = adv ? NAVY : RED;
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, OT_LETTER_W, OT_LETTER_H);
   ctx.fillStyle = GOLD; ctx.fillRect(0, 0, OT_LETTER_W, 22);
   ctx.fillStyle = NAVY; ctx.fillRect(0, 22, OT_LETTER_W, 12);
@@ -45,13 +48,13 @@ export function drawOnlineTestWarning(ctx, w, { logos = {}, date = "", testTitle
   ctx.fillStyle = NAVY; ctx.fillRect(L, 212, R - L, 1.5);
 
   const yr = (String(date).match(/\d{4}/) || [""])[0];
-  const ref = `COE/OT/${yr}/${String(w.cls).replace(/\s+/g, "-")}-${w.roll}`;
+  const ref = `COE/${adv ? "OT-ADV" : "OT"}/${yr}/${String(w.cls).replace(/\s+/g, "-")}-${w.roll}`;
   put(ctx, `Ref. No.: ${ref}`, L, 244, F("bold", 20), INK);
   put(ctx, `Date: ${date}`, R, 244, F("bold", 20), INK, "right");
 
-  ctx.fillStyle = RED; ctx.fillRect(L, 274, R - L, 66);
+  ctx.fillStyle = ACC; ctx.fillRect(L, 274, R - L, 66);
   ctx.fillStyle = GOLD; ctx.fillRect(L, 336, R - L, 4);
-  put(ctx, "ACADEMIC WARNING NOTICE", OT_LETTER_W / 2, 306, F("bold", 38), "#fff", "center");
+  put(ctx, adv ? "ACADEMIC ADVISORY NOTICE" : "ACADEMIC WARNING NOTICE", OT_LETTER_W / 2, 306, F("bold", 38), "#fff", "center");
 
   put(ctx, "To,", L, 390, F("bold", 22), INK);
   put(ctx, "The Parent / Guardian", L + 48, 390, F("bold", 22), INK);
@@ -70,12 +73,19 @@ export function drawOnlineTestWarning(ctx, w, { logos = {}, date = "", testTitle
 
   let y = 556;
   put(ctx, "Subject:", L, y, F("bold", 23), INK);
-  put(ctx, w.kind === "absent" ? "ONLINE TEST NOT ATTEMPTED / NOT COMPLETED" : "UNSATISFACTORY RESULT IN ONLINE TEST", L + 105, y, F("bold", 23), RED);
-  ctx.fillStyle = RED; ctx.fillRect(L + 105, y + 17, 760, 2);
+  const subj = adv
+    ? (w.kind === "absent" ? "ADVISORY: ONLINE TEST NOT COMPLETED" : "ADVISORY ON ONLINE TEST RESULT — LET US HELP YOUR SON")
+    : (w.kind === "absent" ? "ONLINE TEST NOT ATTEMPTED / NOT COMPLETED" : "UNSATISFACTORY RESULT IN ONLINE TEST");
+  put(ctx, subj, L + 105, y, F("bold", 23), ACC);
+  ctx.fillStyle = ACC; ctx.fillRect(L + 105, y + 17, 760, 2);
   y += 54;
   put(ctx, "Dear Parent / Guardian,", L, y, F("normal", 22), INK);
   y += 38;
-  const intro = w.kind === "absent"
+  const intro = adv
+    ? (w.kind === "absent"
+      ? `We are writing to let you know that our records show your son did not attempt, or did not complete, the online test "${testTitle}". We would be grateful if you could talk to him about it and encourage him to take the next test in full.`
+      : `We are writing to share your son's result in the online test "${testTitle}", so that we can support him together. His result is below the ${w.passPct}% we hope to see, but we are confident that with some regular practice at home he can do much better. His result is as follows:`)
+    : w.kind === "absent"
     ? `This is to inform you that your son did not attempt, or did not complete, the online test "${testTitle}" that was held for his class. Every student is required to sit this test, so it has been recorded as a failure.`
     : `This is to bring to your notice that your son's result in the online test "${testTitle}" is unsatisfactory. He scored below the required minimum of ${w.passPct}%, and his result is as follows:`;
   y = para(ctx, intro, L, y, R - L, F("normal", 22), INK, 34);
@@ -87,26 +97,33 @@ export function drawOnlineTestWarning(ctx, w, { logos = {}, date = "", testTitle
     : [["MARKS OBTAINED", String(w.correct), `out of ${w.total}`], ["PERCENTAGE", `${Number(w.pct).toFixed(1)}%`, `required ${w.passPct}%`], ["GRADE", w.grade || "F", ""]];
   boxes.forEach((b, i) => {
     const bx = L + i * (bw + 20);
-    ctx.fillStyle = i === 1 || i === 2 ? "#FBEAEA" : PANEL; ctx.fillRect(bx, y, bw, bh);
-    ctx.strokeStyle = i === 0 ? NAVY : RED; ctx.lineWidth = i === 0 ? 1.5 : 2.5; ctx.strokeRect(bx, y, bw, bh);
+    ctx.fillStyle = i === 1 || i === 2 ? (adv ? "#FFF6DC" : "#FBEAEA") : PANEL; ctx.fillRect(bx, y, bw, bh);
+    ctx.strokeStyle = i === 0 ? NAVY : (adv ? GOLD : RED); ctx.lineWidth = i === 0 ? 1.5 : 2.5; ctx.strokeRect(bx, y, bw, bh);
     put(ctx, b[0], bx + bw / 2, y + 24, F("bold", 15), MUTED, "center");
-    put(ctx, b[1], bx + bw / 2, y + 63, F("bold", 38), i === 0 ? NAVY : RED, "center");
+    put(ctx, b[1], bx + bw / 2, y + 63, F("bold", 38), i === 0 || adv ? NAVY : RED, "center");
     if (b[2]) put(ctx, b[2], bx + bw / 2, y + 95, F("normal", 15), MUTED, "center");
   });
   y += bh + 44;
 
-  put(ctx, "What is required", L, y, F("bold", 24), NAVY);
+  put(ctx, adv ? "How you can help" : "What is required", L, y, F("bold", 24), NAVY);
   ctx.fillStyle = NAVY; ctx.fillRect(L, y + 16, 230, 2.5);
   y += 46;
-  const asks = [
+  const asks = adv ? [
+    "Please set aside a regular time for study and revision at home, and take a short look at his notebooks each week.",
+    "Please encourage him to go through the chapter again and to ask his subject teacher about any topic he finds difficult.",
+    "Please contact the subject teacher through a WhatsApp message and explain the reason, so that we can plan together how to help him.",
+  ] : [
     "Please ensure that your son studies and revises the chapter covered in this test regularly at home.",
     "Please meet the Class Teacher at the earliest to discuss how he can improve.",
     "Poor results in tests and examinations may affect his overall academic standing, so steady improvement is expected from now on.",
   ];
   asks.forEach((a) => {
-    ctx.fillStyle = RED; ctx.fillRect(L + 6, y - 5, 10, 10);
+    ctx.fillStyle = adv ? GOLD : RED; ctx.fillRect(L + 6, y - 5, 10, 10);
     y = para(ctx, a, L + 32, y, R - L - 32, F("normal", 22), INK, 33) + 10;
   });
+  if (adv) {
+    para(ctx, "Thank you for your cooperation. We value our partnership with you and are confident that, with your encouragement, your son will do well in the coming tests.", L, y + 18, R - L, F("normal", 22), INK, 33);
+  }
 
   const sy = 1560, colW = (R - L) / 3;
   const sigs = [["Class Teacher", w.incharge || ""], ["Dr Naim Tahir Baig", "Senior Coordinator"], ["Sir Shahbaz Hassan", "Principal"]];
