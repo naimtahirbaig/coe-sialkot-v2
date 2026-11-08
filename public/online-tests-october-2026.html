@@ -78,6 +78,8 @@ Promise.all([
       sub:t.total+" timed MCQs · "+t.perQ+" seconds each · camera required"});
     if(!t.open)closed[t.slug]=true;
   });
+  function chNo(t){var m=String(t.chapter||"").match(/\d+/);return m?+m[0]:0;}
+  items.sort(function(a,b){return a.classNum-b.classNum||String(a.subject).localeCompare(String(b.subject))||chNo(a)-chNo(b);});
   render(items,closed);
 });
 })();
