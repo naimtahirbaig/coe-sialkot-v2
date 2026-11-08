@@ -19,6 +19,9 @@ const toLocal = (iso) => {
 const toIso = (v) => (v ? new Date(v).toISOString() : null);
 const nice = (iso) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
+const testUrl = (t) => (t.custom ? `/t/${t.slug}` : t.slug === "oct-2026-class-8-geography-ch3" ? "/online-tests/october-2026/class-8-geography-ch3.html" : `/t/${t.slug}`);
+const link = { color: "#1B4FD8", fontWeight: 600, textDecoration: "underline", fontSize: 13, marginRight: 8 };
+
 const BADGE = {
   live: ["● LIVE", green, "#E8F6EE"],
   closed: ["● CLOSED", red, "#FBEAEA"],
@@ -63,7 +66,7 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
   const inScope = () => tests.filter((t) => scope === "all" || String(t.classNum) === scope).map((t) => t.slug);
   const classes = [...new Set(tests.map((t) => t.classNum))].sort((a, b) => a - b);
   const counts = { live: 0, closed: 0, scheduled: 0 };
-  tests.forEach((t) => { const s = (st[t.slug] || { state: "live" }).state; if (s === "live") counts.live++; else if (s === "scheduled") counts.scheduled++; else counts.closed++; });
+  tests.forEach((t) => { const s = (st[t.slug] || { state: "closed" }).state; if (s === "live") counts.live++; else if (s === "scheduled") counts.scheduled++; else counts.closed++; });
 
   return (
     <div style={{ margin: "14px 0 20px", border: "1.5px solid #C9CCDC", borderRadius: 10, background: "#fff", color: "#1c1b2e" }}>
@@ -88,13 +91,13 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
             <button style={{ ...btn, color: red, borderColor: red }} disabled={busy}
               onClick={() => { if (window.confirm(`Close ${inScope().length} test(s)? Students who have not started can no longer begin. Anyone already taking a test can finish.`)) post(inScope(), { open: false }, `${inScope().length} test(s) closed.`); }}>Close now</button>
           </div>
-          {msg && <p style={{ margin: "0 0 8px", fontWeight: 600, color: /saved|set for|live now|closed\./i.test(msg) ? green : red, fontSize: 13 }}>{msg}</p>}
+          {msg && <p style={{ margin: "0 0 8px", fontWeight: 600, color: /saved|set for|live now|closed\.|copied/i.test(msg) ? green : red, fontSize: 13 }}>{msg}</p>}
           <div style={{ overflowX: "auto", maxHeight: 460, overflowY: "auto" }}>
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead><tr>{["Test", "Status", "Opens", "Closes", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
                 {tests.map((t) => {
-                  const s = st[t.slug] || { state: "live" }, b = BADGE[s.state] || BADGE.live, e = edit[t.slug] || { o: "", c: "" };
+                  const s = st[t.slug] || { state: "closed" }, b = BADGE[s.state] || BADGE.live, e = edit[t.slug] || { o: "", c: "" };
                   const dirty = e.o !== toLocal(s.opensAt) || e.c !== toLocal(s.closesAt);
                   return (
                     <tr key={t.slug}>
@@ -111,7 +114,10 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
                         {s.state === "live"
                           ? <button style={{ ...btn, color: red, borderColor: red }} disabled={busy} onClick={() => post([t.slug], { open: false }, "Test closed.")}>Close</button>
                           : <button style={btn} disabled={busy} onClick={() => post([t.slug], { goLive: true }, "Test is live.")}>Make live</button>}{" "}
-                        <button style={btn} onClick={() => onOpenCards(t.slug)}>Result cards</button>
+                        <button style={btn} onClick={() => onOpenCards(t.slug)}>Result cards</button>{" "}
+                        <a href={testUrl(t)} target="_blank" rel="noreferrer" style={link}>Open test ↗</a>
+                        <a href={`/online-test-results?test=${encodeURIComponent(t.slug)}`} target="_blank" rel="noreferrer" style={link}>Cards link ↗</a>
+                        <button style={btn} onClick={() => { try { navigator.clipboard.writeText(window.location.origin + testUrl(t)); setMsg("Student link copied."); } catch { setMsg(window.location.origin + testUrl(t)); } }}>Copy link</button>
                       </td>
                     </tr>
                   );

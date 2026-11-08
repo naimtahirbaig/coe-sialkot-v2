@@ -246,6 +246,12 @@ export default function OnlineTestResults() {
     } catch (err) { setMsg(err.message); }
     setBusy(false);
   }
+  // direct link: /online-test-results?test=<slug> opens that test's result cards
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const want = new URLSearchParams(window.location.search).get("test");
+    if (want && want !== test && TESTS.some((t) => t.slug === want)) setTest(want);
+  }, [custom.length]); // eslint-disable-line
   const [pendingLoad, setPendingLoad] = useState(false);
   useEffect(() => { if (pendingLoad) { setPendingLoad(false); load(); } }, [pendingLoad]); // eslint-disable-line
   function openCards(slug) {

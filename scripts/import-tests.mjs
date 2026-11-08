@@ -50,6 +50,9 @@ for (const t of tests) {
     per_q: t.perQ, paper_size: Math.min(t.paperSize, bank.length), questions: bank,
   });
   if (error) { console.error(`FAILED ${slug}: ${error.message}`); process.exit(1); }
-  added++; console.log(`added  ${slug}`);
+  // a new test stays CLOSED until the admin makes it live
+  const { error: e2 } = await supabase.from("online_test_settings").upsert({ test_slug: slug, is_open: false, updated_at: new Date().toISOString() });
+  if (e2) { console.error(`Added ${slug} but could not close it: ${e2.message}`); process.exit(1); }
+  added++; console.log(`added  ${slug}  (closed)`);
 }
 console.log(`\nDone: ${added} added, ${skipped} skipped. Check https://www.coesialkot.com/online-tests-october-2026.html`);

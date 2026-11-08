@@ -1,11 +1,11 @@
 // Live / Closed state of an online test.
-//   • no settings row            → live (so nothing breaks before the switch is ever used)
+//   • no settings row            → CLOSED (a test is closed until the admin makes it live)
 //   • is_open = false            → closed by hand (beats the dates)
 //   • opens_at in the future     → scheduled (not open yet)
 //   • closes_at in the past      → ended (closed automatically)
 //   • otherwise                  → live
 export function stateOf(row, now = Date.now()) {
-  if (!row) return { open: true, state: "live", opensAt: null, closesAt: null };
+  if (!row) return { open: false, state: "closed", opensAt: null, closesAt: null };
   const o = row.opens_at ? new Date(row.opens_at).getTime() : null;
   const c = row.closes_at ? new Date(row.closes_at).getTime() : null;
   let state = "live";
