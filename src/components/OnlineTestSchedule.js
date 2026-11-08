@@ -19,7 +19,7 @@ const toLocal = (iso) => {
 const toIso = (v) => (v ? new Date(v).toISOString() : null);
 const nice = (iso) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
-const testUrl = (t) => (t.custom ? `/t/${t.slug}` : t.slug === "oct-2026-class-8-geography-ch3" ? "/online-tests/october-2026/class-8-geography-ch3.html" : `/t/${t.slug}`);
+const testUrl = (t) => (t.custom ? `/t/${t.slug}` : t.slug === "oct-2026-class-8-geography-ch3" ? "/online-tests-2026/class-8-geography-ch3.html" : `/t/${t.slug}`);
 const link = { color: "#1B4FD8", fontWeight: 600, textDecoration: "underline", fontSize: 13, marginRight: 8 };
 
 const BADGE = {

@@ -29,7 +29,8 @@ export async function POST(req) {
   const paperSize = Math.max(4, Math.min(Math.round(Number(b.paperSize) || bank.length), bank.length, MAX_PAPER));
 
   const supabase = getSupabaseAdmin();
-  const base = [monthSlug(month), `class-${classNum}`, slugify(subject), slugify(chapter)].filter(Boolean).join("-");
+  const yr = (month.match(/\d{4}/) || [""])[0];
+  const base = [yr ? `online-tests-${yr}` : monthSlug(month), `class-${classNum}`, slugify(subject), slugify(chapter)].filter(Boolean).join("-");
   let slug = base, n = 2;
   for (; n < 50; n++) {
     const { data } = await supabase.from("online_test_defs").select("slug").eq("slug", slug).maybeSingle();

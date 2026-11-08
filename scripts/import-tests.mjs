@@ -17,7 +17,8 @@ const monthSlug = (m) => {
   const p = String(m).trim().split(/\s+/), i = names.indexOf((p[0] || "").toLowerCase());
   return `${i >= 0 ? p[0].slice(0, 3).toLowerCase() : slugify(p[0])}-${(String(m).match(/\d{4}/) || [""])[0]}`.replace(/-$/, "");
 };
-const slugOf = (t) => [monthSlug(t.month), `class-${t.classNum}`, slugify(t.subject), slugify(t.chapter)].filter(Boolean).join("-");
+const yearOf = (m) => (String(m).match(/\d{4}/) || [""])[0];
+const slugOf = (t) => [yearOf(t.month) ? `online-tests-${yearOf(t.month)}` : monthSlug(t.month), `class-${t.classNum}`, slugify(t.subject), slugify(t.chapter)].filter(Boolean).join("-");
 
 if (dry) {
   tests.forEach((t) => console.log(`Class ${t.classNum}  ${t.subject} — ${t.chapter}  (${t.questions.length} questions)  → /t/${slugOf(t)}`));
