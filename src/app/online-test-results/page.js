@@ -5,8 +5,8 @@ import OnlineTestSchedule from "@/components/OnlineTestSchedule";
 import { drawOnlineTestWarning, loadUrduFont, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
 
 const BUILTIN = [
-  { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 (October 2026)", classNum: 8, total: 52,
-    title: "Geography, Chapter 3 (Class 8) — Online MCQs Test, October 2026" },
+  { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 (2026)", classNum: 8, total: 52,
+    title: "Geography, Chapter 3 (Class 8) — Online MCQs Test, 2026" },
 ];
 
 const navy = "#150F3F", gold = "#F3B129", green = "#007a3a", red = "#B3261E";

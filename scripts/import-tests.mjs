@@ -47,7 +47,7 @@ for (const t of tests) {
   const title = `${t.subject}${t.chapter ? " — " + t.chapter : ""} (Class ${t.classNum}) — Online MCQs Test, ${t.month}`;
   const bank = t.questions.map((x) => [x.q, x.opts, x.correct]);
   const { error } = await supabase.from("online_test_defs").insert({
-    slug, title, class_num: t.classNum, subject: t.subject, chapter: t.chapter, month_label: t.month,
+    slug, title, class_num: t.classNum, subject: t.subject, chapter: t.chapter || null, month_label: t.month,
     per_q: t.perQ, paper_size: Math.min(t.paperSize, bank.length), questions: bank,
   });
   if (error) { console.error(`FAILED ${slug}: ${error.message}`); process.exit(1); }

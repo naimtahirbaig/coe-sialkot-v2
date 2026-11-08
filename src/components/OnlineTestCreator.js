@@ -36,7 +36,7 @@ function readRows(rows) {
 }
 
 export default function OnlineTestCreator({ pw, defaultMonth, onCreated, onClose }) {
-  const [f, setF] = useState({ classNum: "8", subject: "", chapter: "", month: defaultMonth || "October 2026", perQ: "15", paperSize: "" });
+  const [f, setF] = useState({ classNum: "8", subject: "", chapter: "", month: defaultMonth || "2026", perQ: "15", paperSize: "" });
   const [questions, setQuestions] = useState(null);
   const [fileName, setFileName] = useState("");
   const [errors, setErrors] = useState([]);

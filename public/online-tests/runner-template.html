@@ -108,6 +108,12 @@ input[type=text]:focus{outline:3px solid var(--gold);outline-offset:0;border-col
   border-radius:2px;font-family:inherit;font-size:15.5px;cursor:pointer;color:var(--navy)}
 .opt:hover{border-color:var(--navy);border-left-color:var(--gold);background:var(--mist)}
 .opt:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+/* Urdu questions / options (detected from the text) */
+@font-face{font-family:COEUrdu;src:url(/fonts/noto-nastaliq-urdu-400.woff2) format("woff2");font-weight:400}
+@font-face{font-family:COEUrdu;src:url(/fonts/noto-nastaliq-urdu-700.woff2) format("woff2");font-weight:700}
+.ur{direction:rtl;font-family:COEUrdu,"Noto Nastaliq Urdu","Jameel Noori Nastaleeq","Geeza Pro","Noto Naskh Arabic",Tahoma,serif!important;line-height:2.1}
+.qtext.ur{font-size:22px;text-align:right}
+.opt.ur{text-align:right;font-size:17px}
 .opt .k{font-family:Georgia,serif;font-weight:700;color:var(--gold-deep);flex:0 0 20px}
 .opt.picked{background:var(--navy);color:var(--white);border-color:var(--navy);border-left-color:var(--gold)}
 .opt.picked .k{color:var(--gold)}
@@ -464,12 +470,13 @@ function guard(e){e.preventDefault();e.returnValue="";}
 var idx=0,left=PER_Q,tick=null,locked=false;
 var CIRC=2*Math.PI*47;
 $("ringBar").style.strokeDasharray=CIRC;
+function isUr(t){return /[\u0600-\u06FF]/.test(String(t||""));}
 function show(i){
   idx=i;locked=facePaused;left=PER_Q;
   var q=paper[i];
   $("qNow").textContent=i+1;
   $("bar").style.width=(i/TOTAL*100)+"%";
-  $("qText").textContent=q.q;
+  $("qText").textContent=q.q;$("qText").classList.toggle("ur",isUr(q.q));
   var ul=$("opts");ul.innerHTML="";
   var keys=["A","B","C","D","E"];
   q.opts.forEach(function(o,n){
@@ -477,7 +484,7 @@ function show(i){
     var b=document.createElement("button");
     b.className="opt";b.type="button";
     var k=document.createElement("span");k.className="k";k.textContent=keys[n]+".";
-    var s=document.createElement("span");s.textContent=o.text;
+    var s=document.createElement("span");s.textContent=o.text;if(isUr(o.text)){b.classList.add("ur");s.className="ur";}
     b.appendChild(k);b.appendChild(s);
     b.addEventListener("click",function(){choose(n,b);});
     li.appendChild(b);ul.appendChild(li);
@@ -559,7 +566,7 @@ function finish(){
   rows.forEach(function(r){
     var tr=document.createElement("tr");
     var c1=document.createElement("td");c1.className="qnum";c1.textContent=r.n;
-    var c2=document.createElement("td");c2.textContent=r.q;
+    var c2=document.createElement("td");c2.textContent=r.q;if(isUr(r.q))c2.className="ur";
     var c3=document.createElement("td");
     if(r.mine===null){c3.className="skip";c3.textContent="Not attempted";}
     else{c3.className=r.ok?"ok":"no";c3.textContent=r.mine;}
