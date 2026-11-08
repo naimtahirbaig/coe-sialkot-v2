@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { allStates, stateOf } from "@/lib/onlineTestStatus";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -14,12 +15,12 @@ export async function GET(req) {
   if (month) q = q.eq("month_label", month);
   const { data, error } = await q;
   if (error) return NextResponse.json({ tests: [] }, { headers: { "Cache-Control": "no-store" } });
-  const { data: st } = await supabase.from("online_test_settings").select("test_slug, is_open");
-  const closed = new Set((st || []).filter((x) => x.is_open === false).map((x) => x.test_slug));
+  const states = await allStates(supabase);
   return NextResponse.json({
     tests: (data || []).map((t) => ({
       slug: t.slug, title: t.title, classNum: t.class_num, subject: t.subject, chapter: t.chapter,
-      month: t.month_label, perQ: t.per_q, total: t.paper_size, open: !closed.has(t.slug), url: `/t/${t.slug}`,
+      month: t.month_label, perQ: t.per_q, total: t.paper_size, url: `/t/${t.slug}`,
+      ...(({ open, state, opensAt, closesAt }) => ({ open, state, opensAt, closesAt }))(states[t.slug] || stateOf(null)),
     })),
   }, { headers: { "Cache-Control": "no-store" } });
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import OnlineTestCreator from "@/components/OnlineTestCreator";
+import OnlineTestSchedule from "@/components/OnlineTestSchedule";
 import { drawOnlineTestWarning, loadUrduFont, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
 
 const BUILTIN = [
@@ -245,6 +246,12 @@ export default function OnlineTestResults() {
     } catch (err) { setMsg(err.message); }
     setBusy(false);
   }
+  const [pendingLoad, setPendingLoad] = useState(false);
+  useEffect(() => { if (pendingLoad) { setPendingLoad(false); load(); } }, [pendingLoad]); // eslint-disable-line
+  function openCards(slug) {
+    setTest(slug); setRows(null); setOpen(null); setPendingLoad(true);
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   async function setActive(next) {
     if (!next && !window.confirm("Close this test? Students who have not started will no longer be able to begin it. Anyone already taking it can still finish.")) return;
     const r = await fetch("/api/online-test/status", {
@@ -317,6 +324,7 @@ export default function OnlineTestResults() {
         <button type="button" style={btn} disabled={!pw} title={pw ? "" : "Enter the admin password first"} onClick={() => setShowCreate((v) => !v)}>＋ Create new test</button>
         {rows && <button type="button" style={btn} onClick={excel}>Download Excel</button>}
       </form>
+      {pw && <OnlineTestSchedule pw={pw} tests={TESTS} onOpenCards={openCards} />}
       {rows && open !== null && (
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 8, background: open ? "#E8F6EE" : "#FBEAEA", border: `1.5px solid ${open ? green : red}` }}>
           <b style={{ color: open ? green : red, fontSize: 16 }}>{open ? "● Test is ACTIVE" : "● Test is CLOSED"}</b>

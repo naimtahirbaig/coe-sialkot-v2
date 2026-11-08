@@ -68,3 +68,7 @@ alter table public.online_test_attempts add column if not exists last_seen times
 alter table public.online_test_attempts add column if not exists face_events int;
 alter table public.online_test_attempts add column if not exists no_face_secs int;
 alter table public.online_test_attempts add column if not exists multi_face int;
+
+-- Live / Closed date slots per test (opens at / closes at). Safe to run again.
+alter table public.online_test_settings add column if not exists opens_at  timestamptz;
+alter table public.online_test_settings add column if not exists closes_at timestamptz;
