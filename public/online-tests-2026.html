@@ -30,6 +30,15 @@ a.test:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(21,15,63,.15)
 a.test b{display:block;color:var(--navy);font-size:17px}
 a.test span{font-size:13px;color:#5b5a70}
 a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999px;padding:8px 16px;font-weight:600;font-size:14px;white-space:nowrap}
+.grp{background:#fff;border:1px solid #dcdaea;border-radius:12px;padding:16px 18px;margin-bottom:10px;box-shadow:0 1px 3px rgba(21,15,63,.08)}
+.grp>div>b{display:block;color:var(--navy);font-size:17px}.grp>div>span{font-size:13px;color:#5b5a70}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{display:flex;flex-direction:column;align-items:center;min-width:96px;padding:8px 12px;border-radius:10px;text-decoration:none;border:1.5px solid}
+.chip b{font-size:14px}.chip small{font-size:11px;margin-top:2px}
+.chip.live{background:var(--green);color:#fff;border-color:var(--green)}
+.chip.soon{background:#FFF6DC;color:#8a5a00;border-color:#B7791F}
+.chip.off{background:#f1f0f6;color:#8a89a0;border-color:#dcdaea}
+.chip.live:hover{filter:brightness(1.1)}
 footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
 </style>
 </head>
@@ -50,24 +59,34 @@ var BUILTIN=[{slug:"oct-2026-class-8-geography-ch3",classNum:8,subject:"Geograph
 function ord(n){return n+(n===11||n===12||n===13?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));}
 function fmt(iso){try{return new Date(iso).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"numeric",minute:"2-digit"});}catch(e){return "";}}
 function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+var ORD={1:"1st",2:"2nd",3:"3rd",4:"4th",5:"5th"};
 function render(items,closed){
   var main=document.querySelector("main");main.innerHTML="";
   var classes=[];items.forEach(function(t){if(classes.indexOf(t.classNum)<0)classes.push(t.classNum);});
   classes.sort(function(a,b){return a-b;});
   classes.forEach(function(c){
     main.appendChild(el("h2","","Class "+ord(c)));
+    var groups=[],gi={};
     items.filter(function(t){return t.classNum===c;}).forEach(function(t){
-      var si=closed[t.slug]||{state:"live"},isClosed=si.state!=="live";
-      var a=el("a","test");
-      if(!isClosed)a.href=t.url;else{a.style.opacity=".6";a.style.pointerEvents="none";}
-      var d=el("div");d.appendChild(el("b","",t.subject+(t.chapter?" – "+t.chapter:"")));
-      d.appendChild(el("span","",t.sub));
-      if(si.state==="scheduled"&&si.opensAt)d.appendChild(el("span","","  ·  Opens "+fmt(si.opensAt)));
-      if(si.state==="live"&&si.closesAt)d.appendChild(el("span","","  ·  Closes "+fmt(si.closesAt)));
-      a.appendChild(d);
-      var i=el("i","",si.state==="scheduled"?"Opens soon":isClosed?"Closed":"Start test");
-      if(si.state==="scheduled")i.style.background="#B7791F";else if(isClosed)i.style.background="#B3261E";
-      a.appendChild(i);main.appendChild(a);
+      var k=t.base||t.slug;
+      if(!gi[k]){gi[k]={subject:t.subject,chapter:t.chapter,sub:t.sub,rounds:{}};groups.push(gi[k]);}
+      gi[k].rounds[t.round||1]=t;
+    });
+    groups.forEach(function(g){
+      var card=el("div","grp"),d=el("div");
+      d.appendChild(el("b","",g.subject+(g.chapter?" – "+g.chapter:"")));
+      d.appendChild(el("span","",g.sub));card.appendChild(d);
+      var chips=el("div","chips");
+      [1,2,3,4,5].forEach(function(r){
+        var t=g.rounds[r];if(!t)return;
+        var si=closed[t.slug]||{state:"live"},live=si.state==="live";
+        var a=el(live?"a":"span","chip "+(live?"live":si.state==="scheduled"?"soon":"off"));
+        if(live)a.href=t.url;
+        a.appendChild(el("b","",ORD[r]+" test"));
+        a.appendChild(el("small","",live?(si.closesAt?"Closes "+fmt(si.closesAt):"Start now"):(si.state==="scheduled"&&si.opensAt?"Opens "+fmt(si.opensAt):"Closed")));
+        chips.appendChild(a);
+      });
+      card.appendChild(chips);main.appendChild(card);
     });
   });
 }
@@ -79,7 +98,7 @@ Promise.all([
   BUILTIN.forEach(function(t,i){if(res[1][i].open===false||res[1][i].closesAt)closed[t.slug]=res[1][i];});
   var items=BUILTIN.slice();
   (res[0].tests||[]).forEach(function(t){
-    items.push({slug:t.slug,classNum:t.classNum,subject:t.subject,chapter:t.chapter,url:t.url,
+    items.push({slug:t.slug,classNum:t.classNum,subject:t.subject,chapter:t.chapter,url:t.url,round:t.round,base:t.base,
       sub:(t.month&&/\d{4}/.test(t.month)?t.month.match(/\d{4}/)[0]+" · ":"")+t.total+" timed MCQs · "+t.perQ+" seconds each · camera required"});
     if(!t.open)closed[t.slug]={state:t.state||"closed",opensAt:t.opensAt,closesAt:t.closesAt};
     else if(t.closesAt)closed[t.slug]={state:"live",closesAt:t.closesAt};
@@ -90,6 +109,6 @@ Promise.all([
 });
 })();
 </script>
-<footer>Use a device with a working camera. Each student can take a test only once — no retake. Do not switch tabs during the test.</footer>
+<footer>Use a device with a working camera. Each student can take each test (1st to 5th) only once. Do not switch tabs during the test.</footer>
 </body>
 </html>

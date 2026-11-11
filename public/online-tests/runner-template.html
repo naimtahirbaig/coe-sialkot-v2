@@ -583,7 +583,7 @@ function finish(){
 var cardURL=null;
 
 /* ============ comparison with the student's earlier results ============ */
-function cmpRows(){return previous.slice(-3);}
+function cmpRows(){return previous.slice(-40);}
 function cmpHeight(){var n=cmpRows().length;return n?(106+(n+1)*44):0;}
 function fmtD(s){var d=new Date(s);if(isNaN(d))return "";
   return d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear();}

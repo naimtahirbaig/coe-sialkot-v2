@@ -5,7 +5,7 @@ import OnlineTestSchedule from "@/components/OnlineTestSchedule";
 import { drawOnlineTestWarning, loadUrduFont, OT_LETTER_W, OT_LETTER_H } from "@/lib/onlineTestWarning";
 
 const BUILTIN = [
-  { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 (2026)", classNum: 8, total: 52,
+  { slug: "oct-2026-class-8-geography-ch3", label: "Class 8th — Geography Chapter 3 — 1st test", classNum: 8, total: 52,
     title: "Geography, Chapter 3 (Class 8) — Online MCQs Test, 2026" },
 ];
 
@@ -33,7 +33,7 @@ export default function OnlineTestResults() {
   const [retestBelow, setRetestBelow] = useState("70");
   useEffect(() => {
     fetch("/api/online-test/list", { cache: "no-store" }).then((r) => r.json()).then((d) => {
-      setCustom((d.tests || []).map((t) => ({ slug: t.slug, label: `Class ${t.classNum} — ${t.subject}${t.chapter ? " " + t.chapter : ""} (${t.month})`,
+      setCustom((d.tests || []).map((t) => ({ slug: t.slug, label: `Class ${t.classNum} — ${t.subject}${t.chapter ? " " + t.chapter : ""} — ${["", "1st", "2nd", "3rd", "4th", "5th"][t.round || 1]} test`, round: t.round || 1,
         classNum: t.classNum, total: t.total, title: t.title, custom: true, month: t.month })));
     }).catch(() => {});
   }, []);
@@ -213,7 +213,7 @@ export default function OnlineTestResults() {
     setBusy(false);
   }
   function onCreated(j, f) {
-    setCustom((c) => [...c, { slug: j.slug, label: `Class ${j.classNum} — ${f.subject}${f.chapter ? " " + f.chapter : ""} (${f.month})`,
+    setCustom((c) => [...c, { slug: j.slug, label: `Class ${j.classNum} — ${f.subject}${f.chapter ? " " + f.chapter : ""} — 1st test`, round: 1,
       classNum: j.classNum, total: j.paperSize, title: j.title, custom: true, month: f.month }]);
     setTest(j.slug); setRows(null); setOpen(null);
   }

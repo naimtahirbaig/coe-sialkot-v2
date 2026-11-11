@@ -4,8 +4,10 @@
 //   • attempts archived in online_test_attempt_history by a retest
 //     (including the earlier attempt of this very test).
 
+import { roundOf, ORD } from "@/lib/onlineTestDefs";
+
 const BUILTIN = {
-  "oct-2026-class-8-geography-ch3": { subject: "Geography", classNum: 8, total: 52, short: "Geography Ch 3" },
+  "oct-2026-class-8-geography-ch3": { subject: "Geography", classNum: 8, total: 52, short: "Geography Ch 3 — 1st test" },
 };
 
 export async function testMeta(supabase, slug) {
@@ -15,11 +17,11 @@ export async function testMeta(supabase, slug) {
   if (!data) return null;
   return {
     subject: data.subject, classNum: data.class_num, total: data.paper_size,
-    short: `${data.subject}${data.chapter ? " " + data.chapter : ""} (${data.month_label})`,
+    short: `${data.subject}${data.chapter ? " " + data.chapter : ""} — ${ORD[roundOf(slug)] || "1st"} test`,
   };
 }
 
-export async function previousResults(supabase, studentId, slug, keep = 3) {
+export async function previousResults(supabase, studentId, slug, keep = 40) {
   try {
     const me = await testMeta(supabase, slug);
     if (!me) return [];
@@ -31,7 +33,7 @@ export async function previousResults(supabase, studentId, slug, keep = 3) {
       .select("slug, subject, chapter, class_num, paper_size, month_label").eq("class_num", me.classNum);
     (defs || []).forEach((d) => {
       if (same(d.subject, d.class_num)) {
-        metas[d.slug] = { total: d.paper_size, short: `${d.subject}${d.chapter ? " " + d.chapter : ""} (${d.month_label})` };
+        metas[d.slug] = { total: d.paper_size, short: `${d.subject}${d.chapter ? " " + d.chapter : ""} — ${ORD[roundOf(d.slug)] || "1st"} test` };
       }
     });
     metas[slug] = metas[slug] || me;

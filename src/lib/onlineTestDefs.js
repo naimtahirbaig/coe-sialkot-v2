@@ -40,3 +40,10 @@ export function cleanBank(questions) {
   if (questions.length > MAX_BANK) errors.push(`Too many questions (${MAX_BANK} max).`);
   return { errors, bank };
 }
+
+// Rounds: the same chapter test can be given up to 5 times ("1st test" … "5th test").
+// Round 1 keeps the plain address; rounds 2–5 end in -test-2 … -test-5.
+export const MAX_ROUNDS = 5;
+export const ORD = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th", 5: "5th" };
+export const roundOf = (slug) => { const m = /-test-([2-9])$/.exec(String(slug)); return m ? Number(m[1]) : 1; };
+export const baseSlug = (slug) => String(slug).replace(/-test-[2-9]$/, "");

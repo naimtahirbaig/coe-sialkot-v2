@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { allStates, stateOf } from "@/lib/onlineTestStatus";
+import { roundOf, baseSlug } from "@/lib/onlineTestDefs";
+
+// rounds 2–5 of the original Geography page belong under it
+const ALIAS = { "online-tests-2026-class-8-geography-chapter-3": "oct-2026-class-8-geography-ch3" };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -19,7 +23,7 @@ export async function GET(req) {
   return NextResponse.json({
     tests: (data || []).map((t) => ({
       slug: t.slug, title: t.title, classNum: t.class_num, subject: t.subject, chapter: t.chapter,
-      month: t.month_label, perQ: t.per_q, total: t.paper_size, url: `/t/${t.slug}`,
+      month: t.month_label, perQ: t.per_q, total: t.paper_size, url: `/t/${t.slug}`, round: roundOf(t.slug), base: ALIAS[baseSlug(t.slug)] || baseSlug(t.slug),
       ...(({ open, state, opensAt, closesAt }) => ({ open, state, opensAt, closesAt }))(states[t.slug] || stateOf(null)),
     })),
   }, { headers: { "Cache-Control": "no-store" } });

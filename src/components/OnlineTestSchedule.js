@@ -36,6 +36,8 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
   const [busy, setBusy] = useState(false);
   const [openPanel, setOpenPanel] = useState(true);
   const [scope, setScope] = useState("all");
+  const [rnd, setRnd] = useState("all"); // all | 1..5
+  const [q, setQ] = useState("");
   const [bo, setBo] = useState(""), [bc, setBc] = useState("");
 
   const refresh = useCallback(async () => {
@@ -63,7 +65,8 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
     } catch (err) { setMsg(err.message); }
     setBusy(false);
   }
-  const inScope = () => tests.filter((t) => scope === "all" || String(t.classNum) === scope).map((t) => t.slug);
+  const shown = tests.filter((t) => (rnd === "all" || String(t.round || 1) === rnd) && (!q.trim() || t.label.toLowerCase().includes(q.trim().toLowerCase())));
+  const inScope = () => shown.filter((t) => scope === "all" || String(t.classNum) === scope).map((t) => t.slug);
   const classes = [...new Set(tests.map((t) => t.classNum))].sort((a, b) => a - b);
   const counts = { live: 0, closed: 0, scheduled: 0 };
   tests.forEach((t) => { const s = (st[t.slug] || { state: "closed" }).state; if (s === "live") counts.live++; else if (s === "scheduled") counts.scheduled++; else counts.closed++; });
@@ -78,7 +81,14 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
       {openPanel && (
         <div style={{ padding: "0 14px 14px" }}>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "end", padding: 10, background: "#F4F6F9", borderRadius: 8, marginBottom: 10, fontSize: 13 }}>
-            <label>Apply to<br />
+            <label>Show / apply to round<br />
+              <select value={rnd} onChange={(e) => setRnd(e.target.value)} style={inp}>
+                <option value="all">All tests (1st–5th)</option>
+                {[1, 2, 3, 4, 5].map((r) => <option key={r} value={String(r)}>{["", "1st", "2nd", "3rd", "4th", "5th"][r]} test only</option>)}
+              </select>
+            </label>
+            <label>Search<br /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="subject or chapter" style={{ ...inp, width: 150 }} /></label>
+            <label>Class<br />
               <select value={scope} onChange={(e) => setScope(e.target.value)} style={inp}>
                 <option value="all">All tests</option>
                 {classes.map((c) => <option key={c} value={String(c)}>Class {c} tests</option>)}
@@ -86,7 +96,7 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
             </label>
             <label>Opens (date &amp; time)<br /><input type="datetime-local" value={bo} onChange={(e) => setBo(e.target.value)} style={inp} /></label>
             <label>Closes (date &amp; time)<br /><input type="datetime-local" value={bc} onChange={(e) => setBc(e.target.value)} style={inp} /></label>
-            <button style={btnGo} disabled={busy} onClick={() => post(inScope(), { opensAt: toIso(bo), closesAt: toIso(bc) }, `Dates set for ${inScope().length} test(s). A blank slot means no limit.`)}>Set dates</button>
+            <button style={btnGo} disabled={busy} onClick={() => post(inScope(), { opensAt: toIso(bo), closesAt: toIso(bc) }, `Dates set for ${inScope().length} test(s) shown. A blank slot means no limit.`)}>Set dates</button>
             <button style={btn} disabled={busy} onClick={() => post(inScope(), { goLive: true }, `${inScope().length} test(s) are live now.`)}>Make live now</button>
             <button style={{ ...btn, color: red, borderColor: red }} disabled={busy}
               onClick={() => { if (window.confirm(`Close ${inScope().length} test(s)? Students who have not started can no longer begin. Anyone already taking a test can finish.`)) post(inScope(), { open: false }, `${inScope().length} test(s) closed.`); }}>Close now</button>
@@ -96,7 +106,7 @@ export default function OnlineTestSchedule({ pw, tests, onOpenCards }) {
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 900 }}>
               <thead><tr>{["Test", "Status", "Opens", "Closes", ""].map((h) => <th key={h} style={th}>{h}</th>)}</tr></thead>
               <tbody>
-                {tests.map((t) => {
+                {shown.map((t) => {
                   const s = st[t.slug] || { state: "closed" }, b = BADGE[s.state] || BADGE.live, e = edit[t.slug] || { o: "", c: "" };
                   const dirty = e.o !== toLocal(s.opensAt) || e.c !== toLocal(s.closesAt);
                   return (
