@@ -315,6 +315,7 @@ export default function OnlineTestResults() {
     <div style={{ position: "fixed", inset: 0, overflowY: "auto", background: "#F3F2F9", zIndex: 40, colorScheme: "light" }}>
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "24px 16px 60px", fontFamily: "system-ui, sans-serif", color: "#14122E" }}>
       <h1 style={{ margin: "0 0 4px", fontSize: 26 }}>Online test results</h1>
+      <p style={{ margin: "0 0 10px" }}><a href="/online-test-setup" style={{ color: "#1B4FD8", fontWeight: 700, fontSize: 14 }}>▶ Guided setup — class, test, dates, go live, share link</a></p>
       <div style={{ height: 4, width: 60, background: gold, marginBottom: 18 }} />
 
       <form onSubmit={load} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "end", marginBottom: 14 }}>
