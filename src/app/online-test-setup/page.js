@@ -48,11 +48,28 @@ function Badge({ s }) {
   return <span style={{ background: b[2], color: b[1], border: `1.5px solid ${b[1]}`, borderRadius: 999, padding: "3px 12px", fontWeight: 800, fontSize: 12, letterSpacing: 0.5, whiteSpace: "nowrap" }}>● {b[0]}</span>;
 }
 
+
+// fetch with a time limit and clean error messages (never raw HTML)
+async function api(url, opts = {}, ms = 10000) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { cache: "no-store", ...opts, signal: ctl.signal });
+    const txt = await r.text(); let j = {}; try { j = JSON.parse(txt); } catch {}
+    if (!r.ok) throw new Error(j.error || (r.status === 401 ? "That password is not correct." : "The server did not answer properly. Please try again."));
+    return j;
+  } catch (e) {
+    if (e.name === "AbortError") throw new Error("The server is taking too long to answer. Please try again in a minute.");
+    if (e instanceof TypeError) throw new Error("No internet connection. Please check and try again.");
+    throw e;
+  } finally { clearTimeout(t); }
+}
+
 export default function OnlineTestSetup() {
   const [step, setStep] = useState(1);
   const [pw, setPw] = useState("");
   const [authed, setAuthed] = useState(false);
   const [err, setErr] = useState("");
+  const [loadErr, setLoadErr] = useState("");
   const [busy, setBusy] = useState(false);
 
   const [tests, setTests] = useState([]);        // every test, incl. the original Geography page
@@ -68,15 +85,20 @@ export default function OnlineTestSetup() {
   const [copied, setCopied] = useState("");
 
   const load = useCallback(async () => {
+    setLoadErr("");
     try {
-      const d = await fetch("/api/online-test/list", { cache: "no-store" }).then((r) => r.json());
+      const d = await api("/api/online-test/list", {}, 10000);
       const all = (d.tests || []).map((t) => ({ slug: t.slug, base: t.base || t.slug, round: t.round || 1, classNum: t.classNum, subject: t.subject, chapter: t.chapter || "",
         month: t.month, perQ: t.perQ, total: t.total, url: t.url, state: t.state || (t.open ? "live" : "closed"), opensAt: t.opensAt, closesAt: t.closesAt }));
-      let b = { ...BUILTIN, state: "live" };
-      try { const s = await fetch(`/api/online-test/status?test=${BUILTIN.slug}`, { cache: "no-store" }).then((r) => r.json()); b = { ...b, state: s.state || (s.open === false ? "closed" : "live"), opensAt: s.opensAt, closesAt: s.closesAt }; } catch {}
-      setTests([b, ...all]); setLoaded(true);
-    } catch { setErr("Could not load the tests. Check your internet and refresh."); }
+      const s = (d.states || {})[BUILTIN.slug] || { state: "closed" };
+      const b = { ...BUILTIN, state: s.state || "closed", opensAt: s.opensAt, closesAt: s.closesAt };
+      const list = [b, ...all];
+      setTests(list); setLoaded(true);
+      try { sessionStorage.setItem("otsetup_cache", JSON.stringify(list)); } catch {}
+    } catch (e) { setLoadErr(e.message || "Could not load the tests."); }
   }, []);
+  // show the last known list at once (stale-while-revalidate), then refresh in the background
+  useEffect(() => { try { const c = JSON.parse(sessionStorage.getItem("otsetup_cache") || "null"); if (Array.isArray(c) && c.length) { setTests(c); setLoaded(true); } } catch {} }, []);
   useEffect(() => { load(); }, [load]);
 
   // remember the password for this browser tab only
@@ -86,8 +108,7 @@ export default function OnlineTestSetup() {
   async function verify(p, silent) {
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/online-test/verify", { method: "POST", headers: { "x-admin-password": p } });
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "That password is not correct.");
+      await api("/api/online-test/verify", { method: "POST", headers: { "x-admin-password": p } }, 10000);
       setAuthed(true); try { sessionStorage.setItem("otsetup_pw", p); } catch {}
       if (!silent) setStep(2); else setStep((s) => (s === 1 ? 2 : s));
     } catch (e) { if (!silent) setErr(e.message); try { sessionStorage.removeItem("otsetup_pw"); } catch {} }
@@ -116,10 +137,8 @@ export default function OnlineTestSetup() {
   useEffect(() => { if (test) { setO(toLocal(test.opensAt)); setC(toLocal(test.closesAt)); setNoDates(false); } }, [test && test.slug]); // eslint-disable-line
 
   async function post(body) {
-    const r = await fetch("/api/online-test/status", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw }, body: JSON.stringify({ tests: [test.slug], ...body }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || "Could not save");
-    const s = await fetch(`/api/online-test/status?test=${encodeURIComponent(test.slug)}`, { cache: "no-store" }).then((x) => x.json());
+    await api("/api/online-test/status", { method: "POST", headers: { "Content-Type": "application/json", "x-admin-password": pw }, body: JSON.stringify({ tests: [test.slug], ...body }) }, 12000);
+    const s = await api(`/api/online-test/status?test=${encodeURIComponent(test.slug)}`, {}, 10000);
     setTests((all) => all.map((t) => (t.slug === test.slug ? { ...t, state: s.state || (s.open ? "live" : "closed"), opensAt: s.opensAt, closesAt: s.closesAt } : t)));
     return s;
   }
@@ -212,6 +231,7 @@ export default function OnlineTestSetup() {
           </div>
         )}
         <section style={{ ...card, padding: "28px 26px 24px" }}>
+          {loadErr && <div role="alert" style={{ background: "#FFF7E6", border: "1.5px solid #F0C36D", color: "#7A5200", borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontWeight: 600, fontSize: 14, display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between" }}><span>{loadErr}{loaded ? " (showing the last saved list)" : ""}</span><button type="button" style={{ ...ghost, padding: "6px 14px" }} onClick={load}>Retry</button></div>}
           {err && <div role="alert" style={{ background: "#FBEAEA", border: `1.5px solid ${RED}`, color: RED, borderRadius: 10, padding: "10px 14px", marginBottom: 16, fontWeight: 600, fontSize: 14 }}>{err}</div>}
 
           {step === 1 && (

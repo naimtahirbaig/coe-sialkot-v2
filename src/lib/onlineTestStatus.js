@@ -15,19 +15,22 @@ export function stateOf(row, now = Date.now()) {
   return { open: state === "live", state, opensAt: row.opens_at || null, closesAt: row.closes_at || null };
 }
 
+// Throws when the database cannot be read (so callers can say "try again" instead of "closed").
 export async function testState(supabase, test) {
   const { data, error } = await supabase.from("online_test_settings").select("*").eq("test_slug", test).maybeSingle();
-  if (error || !data) return stateOf(null);
+  if (error) throw new Error(error.message);
   return stateOf(data);
 }
 
+// Used when a student starts a test: if the database cannot be read, nobody can start anyway.
 export async function isTestOpen(supabase, test) {
-  return (await testState(supabase, test)).open;
+  try { return (await testState(supabase, test)).open; } catch { return false; }
 }
 
-// every test that has a settings row → { slug: state }
+// every test that has a settings row → { slug: state }   (throws if the database cannot be read)
 export async function allStates(supabase) {
-  const { data } = await supabase.from("online_test_settings").select("*");
+  const { data, error } = await supabase.from("online_test_settings").select("*");
+  if (error) throw new Error(error.message);
   const out = {};
   (data || []).forEach((r) => { out[r.test_slug] = stateOf(r); });
   return out;

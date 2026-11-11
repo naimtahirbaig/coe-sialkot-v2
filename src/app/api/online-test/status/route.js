@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { getSupabaseFast, cleanError } from "@/lib/supabaseFast";
 import { testState } from "@/lib/onlineTestStatus";
 
 export const dynamic = "force-dynamic";
@@ -9,8 +9,12 @@ export const revalidate = 0;
 export async function GET(req) {
   const test = new URL(req.url).searchParams.get("test");
   if (!test) return NextResponse.json({ error: "Missing test" }, { status: 400 });
-  const s = await testState(getSupabaseAdmin(), test);
-  return NextResponse.json(s, { headers: { "Cache-Control": "no-store" } });
+  try {
+    const s = await testState(getSupabaseFast(), test);
+    return NextResponse.json(s, { headers: { "Cache-Control": "no-store" } });
+  } catch (e) {
+    return NextResponse.json({ error: cleanError(e), dbDown: true }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
 }
 
 // POST /api/online-test/status   (header x-admin-password)
@@ -37,9 +41,10 @@ export async function POST(req) {
   if ((hasO && o === undefined) || (hasC && c === undefined)) return NextResponse.json({ error: "That date is not valid." }, { status: 400 });
   if (o && c && new Date(c) <= new Date(o)) return NextResponse.json({ error: "The closing time must be after the opening time." }, { status: 400 });
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseFast();
   const now = Date.now();
-  const { data: have } = await supabase.from("online_test_settings").select("*").in("test_slug", slugs);
+  const { data: have, error: readErr } = await supabase.from("online_test_settings").select("*").in("test_slug", slugs);
+  if (readErr) return NextResponse.json({ error: cleanError(readErr), dbDown: true }, { status: 503 });
   const byId = {}; (have || []).forEach((r) => { byId[r.test_slug] = r; });
 
   const rows = slugs.map((slug) => {
@@ -59,7 +64,7 @@ export async function POST(req) {
   const { error } = await supabase.from("online_test_settings").upsert(rows);
   if (error) {
     const missing = /opens_at|closes_at/.test(error.message);
-    return NextResponse.json({ error: missing ? "Run the new SQL (dates) in Supabase first." : error.message }, { status: 500 });
+    return NextResponse.json({ error: missing ? "Run the new SQL (dates) in Supabase first." : cleanError(error) }, { status: missing ? 500 : 503 });
   }
   return NextResponse.json({ ok: true, count: rows.length });
 }

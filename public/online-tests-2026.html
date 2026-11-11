@@ -90,12 +90,21 @@ function render(items,closed){
     });
   });
 }
-Promise.all([
-  fetch("/api/online-test/list",{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {tests:[]};}),
-  Promise.all(BUILTIN.map(function(t){return fetch("/api/online-test/status?test="+t.slug,{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {open:true};});}))
-]).then(function(res){
-  var closed={};
-  BUILTIN.forEach(function(t,i){if(res[1][i].open===false||res[1][i].closesAt)closed[t.slug]=res[1][i];});
+function load(tries){
+  fetch("/api/online-test/list",{cache:"no-store"}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||"down");return j;});}).then(function(d){
+    var old=document.getElementById("dbmsg");if(old)old.remove();
+    build(d);
+  }).catch(function(){
+    var m=document.getElementById("dbmsg");
+    if(!m){m=document.createElement("div");m.id="dbmsg";m.style.cssText="margin:14px auto;max-width:720px;padding:12px 16px;border-radius:10px;background:#fff7e6;border:1px solid #f0c36d;color:#7a5200;font:600 14px/1.5 system-ui,sans-serif;text-align:center";document.body.insertBefore(m,document.body.firstChild);}
+    m.innerHTML="The test list could not be loaded right now. Please check your internet and <a href='#' style='color:#7a5200' onclick='location.reload();return false'>try again</a>.";
+    if(tries<3)setTimeout(function(){load(tries+1);},4000);
+  });
+}
+function build(res0){
+  var res=[res0,null],closed={};
+  var st=res0.states||{};
+  BUILTIN.forEach(function(t){var s=st[t.slug]||{state:"closed",open:false};if(!s.open)closed[t.slug]=s;else if(s.closesAt)closed[t.slug]={state:"live",closesAt:s.closesAt};});
   var items=BUILTIN.slice();
   (res[0].tests||[]).forEach(function(t){
     items.push({slug:t.slug,classNum:t.classNum,subject:t.subject,chapter:t.chapter,url:t.url,round:t.round,base:t.base,
@@ -106,7 +115,8 @@ Promise.all([
   function chNo(t){var m=String(t.chapter||"").match(/\d+/);return m?+m[0]:0;}
   items.sort(function(a,b){return a.classNum-b.classNum||String(a.subject).localeCompare(String(b.subject))||chNo(a)-chNo(b);});
   render(items,closed);
-});
+}
+load(0);
 })();
 </script>
 <footer>Use a device with a working camera. Each student can take each test (1st to 5th) only once. Do not switch tabs during the test.</footer>
