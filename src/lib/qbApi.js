@@ -25,7 +25,7 @@ export function route(role, fn) {
     } catch (e) {
       if (e instanceof QbError) return NextResponse.json({ error: e.message }, { status: e.status, headers: NO_STORE });
       const msg = String(e?.message || e);
-      if (/qb_(teachers|questions|papers)|schema cache|does not exist/i.test(msg)) {
+      if (/qb_(teachers|questions|papers)|schema cache|does not exist|column .*section/i.test(msg)) {
         return NextResponse.json({ error: "The question bank tables are missing. Run supabase/migration-question-bank.sql in the Supabase SQL Editor." }, { status: 500, headers: NO_STORE });
       }
       const clean = cleanError(e);

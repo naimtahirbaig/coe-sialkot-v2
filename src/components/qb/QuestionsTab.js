@@ -48,18 +48,17 @@ export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
           {data.rows.length ? (
             <div style={{ ...card, padding: 0, overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead><tr><th style={th}>#</th><th style={th}>Class / subject</th><th style={th}>Type</th><th style={th}>Question</th><th style={{ ...th, textAlign: "right" }}>Marks</th><th style={th}>By</th><th style={th}></th></tr></thead>
+                <thead><tr><th style={th}>#</th><th style={th}>Class / subject</th><th style={th}>Type</th><th style={th}>Question</th><th style={th}>By</th><th style={th}></th></tr></thead>
                 <tbody>
                   {data.rows.map((q) => (
                     <tr key={q.id}>
                       <td style={td}>{q.id}</td>
-                      <td style={td}>Class {q.class_num}<br /><span style={{ color: C.MUTED }}>{q.subject}{q.chapter ? ` · ${q.chapter}` : ""}</span></td>
+                      <td style={td}>Class {q.class_num}<br /><span style={{ color: C.MUTED }}>{q.subject}{q.chapter ? ` · ${q.chapter}` : ""}{q.section ? ` · ${q.section}` : ""}</span></td>
                       <td style={td}>{QT[q.qtype]}<br /><span style={{ color: C.MUTED }}>{q.difficulty}</span></td>
                       <td style={{ ...td, maxWidth: 420, whiteSpace: "pre-line" }} dir="auto"><Rich text={q.text} />{q.has_image && <span title="has a picture"> 🖼</span>}{q.passage_id && <span style={{ color: C.MUTED }}> · passage #{q.passage_id}</span>}
                         {q.qtype === "mcq" && <div style={{ fontSize: 13, color: C.MUTED }} dir="auto">{q.opts.map((o, i) => o && <span key={i} style={{ marginRight: 12, ...("ABCD"[i] === q.correct ? { color: C.GREEN, fontWeight: 700 } : {}) }}>{"ABCD"[i]}) <Rich text={o} /></span>)}</div>}
                         {q.qtype === "true_false" && <div style={{ fontSize: 13, color: C.MUTED }}>Answer: {q.correct}</div>}
                       </td>
-                      <td style={{ ...td, textAlign: "right" }}>{fmt(q.marks)}</td>
                       <td style={td}>{q.created_by_name}</td>
                       <td style={{ ...td, whiteSpace: "nowrap" }}>
                         {q.canEdit && <><button style={small} onClick={() => onEdit(q)}>Edit</button>{" "}<button style={{ ...small, color: C.RED, borderColor: C.RED }} onClick={() => del(q)}>Delete</button></>}

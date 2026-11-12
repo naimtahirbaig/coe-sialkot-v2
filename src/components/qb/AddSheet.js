@@ -1,15 +1,12 @@
 "use client";
-// Continuous "question sheet": the teacher picks class and subject once, sets the marks per question
-// type once, then keeps scrolling and typing. Every question saves by itself a moment after typing
+// Continuous "question sheet": the teacher picks class, subject and chapter once, then keeps scrolling and typing. Every question saves by itself a moment after typing
 // stops, numbers continue (Q1, Q2, Q3 ...), and any saved question can be edited by just typing.
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Rich from "./Rich";
-import { C, QT, TYPE_COLOR, CLASSES, MARK_CHOICES, DIFF, inp, small, btn, Msg, api, fmt, fileToDataUrl } from "./ui";
-import { normSubject } from "@/lib/qbFormats";
+import { C, TYPE_COLOR, CLASSES, DIFF, inp, small, btn, Msg, api, fileToDataUrl } from "./ui";
+import { normSubject, SUBJECTS, QTYPE_LABEL, typesFor, sectionsFor, chapterLabel, parseChapter, sortChapters } from "@/lib/qbFormats";
+import { parseBulk } from "@/lib/qbPaste";
 
-const BASE_SUBJECTS = ["English", "Urdu", "Mathematics", "Science", "Computer Science", "Islamiat", "History & Geography", "Tarjuma-tul-Quran-ul-Majeed"];
-const DEFAULT_MARKS = { mcq: 1, true_false: 1, fill_blank: 1, short: 2, long: 5 };
-const NEW = "__new__";
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
@@ -20,7 +17,7 @@ const sel = { ...inp, padding: "8px 10px", fontSize: 14, fontWeight: 600, cursor
 const tiny = { display: "block", fontSize: 11, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase", color: C.MUTED, marginBottom: 3 };
 
 const fromRow = (q) => ({
-  qtype: q.qtype, chapter: q.chapter || "", difficulty: q.difficulty || "medium", marks: String(+Number(q.marks).toFixed(2)),
+  qtype: q.qtype, chapter: q.chapter || "", section: q.section || "", difficulty: q.difficulty || "medium",
   text: q.text || "", opts: [0, 1, 2, 3].map((i) => (q.opts || [])[i] || ""), correct: q.correct || "",
   answer: q.answer || "", image: q.image || "", passageId: q.passage_id ? String(q.passage_id) : "",
 });
@@ -34,7 +31,6 @@ function missing(n) {
     if (!n.opts["ABCD".indexOf(n.correct)].trim()) return "the correct option is empty";
   }
   if (n.qtype === "true_false" && !n.correct) return "choose True or False";
-  if (!(Number(n.marks) > 0)) return "choose the marks";
   return "";
 }
 
@@ -51,18 +47,18 @@ function AutoText({ value, onChange, placeholder, autoFocus, minRows = 2, style 
 }
 
 // ------------------------------------------------------------------ one question
-function Card({ cardKey, row, initType, autoFocus, serial, sc, defaults, marks, chapters, passages, highlight, onStarted, onType, onRemove, onPending, onSaved, register }) {
+function Card({ cardKey, row, initType, preset, autoFocus, serial, sc, defaults, chapters, passages, highlight, onStarted, onType, onRemove, onPending, onSaved, register }) {
   const init = useMemo(() => (row ? fromRow(row) : {
-    qtype: initType, chapter: defaults.chapter, difficulty: defaults.difficulty, marks: String(marks[initType]),
-    text: "", opts: ["", "", "", ""], correct: "", answer: "", image: "", passageId: "",
+    qtype: initType, chapter: defaults.chapter, section: defaults.section, difficulty: defaults.difficulty,
+    text: "", opts: ["", "", "", ""], correct: "", answer: "", image: "", passageId: "", ...(preset || {}),
   }), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [f, setF] = useState(init);
   const fRef = useRef(init);
   const idRef = useRef(row ? row.id : null);
-  const [status, setStatus] = useState(row ? "saved" : "idle");
+  const [status, setStatus] = useState(row ? "saved" : preset ? "dirty" : "idle");
   const [hint, setHint] = useState("");
   const [more, setMore] = useState(!!(row && (row.image || row.passage_id || row.answer)));
-  const timer = useRef(null), busy = useRef(false), again = useRef(false), dirty = useRef(false), started = useRef(!!row);
+  const timer = useRef(null), busy = useRef(false), again = useRef(false), dirty = useRef(!!preset), started = useRef(!!row || !!preset);
   const scRef = useRef(sc); scRef.current = sc;
 
   const flush = useCallback(async () => {
@@ -82,7 +78,7 @@ function Card({ cardKey, row, initType, autoFocus, serial, sc, defaults, marks, 
     if (again.current) { again.current = false; if (dirty.current && !missing(fRef.current)) flush(); }
   }, [cardKey, onPending, onSaved]);
 
-  // lets the page wait for this card to finish saving (used before changing marks etc.)
+  // lets the page wait for this card to finish saving (used before leaving the page)
   useEffect(() => {
     register(cardKey, async () => {
       if (timer.current || (dirty.current && !missing(fRef.current))) await flush();
@@ -106,16 +102,24 @@ function Card({ cardKey, row, initType, autoFocus, serial, sc, defaults, marks, 
     timer.current = setTimeout(flush, 900);
   };
 
-  // an untouched blank card follows the chapter / difficulty / marks chosen at the top
+  // cards made by "Paste many" save themselves (or say what is missing)
+  useEffect(() => {
+    if (!preset) return;
+    const miss = missing(fRef.current);
+    if (miss) { setStatus("invalid"); setHint(miss); onPending(cardKey, true); }
+    else { onPending(cardKey, true); timer.current = setTimeout(flush, preset.delay || 200); }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // an untouched blank card follows the chapter / section / difficulty chosen at the top
   useEffect(() => {
     if (started.current || row) return;
-    const n = { ...fRef.current, chapter: defaults.chapter, difficulty: defaults.difficulty, marks: String(marks[fRef.current.qtype]) };
+    const n = { ...fRef.current, chapter: defaults.chapter, section: defaults.section, difficulty: defaults.difficulty };
     fRef.current = n; setF(n);
-  }, [defaults.chapter, defaults.difficulty, marks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [defaults.chapter, defaults.section, defaults.difficulty]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setType = (t) => {
     onType(t);
-    edit({ qtype: t, marks: String(marks[t]), correct: t === f.qtype && (t === "mcq" || t === "true_false") ? f.correct : "" });
+    edit({ qtype: t, correct: t === f.qtype && (t === "mcq" || t === "true_false") ? f.correct : "" });
   };
   async function remove() {
     if (idRef.current) {
@@ -133,7 +137,8 @@ function Card({ cardKey, row, initType, autoFocus, serial, sc, defaults, marks, 
 
   const color = TYPE_COLOR[f.qtype];
   const chapterList = f.chapter && !chapters.includes(f.chapter) ? [f.chapter, ...chapters] : chapters;
-  const markList = MARK_CHOICES.includes(Number(f.marks)) ? MARK_CHOICES : [...MARK_CHOICES, Number(f.marks)].sort((a, b) => a - b);
+  const sections = sectionsFor(sc.subject);
+  const typeList = typesFor(sc.subject);
   const statusUI = {
     idle: null,
     saved: <span style={{ color: C.GREEN, fontWeight: 700 }}>✓ Saved</span>,
@@ -152,19 +157,21 @@ function Card({ cardKey, row, initType, autoFocus, serial, sc, defaults, marks, 
         <div style={{ background: color, color: "#fff", fontWeight: 800, fontSize: 18, borderRadius: 10, padding: "6px 14px", minWidth: 56, textAlign: "center", alignSelf: "center" }}>Q{serial}</div>
         <Field label="Type" style={{ minWidth: 180 }}>
           <select style={{ ...sel, borderColor: color, color }} value={f.qtype} onChange={(e) => setType(e.target.value)}>
-            {Object.entries(QT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {(typeList.includes(f.qtype) ? typeList : [...typeList, f.qtype]).map((k) => <option key={k} value={k}>{QTYPE_LABEL[k]}</option>)}
           </select></Field>
-        <Field label="Chapter / topic" style={{ minWidth: 160 }}>
+        {sections.length > 0 && (
+          <Field label="Section" style={{ minWidth: 220 }}>
+            <select style={sel} value={f.section} onChange={(e) => edit({ section: e.target.value })}>
+              <option value="">— none —</option>{(f.section && !sections.includes(f.section) ? [f.section, ...sections] : sections).map((x) => <option key={x} value={x}>{x}</option>)}
+            </select></Field>
+        )}
+        <Field label="Chapter" style={{ minWidth: 160 }}>
           <select style={sel} value={f.chapter} onChange={(e) => edit({ chapter: e.target.value })}>
             <option value="">— none —</option>{chapterList.map((c) => <option key={c} value={c}>{c}</option>)}
           </select></Field>
         <Field label="Difficulty">
           <select style={sel} value={f.difficulty} onChange={(e) => edit({ difficulty: e.target.value })}>
             {DIFF.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
-          </select></Field>
-        <Field label="Marks">
-          <select style={{ ...sel, width: 84 }} value={f.marks} onChange={(e) => edit({ marks: e.target.value })}>
-            {markList.map((m) => <option key={m} value={String(m)}>{fmt(m)}</option>)}
           </select></Field>
         <div style={{ marginLeft: "auto", display: "flex", gap: 12, alignItems: "center", fontSize: 13 }}>
           {statusUI}
@@ -292,24 +299,26 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
   const saved = useMemo(() => store.get("qb_setup", {}), []);
   const [classNum, setClassNum] = useState(scope ? String(scope.classNum) : saved.classNum || "");
   const [subject, setSubject] = useState(scope ? scope.subject : saved.subject || "");
-  const [chapter, setChapter] = useState(scope ? "" : saved.chapter || "");
+  const startCh = scope ? { no: "", name: "" } : parseChapter(saved.chapter || "");
+  const [chNo, setChNo] = useState(startCh.no);
+  const [chName, setChName] = useState(startCh.name);
+  const [section, setSection] = useState(scope ? "" : saved.section || "");
   const [difficulty, setDifficulty] = useState(saved.difficulty || "medium");
-  const [marks, setMarks] = useState({ ...DEFAULT_MARKS, ...store.get("qb_marks", {}) });
-  const [extraSubjects, setExtraSubjects] = useState([]);
-  const [extraChapters, setExtraChapters] = useState({});
-  const [adding, setAdding] = useState(null); // { what: "subject"|"chapter", value }
   const [cards, setCards] = useState(null);
   const [passages, setPassages] = useState([]);
   const [msg, setMsg] = useState(null);
   const [focusId, setFocusId] = useState(scope ? scope.focusId : null);
+  const [paste, setPaste] = useState({ open: false, qtype: "mcq", text: "", oneLine: undefined });
   const seq = useRef(0), epoch = useRef(0), loadId = useRef(0), pending = useRef(new Set()), flushers = useRef({}), draftType = useRef("mcq"), metaTimer = useRef(null);
 
+  const chapter = chapterLabel(chNo, chName);
   const sc = useMemo(() => ({ classNum, subject }), [classNum, subject]);
   const scopeKey = `${classNum}|${subject}`;
   const ready = !!(classNum && subject);
+  const sections = sectionsFor(subject);
+  const typeList = typesFor(subject);
 
-  useEffect(() => { store.set("qb_setup", { classNum, subject, chapter, difficulty }); }, [classNum, subject, chapter, difficulty]);
-  useEffect(() => { store.set("qb_marks", marks); }, [marks]);
+  useEffect(() => { store.set("qb_setup", { classNum, subject, chapter, section, difficulty }); }, [classNum, subject, chapter, section, difficulty]);
   useEffect(() => {
     const warn = (e) => { if (pending.current.size) { e.preventDefault(); e.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
@@ -318,10 +327,22 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
 
   const subjects = useMemo(() => {
     const seen = new Map();
-    [...(meta?.subjects || []), ...extraSubjects, ...BASE_SUBJECTS, subject].forEach((s) => { const k = normSubject(s); if (k && !seen.has(k)) seen.set(k, s); });
+    [...SUBJECTS, ...(meta?.subjects || []), subject].forEach((x) => { const k = normSubject(x); if (k && !seen.has(k)) seen.set(k, x); });
     return [...seen.values()];
-  }, [meta, extraSubjects, subject]);
-  const chapters = useMemo(() => [...new Set([...((meta?.chapters || {})[scopeKey] || []), ...(extraChapters[scopeKey] || []), ...(chapter ? [chapter] : [])])].sort(), [meta, extraChapters, scopeKey, chapter]);
+  }, [meta, subject]);
+  const chapters = useMemo(() => sortChapters([...new Set([...((meta?.chapters || {})[scopeKey] || []), ...(chapter ? [chapter] : [])])]), [meta, scopeKey, chapter]);
+  const chapterNames = useMemo(() => [...new Set(chapters.map((c) => parseChapter(c).name).filter(Boolean))], [chapters]);
+
+  function pickChapterNo(v) {
+    setChNo(v);
+    const hit = chapters.map(parseChapter).find((c) => c.no && c.no === v.trim());
+    if (hit && !chName.trim()) setChName(hit.name);
+  }
+  function pickChapterName(v) {
+    setChName(v);
+    const hit = chapters.map(parseChapter).find((c) => c.name && c.name === v.trim());
+    if (hit && !chNo.trim()) setChNo(hit.no);
+  }
 
   const blank = useCallback((autoFocus = false) => ({ key: `n${++seq.current}`, row: null, type: draftType.current, autoFocus }), []);
 
@@ -341,13 +362,18 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
       await Promise.all(all.filter((q) => q.has_image).map(async (q) => { try { q.image = (await api(`/api/qb/questions/${q.id}`)).question.image || ""; } catch { /* keep going */ } }));
       if (id !== loadId.current) return;
       epoch.current++;
-      draftType.current = all.length ? all[all.length - 1].qtype : draftType.current;
+      if (all.length && typesFor(subject).includes(all[all.length - 1].qtype)) draftType.current = all[all.length - 1].qtype;
       setCards([...all.map((r) => ({ key: `e${epoch.current}-q${r.id}`, row: r })), blank()]);
       setMsg(null);
     } catch (e) { if (id === loadId.current) setMsg({ type: "err", text: e.message }); }
   }, [ready, classNum, subject, user.role, blank]);
 
-  useEffect(() => { load(false); }, [scopeKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setSection((x) => (sectionsFor(subject).includes(x) ? x : ""));
+    if (!typesFor(subject).includes(draftType.current)) draftType.current = "mcq";
+    setPaste((p) => ({ ...p, qtype: typesFor(subject).includes(p.qtype) ? p.qtype : "mcq" }));
+    load(false);
+  }, [scopeKey]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!ready) { setPassages([]); return; }
     api(`/api/qb/passages?classNum=${classNum}&subject=${encodeURIComponent(subject)}`).then((r) => setPassages(r.passages)).catch(() => setPassages([]));
@@ -367,31 +393,23 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
   }), [blank]);
   const flushAll = () => Promise.all(Object.values(flushers.current).map((fn) => fn()));
 
-  async function changeMarks(t, v) {
-    const m = Number(v);
-    setMarks((x) => ({ ...x, [t]: m }));
-    if (!ready) return;
-    if (window.confirm(`Marks for ${QT[t]} are now ${fmt(m)}.\n\nAlso change the marks of the ${QT[t]} questions you already saved in this class and subject to ${fmt(m)}?\n\nOK = change them too.  Cancel = only new questions.`)) {
-      try {
-        await flushAll();
-        await api("/api/qb/marks", { method: "POST", body: { classNum, subject, qtype: t, marks: m } });
-        await load(true);
-        setMsg({ type: "ok", text: `All ${QT[t]} questions here now carry ${fmt(m)} marks.` });
-      } catch (e) { setMsg({ type: "err", text: e.message }); }
-    }
-  }
-
-  function confirmNew() {
-    const v = (adding.value || "").trim().replace(/\s+/g, " ").slice(0, adding.what === "subject" ? 60 : 100);
-    if (v) {
-      if (adding.what === "subject") { setExtraSubjects((a) => [...a, v]); setSubject(v); setChapter(""); }
-      else { setExtraChapters((m) => ({ ...m, [scopeKey]: [...(m[scopeKey] || []), v] })); setChapter(v); }
-    }
-    setAdding(null);
-  }
-
   const savedCount = cards ? cards.filter((c) => c.row).length : 0;
   const stickyBox = { background: "#fff", border: `1px solid ${C.LINE}`, borderTop: `4px solid ${C.GOLD}`, borderRadius: 14, padding: "12px 16px 14px", boxShadow: "0 4px 18px rgba(21,15,63,.12)" };
+
+  const pasted = useMemo(() => (paste.open ? parseBulk(paste.text, paste.qtype, paste.oneLine) : []), [paste.open, paste.text, paste.qtype, paste.oneLine]);
+  const needAnswer = pasted.filter((q) => (q.qtype === "mcq" && (!q.correct || !q.opts["ABCD".indexOf(q.correct)] || !q.opts[0] || !q.opts[1])) || (q.qtype === "true_false" && !q.correct)).length;
+  function addPasted() {
+    if (!pasted.length) return;
+    const items = pasted.map((q, i) => ({
+      key: `n${++seq.current}`, row: null, type: q.qtype,
+      preset: { ...q, chapter, section, difficulty, delay: 150 + i * 160 },
+    }));
+    draftType.current = paste.qtype;
+    setCards((c) => [...c.slice(0, -1), ...items, c[c.length - 1]]);
+    setPaste((p) => ({ ...p, text: "", open: false }));
+    setMsg({ type: "ok", text: `${items.length} question${items.length === 1 ? "" : "s"} added below. They save by themselves${needAnswer ? `; ${needAnswer} still need the correct answer (choose it from the dropdown)` : ""}.` });
+    setTimeout(() => document.getElementById(`q-${items[0].key}`)?.scrollIntoView({ block: "start", behavior: "smooth" }), 250);
+  }
 
   return (
     <div>
@@ -399,46 +417,28 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
       <div className="qb-sticky" style={{ ...stickyBox, marginBottom: 16 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 14px", alignItems: "flex-end" }}>
           <Field label="1 · Class">
-            <select style={{ ...sel, width: 120 }} value={classNum} onChange={(e) => { setClassNum(e.target.value); setChapter(""); }}>
+            <select style={{ ...sel, width: 120 }} value={classNum} onChange={(e) => { setClassNum(e.target.value); setChNo(""); setChName(""); }}>
               <option value="">Choose…</option>{CLASSES.map((c) => <option key={c} value={c}>Class {c}</option>)}
             </select></Field>
           <Field label="2 · Subject">
-            <select style={{ ...sel, minWidth: 210 }} value={adding?.what === "subject" ? NEW : subject}
-              onChange={(e) => { if (e.target.value === NEW) setAdding({ what: "subject", value: "" }); else { setAdding(null); setSubject(e.target.value); setChapter(""); } }}>
-              <option value="">Choose…</option>{subjects.map((s) => <option key={s} value={s}>{s}</option>)}<option value={NEW}>+ Add a new subject…</option>
+            <select style={{ ...sel, minWidth: 220 }} value={subject} onChange={(e) => { setSubject(e.target.value); setChNo(""); setChName(""); }}>
+              <option value="">Choose…</option>{subjects.map((x) => <option key={x} value={x}>{x}</option>)}
             </select></Field>
-          <Field label="3 · Chapter / topic">
-            <select style={{ ...sel, minWidth: 190 }} value={adding?.what === "chapter" ? NEW : chapter} disabled={!ready}
-              onChange={(e) => { if (e.target.value === NEW) setAdding({ what: "chapter", value: "" }); else { setAdding(null); setChapter(e.target.value); } }}>
-              <option value="">— none —</option>{chapters.map((c) => <option key={c} value={c}>{c}</option>)}<option value={NEW}>+ Add a new chapter…</option>
-            </select></Field>
+          {sections.length > 0 && (
+            <Field label="Section">
+              <select style={{ ...sel, minWidth: 240 }} value={section} onChange={(e) => setSection(e.target.value)}>
+                <option value="">— none —</option>{sections.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select></Field>
+          )}
+          <Field label="3 · Chapter No.">
+            <input style={{ ...sel, fontWeight: 500, width: 84 }} inputMode="numeric" maxLength={8} placeholder="e.g. 3" value={chNo} disabled={!ready} onChange={(e) => pickChapterNo(e.target.value)} /></Field>
+          <Field label="Chapter name">
+            <input style={{ ...sel, fontWeight: 500, width: 250 }} list="qb-chapter-names" maxLength={80} placeholder="e.g. Parts of Speech" dir="auto" value={chName} disabled={!ready} onChange={(e) => pickChapterName(e.target.value)} />
+            <datalist id="qb-chapter-names">{chapterNames.map((x) => <option key={x} value={x} />)}</datalist></Field>
           <Field label="Difficulty">
             <select style={sel} value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
               {DIFF.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
             </select></Field>
-          {adding && (
-            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
-              <Field label={`New ${adding.what}`}><input style={{ ...sel, fontWeight: 500, width: 220 }} autoFocus dir="auto" value={adding.value} onChange={(e) => setAdding({ ...adding, value: e.target.value })}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); confirmNew(); } }} /></Field>
-              <button type="button" style={btn()} onClick={confirmNew}>Add</button>
-              <button type="button" style={btn(false)} onClick={() => setAdding(null)}>Cancel</button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div style={{ ...stickyBox, borderTop: `1px solid ${C.LINE}`, boxShadow: "none", marginBottom: 16 }}>
-        <div>
-          <span style={{ ...tiny, marginBottom: 6 }}>Marks per question type — set once, used automatically for every question of that type</span>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-            {Object.entries(QT).map(([k, v]) => (
-              <div key={k} style={{ display: "flex", alignItems: "center", gap: 8, border: `2px solid ${TYPE_COLOR[k]}`, borderRadius: 10, padding: "4px 6px 4px 12px", background: "#fff" }}>
-                <b style={{ color: TYPE_COLOR[k], fontSize: 13 }}>{v}</b>
-                <select style={{ ...sel, width: 78, padding: "5px 8px" }} value={String(marks[k])} onChange={(e) => changeMarks(k, e.target.value)}>
-                  {(MARK_CHOICES.includes(marks[k]) ? MARK_CHOICES : [...MARK_CHOICES, marks[k]].sort((a, b) => a - b)).map((m) => <option key={m} value={String(m)}>{fmt(m)}</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -454,10 +454,46 @@ export default function AddSheet({ meta, user, scope, refreshMeta }) {
           <p style={{ margin: "0 0 12px", color: C.MUTED }}>
             <b style={{ color: C.NAVY }}>Class {classNum} · {subject}</b> — {savedCount} question{savedCount === 1 ? "" : "s"} saved. Keep typing in the last card; a new one appears by itself.
           </p>
+          <div style={{ background: "#fff", border: `2px solid ${C.NAVY}`, borderRadius: 12, padding: "10px 14px", marginBottom: 16 }}>
+            <button type="button" onClick={() => setPaste((p) => ({ ...p, open: !p.open }))}
+              style={{ background: "none", border: 0, cursor: "pointer", fontWeight: 800, fontSize: 15, color: C.NAVY, padding: 0 }}>
+              {paste.open ? "▼" : "▶"} Paste many questions at once <span style={{ fontWeight: 500, color: C.MUTED }}>— type or paste 10, 20 or more of the same type</span>
+            </button>
+            {paste.open && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 14px", alignItems: "flex-end", marginBottom: 8 }}>
+                  <Field label="Type of all these questions">
+                    <select style={{ ...sel, minWidth: 200, borderColor: TYPE_COLOR[paste.qtype], color: TYPE_COLOR[paste.qtype] }} value={paste.qtype} onChange={(e) => setPaste({ ...paste, qtype: e.target.value })}>
+                      {typeList.map((k) => <option key={k} value={k}>{QTYPE_LABEL[k]}</option>)}
+                    </select></Field>
+                  <div style={{ fontSize: 14, color: C.MUTED, paddingBottom: 8 }}>Added to <b style={{ color: C.NAVY }}>Class {classNum} · {subject}</b>{chapter ? <> · <b style={{ color: C.NAVY }}>{chapter}</b></> : ""}{section ? <> · <b style={{ color: C.NAVY }}>{section}</b></> : ""}</div>
+                </div>
+                <textarea dir="auto" value={paste.text} onChange={(e) => setPaste({ ...paste, text: e.target.value })} rows={9}
+                  placeholder={paste.qtype === "mcq"
+                    ? "1. Which word is a noun?\na) run\nb) table*\nc) quickly\nd) and\n\n2. Choose the verb:\n(a) happy (b) jump (c) blue (d) very\nAnswer: B"
+                    : "1. Define a noun.\n2. What is a pronoun? Give two examples.\n3. Name the three tenses."}
+                  style={{ ...inp, fontSize: 15, lineHeight: 1.5, fontFamily: "inherit" }} />
+                <div style={{ fontSize: 13, color: C.MUTED, margin: "6px 0 10px" }}>
+                  {paste.qtype === "mcq" ? "Put each question after a blank line (or number it). Options start with a) b) c) d). Mark the right option with * at its end, or add a line “Answer: B”." : "Put each question on its own line, or after a blank line, or number it 1. 2. 3. A line “Answer: …” becomes the model answer."}
+                  {paste.qtype !== "mcq" && <label style={{ marginLeft: 12 }}><input type="checkbox" checked={paste.oneLine === undefined ? pasted.length > 1 && !paste.text.includes("\n\n") : paste.oneLine} onChange={(e) => setPaste({ ...paste, oneLine: e.target.checked })} /> every line is a separate question</label>}
+                </div>
+                {paste.text.trim() && (
+                  <div style={{ background: C.SOFT, border: `1px solid ${C.LINE}`, borderRadius: 10, padding: "8px 12px", marginBottom: 10, maxHeight: 220, overflow: "auto" }}>
+                    <b style={{ color: C.NAVY }}>{pasted.length} question{pasted.length === 1 ? "" : "s"} found</b>
+                    {needAnswer > 0 && <span style={{ color: "#9A5B00", fontWeight: 700 }}> · {needAnswer} without a correct answer yet (you can choose it after adding)</span>}
+                    <ol style={{ margin: "6px 0 0", paddingLeft: 22, fontSize: 14 }}>
+                      {pasted.map((q, i) => <li key={i} dir="auto" style={{ marginBottom: 3 }}>{q.text.split("\n")[0].slice(0, 110)}{q.qtype === "mcq" && <span style={{ color: C.MUTED }}> — {q.opts.filter(Boolean).length} options{q.correct ? `, answer ${q.correct}` : ", no answer"}</span>}</li>)}
+                    </ol>
+                  </div>
+                )}
+                <button type="button" style={btn(pasted.length > 0)} disabled={!pasted.length} onClick={addPasted}>Add {pasted.length || ""} question{pasted.length === 1 ? "" : "s"} to the sheet</button>
+              </div>
+            )}
+          </div>
           <PassagePanel sc={sc} chapter={chapter} passages={passages} setPassages={setPassages} />
           {cards.map((c, i) => (
-            <Card key={c.key} cardKey={c.key} row={c.row} initType={c.type} autoFocus={c.autoFocus} serial={i + 1} sc={sc}
-              defaults={{ chapter, difficulty }} marks={marks} chapters={chapters} passages={passages} highlight={!!c.row && c.row.id === focusId}
+            <Card key={c.key} cardKey={c.key} row={c.row} initType={c.type} preset={c.preset} autoFocus={c.autoFocus} serial={i + 1} sc={sc}
+              defaults={{ chapter, section, difficulty }} chapters={chapters} passages={passages} highlight={!!c.row && c.row.id === focusId}
               onStarted={onStarted} onType={onType} onRemove={onRemove} onPending={onPending} onSaved={onSaved} register={register} />
           ))}
           <button type="button" style={{ ...btn(), width: "100%", padding: "14px", fontSize: 16 }}

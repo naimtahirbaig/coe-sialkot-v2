@@ -89,7 +89,7 @@ export async function updateTeacher(sb, id, b) {
 
 // --------------------------------------------------------------- questions
 // the picture is left out of lists (it can be large); has_image says whether there is one
-const LIST_COLS = "id, class_num, subject, chapter, qtype, text, opts, correct, answer, marks, difficulty, passage_id, has_image, created_by, created_by_name, created_at";
+const LIST_COLS = "id, class_num, subject, chapter, section, qtype, text, opts, correct, answer, marks, difficulty, passage_id, has_image, created_by, created_by_name, created_at";
 
 export async function listQuestions(sb, user, a) {
   const page = Math.max(1, parseInt(a.get("page"), 10) || 1);
@@ -129,19 +129,6 @@ export async function createQuestion(sb, user, body) {
   const { data: row, error } = await sb.from("qb_questions").insert({ ...data, created_by: user.id, created_by_name: user.name }).select("id").single();
   if (error) throw new Error(error.message);
   return { ok: true, id: row?.id };
-}
-
-// Sets the marks of every question of one type in one class + subject (a teacher: his own; admin: all).
-export async function setTypeMarks(sb, user, b) {
-  const classNum = parseClassNum(b.classNum), subject = cleanStr(b.subject, 60).replace(/\s+/g, " ");
-  const marks = Number(b.marks);
-  if (!classNum || !subject) throw new QbError(400, "Choose a class and subject.");
-  if (!QTYPES[b.qtype]) throw new QbError(400, "Choose a question type.");
-  if (!(marks > 0 && marks <= 100)) throw new QbError(400, "Marks must be between 0 and 100.");
-  let q = sb.from("qb_questions").update({ marks }).eq("class_num", classNum).eq("subject", subject).eq("qtype", b.qtype);
-  if (user.role !== "admin") q = q.eq("created_by", user.id);
-  must(await q);
-  return { ok: true };
 }
 
 async function editable(sb, user, id) {
@@ -235,7 +222,8 @@ export async function deletePassage(sb, user, id) {
 async function candidateRows(sb, f) {
   return fetchAll((o) => {
     let q = sb.from("qb_questions").select("id, passage_id", o).eq("class_num", f.classNum).eq("subject", f.subject)
-      .in("qtype", f.qtypes).eq("marks", f.marks);
+      .in("qtype", f.qtypes);
+    if (f.section) q = q.eq("section", f.section);
     if (f.chapters?.length) q = q.in("chapter", f.chapters);
     if (DIFFICULTIES.includes(f.difficulty)) q = q.eq("difficulty", f.difficulty);
     return q.order("id");
@@ -247,9 +235,10 @@ async function usedBefore(sb, classNum, subject) {
   return new Set(rows.flatMap((r) => r.qids || []));
 }
 
-const snapshot = (q) => ({
+// marks come from the paper layout (the bank does not store meaningful marks)
+const snapshot = (q, marks) => ({
   qid: q.id, qtype: q.qtype, chapter: q.chapter, text: q.text, opts: q.opts || [], correct: q.correct,
-  answer: q.answer, image: q.image || "", marks: Number(q.marks), passageId: q.passage_id || null,
+  answer: q.answer, image: q.image || "", marks: Number(marks), passageId: q.passage_id || null,
 });
 
 const bodyQids = (b) => [
@@ -257,11 +246,11 @@ const bodyQids = (b) => [
 ].map((q) => q.qid);
 
 export async function availability(sb, a) {
-  const classNum = Number(a.get("classNum")), marks = Number(a.get("marks"));
+  const classNum = Number(a.get("classNum"));
   const subject = a.get("subject") || "", kind = a.get("kind") || "crq";
   const qtypes = kind === "mcq" ? ["mcq"] : PART_QTYPES[kind];
-  if (!classNum || !subject || !qtypes || !(marks > 0)) return { available: null };
-  const rows = await candidateRows(sb, { classNum, subject, qtypes, marks, chapters: a.getAll("chapters"), difficulty: a.get("difficulty") || "" });
+  if (!classNum || !subject || !qtypes) return { available: null };
+  const rows = await candidateRows(sb, { classNum, subject, qtypes, section: a.get("section") || "", chapters: a.getAll("chapters"), difficulty: a.get("difficulty") || "" });
   const passages = {};
   rows.filter((r) => r.passage_id).forEach((r) => { passages[r.passage_id] = (passages[r.passage_id] || 0) + 1; });
   return {
@@ -283,13 +272,13 @@ export async function generatePaper(sb, user, body) {
   // ---- Part A: MCQs (optionally a reading passage with its own group of MCQs)
   let plainIds = [], passageId = null, passageIds = [];
   if (partA.count > 0) {
-    const rows = await candidateRows(sb, { ...base, qtypes: ["mcq"], marks: partA.marks });
+    const rows = await candidateRows(sb, { ...base, qtypes: ["mcq"] });
     const P = partA.passageSize;
     if (P > 0) {
       const groups = {};
       rows.filter((r) => r.passage_id).forEach((r) => { (groups[r.passage_id] ||= []).push(r.id); });
       const ok = Object.entries(groups).filter(([, ids]) => ids.length >= P);
-      if (!ok.length) problems.push(`Part A: no reading passage has ${P} MCQs of ${fmtNum(partA.marks)} marks. Add more MCQs to a passage, or set passage questions to 0.`);
+      if (!ok.length) problems.push(`Part A: no reading passage has ${P} MCQs. Add more MCQs to a passage, or set passage questions to 0.`);
       else {
         const fresh = ok.filter(([, ids]) => ids.filter((i) => !used.has(i)).length >= P);
         const pool = fresh.length ? fresh : ok;
@@ -301,7 +290,7 @@ export async function generatePaper(sb, user, body) {
     }
     const need = partA.count - P;
     const plain = chooseIds(rows.filter((r) => !r.passage_id).map((r) => r.id), used, taken, need);
-    if (plain.ids.length < need) problems.push(`Part A: need ${need} MCQs of ${fmtNum(partA.marks)} marks, but only ${plain.ids.length} available. Ask teachers to add more, or relax the filters.`);
+    if (plain.ids.length < need) problems.push(`Part A: need ${need} MCQs, but only ${plain.ids.length} available. Ask teachers to add more, or relax the filters.`);
     plainIds = plain.ids;
     plainIds.forEach((i) => taken.add(i));
   }
@@ -313,9 +302,9 @@ export async function generatePaper(sb, user, body) {
     const picks = [];
     for (let j = 0; j < partB[i].parts.length; j++) {
       const part = partB[i].parts[j];
-      const rows = await candidateRows(sb, { ...base, qtypes: PART_QTYPES[part.qtype], marks: part.marks });
+      const rows = await candidateRows(sb, { ...base, qtypes: PART_QTYPES[part.qtype], section: part.section });
       const { ids } = chooseIds(rows.map((r) => r.id), used, taken, 1);
-      if (!ids.length) problems.push(`Question ${startNo + i}, part ${j + 1}: no ${PART_TYPES[part.qtype]} question worth ${fmtNum(part.marks)} marks is available. Ask teachers to add one, or change the marks.`);
+      if (!ids.length) problems.push(`Question ${startNo + i}, part ${j + 1}: no ${PART_TYPES[part.qtype]} question${part.section ? ` in the section “${part.section}”` : ""} is available. Ask teachers to add one, or change the type${part.section ? " or section" : ""}.`);
       ids.forEach((x) => taken.add(x));
       picks.push(ids[0] || null);
     }
@@ -330,7 +319,7 @@ export async function generatePaper(sb, user, body) {
   let passage = null;
   if (passageId) {
     const p = must(await sb.from("qb_passages").select("*").eq("id", passageId).single());
-    passage = { instruction: p.instruction, text: p.text, image: p.image || "", questions: passageIds.map((id) => snapshot(rowById[id])) };
+    passage = { instruction: p.instruction, text: p.text, image: p.image || "", questions: passageIds.map((id) => snapshot(rowById[id], partA.marks)) };
   }
   const total = (n) => Number(n);
   const doc = {
@@ -338,10 +327,10 @@ export async function generatePaper(sb, user, body) {
       title: form.title, gradeLabel: `GRADE-${form.classNum}`, subjectTitle: form.subjectTitle,
       school: form.school || SCHOOL_LINE, lang: form.lang, qr: form.qr, logo: LOGO,
     },
-    partA: { count: partA.count, marksEach: total(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id])), passage },
+    partA: { count: partA.count, marksEach: total(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id], partA.marks)), passage },
     partB: partB.map((blk, i) => ({
       no: startNo + i,
-      parts: blk.parts.map((p, j) => ({ marks: p.marks, spec: p.qtype, q: snapshot(rowById[bPicks[i][j]]) })),
+      parts: blk.parts.map((p, j) => ({ marks: p.marks, spec: p.qtype, section: p.section || "", q: snapshot(rowById[bPicks[i][j]], p.marks) })),
     })),
   };
   const created = must(await sb.from("qb_papers").insert({
@@ -379,21 +368,21 @@ export async function swapQuestion(sb, id, path) {
   const doc = p.body;
   const bad = () => { throw new QbError(404, "Question not found in this paper."); };
   if (!Array.isArray(path)) bad();
-  let holder, key, qtypes, marks, passage;
+  let holder, key, qtypes, marks, passage, section = "";
   if (path[0] === "A" && path[1] === "plain") { holder = doc.partA.plain; key = path[2]; qtypes = ["mcq"]; marks = doc.partA.marksEach; passage = "none"; }
   else if (path[0] === "A" && path[1] === "passage" && doc.partA.passage) {
     holder = doc.partA.passage.questions; key = path[2]; qtypes = ["mcq"]; marks = doc.partA.marksEach; passage = holder[0]?.passageId;
   } else if (path[0] === "B") {
     const part = doc.partB?.[path[1]]?.parts?.[path[2]];
     if (!part) bad();
-    holder = part; key = "q"; qtypes = PART_QTYPES[part.spec] || PART_QTYPES.crq; marks = part.marks; passage = "any";
+    holder = part; key = "q"; qtypes = PART_QTYPES[part.spec] || PART_QTYPES.crq; marks = part.marks; passage = "any"; section = part.section || "";
   } else bad();
   const cur = holder?.[key];
   if (!cur) bad();
 
   const exclude = new Set(bodyQids(doc));
   const f = p.filters || {};
-  const base = { classNum: p.class_num, subject: p.subject, qtypes, marks };
+  const base = { classNum: p.class_num, subject: p.subject, qtypes, section };
   const fits = (r) => (passage === "any" ? true : passage === "none" ? !r.passage_id : r.passage_id === passage);
   const used = await usedBefore(sb, p.class_num, p.subject);
   let note = "";
@@ -402,8 +391,8 @@ export async function swapQuestion(sb, id, path) {
     ({ ids } = chooseIds((await candidateRows(sb, base)).filter(fits).map((r) => r.id), used, exclude, 1));
     if (ids.length) note = "It ignores the chapter/difficulty filters, because none matched.";
   }
-  if (!ids.length) throw new QbError(409, "No other question with the same type and marks is available.");
-  holder[key] = snapshot(must(await sb.from("qb_questions").select("*").eq("id", ids[0]).single()));
+  if (!ids.length) throw new QbError(409, "No other question of the same type" + (section ? " and section" : "") + " is available.");
+  holder[key] = snapshot(must(await sb.from("qb_questions").select("*").eq("id", ids[0]).single()), marks);
   must(await sb.from("qb_papers").update({ body: doc, qids: bodyQids(doc) }).eq("id", id));
   return { ok: true, note };
 }

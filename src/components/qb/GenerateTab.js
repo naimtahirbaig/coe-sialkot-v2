@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { C, DIFF, CLASSES, card, inp, lbl, btn, small, grid, Msg, api, fmt, fileToDataUrl } from "./ui";
-import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, formatFor } from "@/lib/qbFormats";
+import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject } from "@/lib/qbFormats";
 
 const uid = () => Math.random().toString(36).slice(2);
-const mkBlocks = (tpl) => tpl.map((b) => ({ key: uid(), parts: b.parts.map((p) => ({ key: uid(), marks: String(p.marks), qtype: p.qtype })) }));
+const mkBlocks = (tpl) => tpl.map((b) => ({ key: uid(), parts: b.parts.map((p) => ({ key: uid(), marks: String(p.marks), qtype: p.qtype, section: p.section || "" })) }));
 
 export default function GenerateTab({ meta, onGenerated }) {
   const [f, setF] = useState({ classNum: "", subject: "", title: SBA_TITLE, school: SCHOOL_LINE, subjectTitle: "", lang: "en", qr: "", difficulty: "", chapters: [], totalMarks: "" });
@@ -16,6 +16,8 @@ export default function GenerateTab({ meta, onGenerated }) {
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const chapters = (meta?.chapters || {})[`${f.classNum}|${f.subject}`] || [];
+  const subjectOptions = useMemo(() => { const seen = new Map(); [...SUBJECTS, ...(meta?.subjects || [])].forEach((x) => { const k = normSubject(x); if (k && !seen.has(k)) seen.set(k, x); }); return [...seen.values()]; }, [meta]);
+  const sections = sectionsFor(f.subject);
 
   const aTotal = (parseInt(partA.count, 10) || 0) * (Number(partA.marks) || 0);
   const bTotal = partB.reduce((t, b) => t + b.parts.reduce((x, p) => x + (Number(p.marks) || 0), 0), 0);
@@ -37,16 +39,16 @@ export default function GenerateTab({ meta, onGenerated }) {
 
   // live "N available" for every slot, after a short pause while typing
   const slots = useMemo(() => [
-    { id: "A", kind: "mcq", marks: partA.marks },
-    ...partB.flatMap((b) => b.parts.map((p) => ({ id: p.key, kind: p.qtype, marks: p.marks }))),
-  ], [partA.marks, partB]);
+    { id: "A", kind: "mcq", section: "" },
+    ...partB.flatMap((b) => b.parts.map((p) => ({ id: p.key, kind: p.qtype, section: p.section || "" }))),
+  ], [partB]);
   const availKey = JSON.stringify([f.classNum, f.subject, f.difficulty, f.chapters, slots]);
   useEffect(() => {
     if (!f.classNum || !f.subject) { setAvail({}); return; }
     const t = setTimeout(async () => {
       const out = {};
       await Promise.all(slots.map(async (s) => {
-        const qs = new URLSearchParams({ classNum: f.classNum, subject: f.subject, kind: s.kind, marks: s.marks, difficulty: f.difficulty });
+        const qs = new URLSearchParams({ classNum: f.classNum, subject: f.subject, kind: s.kind, section: s.section, difficulty: f.difficulty });
         f.chapters.forEach((c) => qs.append("chapters", c));
         try { out[s.id] = await api(`/api/qb/availability?${qs}`); } catch { out[s.id] = null; }
       }));
@@ -57,7 +59,7 @@ export default function GenerateTab({ meta, onGenerated }) {
   }, [availKey]);
 
   const updPart = (bk, pk, k, v) => setPartB((a) => a.map((b) => (b.key !== bk ? b : { ...b, parts: b.parts.map((p) => (p.key === pk ? { ...p, [k]: v } : p)) })));
-  const addPart = (bk) => setPartB((a) => a.map((b) => (b.key !== bk || b.parts.length >= 8 ? b : { ...b, parts: [...b.parts, { key: uid(), marks: "5", qtype: "crq" }] })));
+  const addPart = (bk) => setPartB((a) => a.map((b) => (b.key !== bk || b.parts.length >= 8 ? b : { ...b, parts: [...b.parts, { key: uid(), marks: "5", qtype: "crq", section: "" }] })));
   const rmPart = (bk, pk) => setPartB((a) => a.map((b) => (b.key !== bk || b.parts.length < 2 ? b : { ...b, parts: b.parts.filter((p) => p.key !== pk) })));
 
   async function uploadQr(e) {
@@ -72,7 +74,7 @@ export default function GenerateTab({ meta, onGenerated }) {
     try {
       const body = {
         ...f, totalMarks: String(target),
-        partA, partB: partB.map((b) => ({ parts: b.parts.map((p) => ({ marks: p.marks, qtype: p.qtype })) })),
+        partA, partB: partB.map((b) => ({ parts: b.parts.map((p) => ({ marks: p.marks, qtype: p.qtype, section: p.section })) })),
       };
       onGenerated((await api("/api/qb/papers", { method: "POST", body })).id);
     } catch (err) { setMsg({ type: "err", text: err.message }); window.scrollTo({ top: 0, behavior: "smooth" }); }
@@ -97,7 +99,7 @@ export default function GenerateTab({ meta, onGenerated }) {
             <option value="">Choose…</option>{CLASSES.map((c) => <option key={c} value={c}>Class {c}</option>)}</select></div>
         <div><label style={lbl}>Subject</label>
           <select style={inp} value={f.subject} onChange={(e) => pick(f.classNum, e.target.value)} required>
-            <option value="">Choose…</option>{(meta?.subjects || []).map((s) => <option key={s}>{s}</option>)}</select></div>
+            <option value="">Choose…</option>{subjectOptions.map((s) => <option key={s}>{s}</option>)}</select></div>
         <div><label style={lbl}>Subject name on paper</label><input style={inp} value={f.subjectTitle} onChange={(e) => set("subjectTitle", e.target.value)} required /></div>
         <div><label style={lbl}>Paper language</label>
           <select style={inp} value={f.lang} onChange={(e) => set("lang", e.target.value)}><option value="en">English (left to right)</option><option value="ur">اردو (right to left)</option></select></div>
@@ -138,14 +140,14 @@ export default function GenerateTab({ meta, onGenerated }) {
       <h3>Part A — Objective (MCQs)</h3>
       <div style={{ ...grid(150), border: `1px solid ${C.LINE}`, borderRadius: 10, padding: 12, background: "#FBFCFD" }}>
         <div><label style={lbl}>Number of MCQs</label><input style={inp} type="number" min="0" max="60" value={partA.count} onChange={(e) => setPartA({ ...partA, count: e.target.value })} /></div>
-        <div><label style={lbl}>Marks of each MCQ</label><input style={inp} type="number" step="0.5" min="0.5" value={partA.marks} onChange={(e) => setPartA({ ...partA, marks: e.target.value })} /></div>
+        <div><label style={lbl}>Marks of each MCQ <span style={{ fontWeight: 400, color: C.MUTED }}>(allotted now)</span></label><input style={inp} type="number" step="0.5" min="0.5" value={partA.marks} onChange={(e) => setPartA({ ...partA, marks: e.target.value })} /></div>
         <div><label style={lbl}>Questions from a reading passage</label><input style={inp} type="number" min="0" value={partA.passageSize} onChange={(e) => setPartA({ ...partA, passageSize: e.target.value })} /></div>
         <div style={{ fontSize: 13, paddingBottom: 10 }}><AV id="A" need={(parseInt(partA.count, 10) || 0) - (parseInt(partA.passageSize, 10) || 0)} passage />
           <div style={{ color: C.MUTED }}>Part A = {fmt(aTotal)} marks</div></div>
       </div>
 
       <h3>Part B — Subjective (CRQs)</h3>
-      <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Each question has parts (a, b, c). Every part takes one bank question worth exactly those marks.</p>
+      <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Each question has parts (a, b, c). Give every part its marks here — questions in the bank have no marks of their own. For English and Urdu, choose which section each part draws from.</p>
       {partB.map((b, bi) => (
         <div key={b.key} style={{ border: `1px solid ${C.LINE}`, borderRadius: 10, padding: 12, marginBottom: 10, background: "#FBFCFD" }}>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
@@ -156,18 +158,23 @@ export default function GenerateTab({ meta, onGenerated }) {
             </span>
           </div>
           {b.parts.map((p, pj) => (
-            <div key={p.key} style={{ ...grid(120), marginBottom: 6 }}>
+            <div key={p.key} style={{ ...grid(sections.length ? 140 : 120), marginBottom: 6 }}>
               <div style={{ paddingBottom: 10, fontWeight: 700 }}>{b.parts.length > 1 ? ["a", "b", "c", "d", "e", "f", "g", "h"][pj] + " )" : "Part"}</div>
               <div><label style={lbl}>Marks</label><input style={inp} type="number" step="0.5" min="0.5" value={p.marks} onChange={(e) => updPart(b.key, p.key, "marks", e.target.value)} /></div>
               <div><label style={lbl}>Type</label>
                 <select style={inp} value={p.qtype} onChange={(e) => updPart(b.key, p.key, "qtype", e.target.value)}>{Object.entries(PART_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              {sections.length > 0 && (
+                <div><label style={lbl}>Section</label>
+                  <select style={inp} value={p.section || ""} onChange={(e) => updPart(b.key, p.key, "section", e.target.value)}>
+                    <option value="">Any section</option>{sections.map((x) => <option key={x} value={x}>{x}</option>)}</select></div>
+              )}
               <div style={{ paddingBottom: 10, fontSize: 13 }}><AV id={p.key} /></div>
               <div style={{ paddingBottom: 6 }}>{b.parts.length > 1 && <button type="button" style={small} onClick={() => rmPart(b.key, p.key)}>Remove</button>}</div>
             </div>
           ))}
         </div>
       ))}
-      <p><button type="button" style={btn(false)} onClick={() => setPartB((a) => [...a, { key: uid(), parts: [{ key: uid(), marks: "5", qtype: "crq" }] }])}>+ Add question</button></p>
+      <p><button type="button" style={btn(false)} onClick={() => setPartB((a) => [...a, { key: uid(), parts: [{ key: uid(), marks: "5", qtype: "crq", section: "" }] }])}>+ Add question</button></p>
 
       <div style={grid(200)}>
         <div><label style={lbl}>Total marks</label>

@@ -86,9 +86,10 @@ export function parseQuestion(input) {
   if (!QTYPES[d.qtype]) errors.push("Choose a question type.");
   d.text = clean(input.text, 4000);
   if (!d.text) errors.push("Question text is required.");
-  const marks = Number(input.marks);
-  if (!(marks > 0 && marks <= 100)) errors.push("Marks must be a number between 0 and 100.");
-  d.marks = marks;
+  // marks are given when the paper is generated, not when a question is added (1 is just a placeholder)
+  const marks = input.marks == null || String(input.marks).trim() === "" ? 1 : Number(input.marks);
+  d.marks = marks > 0 && marks <= 100 ? marks : 1;
+  d.section = clean(input.section, 80);
   d.difficulty = DIFFICULTIES.includes(input.difficulty) ? input.difficulty : "medium";
   d.answer = clean(input.answer, 4000);
   const img = cleanImage(input.image);
@@ -121,7 +122,7 @@ const TYPE_ALIASES = {
   true_false: "true_false", "true/false": "true_false", "true / false": "true_false", tf: "true_false", "true false": "true_false",
   fill_blank: "fill_blank", fill: "fill_blank", "fill in the blanks": "fill_blank", "fill in the blank": "fill_blank",
 };
-export const CSV_COLUMNS = ["class", "subject", "chapter", "type", "question", "option_a", "option_b", "option_c", "option_d", "correct", "answer", "marks", "difficulty"];
+export const CSV_COLUMNS = ["class", "subject", "chapter", "section", "type", "question", "option_a", "option_b", "option_c", "option_d", "correct", "answer", "difficulty"];
 
 // row: object with lower-case CSV headers. Returns { errors, data }
 export function parseImportRow(raw) {
@@ -130,15 +131,15 @@ export function parseImportRow(raw) {
   const qtype = TYPE_ALIASES[(row.type || "").toLowerCase()];
   if (!qtype) return { errors: [`unknown type '${row.type || ""}'`] };
   return parseQuestion({
-    classNum: row.class, subject: row.subject, chapter: row.chapter, qtype, text: row.question,
+    classNum: row.class, subject: row.subject, chapter: row.chapter, section: row.section, qtype, text: row.question,
     opts: [row.option_a, row.option_b, row.option_c, row.option_d], correct: row.correct,
-    answer: row.answer, marks: row.marks, difficulty: (row.difficulty || "medium").toLowerCase(),
+    answer: row.answer, difficulty: (row.difficulty || "medium").toLowerCase(),
   });
 }
 
 // ---------- paper specification (SBA layout) ----------
 // body: { title, school, classNum, subject, subjectTitle, lang, qr, totalMarks, chapters[], difficulty,
-//         partA:{count, marks, passageSize}, partB:[{ parts:[{ marks, qtype }] }] }
+//         partA:{count, marks, passageSize}, partB:[{ parts:[{ marks, qtype, section }] }] }
 export const PART_QTYPE_KEYS = ["crq", "short", "long", "fill_blank", "true_false"];
 
 export function parsePaperSpec(body) {
@@ -169,7 +170,7 @@ export function parsePaperSpec(body) {
 
   const partB = [];
   (Array.isArray(body.partB) ? body.partB : []).slice(0, 12).forEach((blk, i) => {
-    const parts = (Array.isArray(blk.parts) ? blk.parts : []).slice(0, 8).map((p) => ({ marks: Number(p.marks), qtype: PART_QTYPE_KEYS.includes(p.qtype) ? p.qtype : "crq" }));
+    const parts = (Array.isArray(blk.parts) ? blk.parts : []).slice(0, 8).map((p) => ({ marks: Number(p.marks), qtype: PART_QTYPE_KEYS.includes(p.qtype) ? p.qtype : "crq", section: clean(p.section, 80) }));
     if (!parts.length || parts.some((p) => !(p.marks > 0 && p.marks <= 100))) errors.push(`Part B, question ${i + 1}: add at least one part, each with marks.`);
     else partB.push({ parts });
   });

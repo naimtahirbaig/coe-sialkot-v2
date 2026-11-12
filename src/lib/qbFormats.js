@@ -16,13 +16,15 @@ export const PART_TYPES = {
 export const PART_QTYPES = { crq: ["short", "long"], short: ["short"], long: ["long"], fill_blank: ["fill_blank"], true_false: ["true_false"] };
 
 const parts = (...m) => ({ parts: m.map((marks) => ({ marks, qtype: "crq" })) });
+// a part that only draws from one section of the subject (English / Urdu)
+const secParts = (...x) => ({ parts: x.map(([marks, section]) => ({ marks, qtype: "crq", section })) });
 const std = (partB) => ({ partA: { count: 10, marks: 1.5, passageSize: 0 }, partB });
 
 // QR codes are the official PECTAA codes from the Grade 8 sample papers (public/qb/qr).
 // Other classes have no QR here: upload one in the generator.
 const GRADE8 = [
-  { names: ["english"], display: "ENGLISH", lang: "en", qr: "english", template: std([parts(12), parts(15), parts(8)]) },
-  { names: ["urdu"], display: "URDU", lang: "ur", qr: "urdu", template: std([parts(15), parts(10), parts(10)]) },
+  { names: ["english"], display: "ENGLISH", lang: "en", qr: "english", template: std([secParts([12, "Title & Summary Writing"]), secParts([15, "Reading Comprehension"]), secParts([8, "Listening & Speaking"])]) },
+  { names: ["urdu"], display: "URDU", lang: "ur", qr: "urdu", template: std([secParts([15, "Short Answers from the Lesson - مختصر جوابات"]), secParts([10, "Sentence Making - جملہ سازی"]), secParts([10, "Essay Writing - مضمون نویسی"])]) },
   { names: ["mathematics", "maths", "math"], display: "MATHEMATICS", lang: "en", qr: "mathematics", template: std([parts(5, 5), parts(5, 5), parts(7, 8)]) },
   { names: ["science"], display: "SCIENCE", lang: "en", qr: "science", template: std([parts(2, 3, 5), parts(2, 4, 4), parts(2, 5, 8)]) },
   { names: ["computerscience", "computer", "computers"], display: "COMPUTER SCIENCE", lang: "en", qr: "computer-science", template: std([parts(2, 4, 4), parts(2, 4, 4), parts(5, 5, 5)]) },
@@ -31,6 +33,54 @@ const GRADE8 = [
   { match: (k) => k.includes("tarjuma"), display: "TARJUMA-TUL-QURAN-UL MAJEED", lang: "ur", qr: "tarjuma-tul-quran",
     template: { partA: { count: 5, marks: 1, passageSize: 0 }, partB: [parts(10), parts(10)] } },
 ];
+
+// ---- subjects, question types and sections ----
+export const SUBJECTS = [
+  "English", "Urdu", "Mathematics", "Science", "Computer Science", "Islamiat", "History & Geography",
+  "Tarjuma-tul-Quran-ul-Majeed", "Fine Arts", "Physics", "Chemistry", "Biology",
+];
+export const QTYPE_LABEL = { mcq: "MCQ (Multiple Choice)", short: "Short Question", long: "Long Question", fill_blank: "Fill in the Blanks", true_false: "True / False" };
+// English and Urdu use every type and have sections; every other subject has MCQs, short and long questions only.
+export const LANG_SUBJECTS = ["english", "urdu"];
+export const typesFor = (subject) => (LANG_SUBJECTS.includes(normSubject(subject)) ? ["mcq", "short", "long", "fill_blank", "true_false"] : ["mcq", "short", "long"]);
+// Sections follow the Grade 8 SBA sample papers.
+export const SECTIONS = {
+  english: [
+    "Grammar & Vocabulary (MCQs)",      // figures of speech, pronouns, tenses, phrases ...
+    "Reading Passage / Poem (MCQs)",    // MCQs that refer to a paragraph or poem
+    "Title & Summary Writing",          // read the paragraph, create a title, summarise
+    "Reading Comprehension",            // read the paragraph and answer the questions
+    "Listening & Speaking",             // instructions for the student / teacher activity
+  ],
+  urdu: [
+    "Vocabulary & Grammar (MCQs) - لغت و قواعد",
+    "Lesson & Poem (MCQs) - سبق / نظم",
+    "Reading Passage (MCQs) - عبارت",
+    "Short Answers from the Lesson - مختصر جوابات",
+    "Sentence Making - جملہ سازی",
+    "Essay Writing - مضمون نویسی",
+  ],
+};
+export const sectionsFor = (subject) => SECTIONS[normSubject(subject)] || [];
+
+// ---- chapters: a number box and a name box, stored together as "Ch 3: Algebra" ----
+export function chapterLabel(no, name) {
+  const n = String(no || "").trim().replace(/[^0-9A-Za-z.\-]/g, "").slice(0, 8);
+  const t = String(name || "").trim().replace(/\s+/g, " ").slice(0, 80);
+  return n && t ? `Ch ${n}: ${t}` : n ? `Ch ${n}` : t;
+}
+export function parseChapter(s) {
+  const m = /^Ch\s+([0-9A-Za-z.\-]+)(?::\s*(.*))?$/.exec(String(s || "").trim());
+  return m ? { no: m[1], name: m[2] || "" } : { no: "", name: String(s || "") };
+}
+// chapters in book order: by number, then by name
+export const sortChapters = (list) => [...list].sort((a, b) => {
+  const x = parseChapter(a), y = parseChapter(b);
+  const nx = parseFloat(x.no), ny = parseFloat(y.no);
+  if (Number.isFinite(nx) && Number.isFinite(ny) && nx !== ny) return nx - ny;
+  if (Number.isFinite(nx) !== Number.isFinite(ny)) return Number.isFinite(nx) ? -1 : 1;
+  return a.localeCompare(b);
+});
 
 export const normSubject = (s) => String(s || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z]/g, "");
 

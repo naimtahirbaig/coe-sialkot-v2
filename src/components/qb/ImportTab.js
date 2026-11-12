@@ -2,12 +2,13 @@
 import { useState } from "react";
 import { C, card, btn, th, td, Msg, api } from "./ui";
 
-const COLUMNS = ["class", "subject", "chapter", "type", "question", "option_a", "option_b", "option_c", "option_d", "correct", "answer", "marks", "difficulty"];
+const COLUMNS = ["class", "subject", "chapter", "section", "type", "question", "option_a", "option_b", "option_c", "option_d", "correct", "answer", "difficulty"];
+// chapter: write it as "Ch 3: Algebra". section: English / Urdu only (leave empty for other subjects).
 const SAMPLE = [
-  ["9", "Mathematics", "Algebra", "mcq", "What is 7 x 8?", "54", "56", "58", "64", "B", "", "1", "easy"],
-  ["9", "Mathematics", "Algebra", "short", "Define a prime number.", "", "", "", "", "", "A number greater than 1 with exactly two factors.", "2", "easy"],
-  ["9", "Mathematics", "Algebra", "long", "Solve x^2 - 5x + 6 = 0 by factorisation.", "", "", "", "", "", "x = 2 or x = 3", "5", "medium"],
-  ["8", "Geography", "Maps", "true_false", "The equator divides the Earth into two hemispheres.", "", "", "", "", "True", "", "1", "easy"],
+  ["9", "Mathematics", "Ch 2: Algebra", "", "mcq", "What is 7 x 8?", "54", "56", "58", "64", "B", "", "easy"],
+  ["9", "Mathematics", "Ch 2: Algebra", "", "short", "Define a prime number.", "", "", "", "", "", "A number greater than 1 with exactly two factors.", "easy"],
+  ["9", "Mathematics", "Ch 2: Algebra", "", "long", "Solve x^2 - 5x + 6 = 0 by factorisation.", "", "", "", "", "", "x = 2 or x = 3", "medium"],
+  ["8", "English", "Ch 4: Parts of Speech", "Grammar & Vocabulary (MCQs)", "mcq", "Choose the noun: ", "run", "table", "quickly", "and", "B", "", "easy"],
 ];
 
 const esc = (v) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);

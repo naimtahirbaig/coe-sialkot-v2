@@ -31,7 +31,8 @@ create table if not exists public.qb_questions (
   id              bigint generated always as identity primary key,
   class_num       int  not null check (class_num between 1 and 12),
   subject         text not null,
-  chapter         text not null default '',
+  chapter         text not null default '',            -- e.g. 'Ch 3: Algebra'
+  section         text not null default '',            -- English / Urdu only (e.g. 'Reading Comprehension')
   qtype           text not null check (qtype in ('mcq','true_false','fill_blank','short','long')),
   text            text not null,                 -- may contain maths between $...$ (LaTeX)
   opts            jsonb not null default '[]'::jsonb,   -- ["A text","B text","C text","D text"] for MCQs
@@ -46,6 +47,7 @@ create table if not exists public.qb_questions (
   created_by_name text not null default 'Admin',
   created_at      timestamptz not null default now()
 );
+alter table public.qb_questions add column if not exists section text not null default '';
 create index if not exists qb_questions_lookup on public.qb_questions (class_num, subject, qtype, marks);
 create index if not exists qb_questions_passage on public.qb_questions (passage_id);
 
