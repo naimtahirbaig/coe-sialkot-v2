@@ -41,6 +41,18 @@ export async function authenticate(req, sb) {
   return t && t.active ? { role: "teacher", id: t.id, name: t.name } : null;
 }
 
+// A teacher changes his own password (must know the current one).
+export async function changeOwnPassword(sb, user, b) {
+  if (user.role !== "teacher") throw new QbError(400, "The admin password is changed in the site settings, not here.");
+  const cur = String(b.current || ""), next = String(b.next || "");
+  if (next.length < 8) throw new QbError(400, "New password must be at least 8 characters.");
+  if (next === cur) throw new QbError(400, "The new password must be different from the old one.");
+  const t = must(await sb.from("qb_teachers").select("password_hash").eq("id", user.id).maybeSingle());
+  if (!t || !(await bcrypt.compare(cur, t.password_hash))) throw new QbError(401, "Your current password is wrong.");
+  must(await sb.from("qb_teachers").update({ password_hash: await bcrypt.hash(next, 10) }).eq("id", user.id));
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------- teachers
 export async function listTeachers(sb) {
   const teachers = must(await sb.from("qb_teachers").select("id, username, name, active, created_at").order("name"));

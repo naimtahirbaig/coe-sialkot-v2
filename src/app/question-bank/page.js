@@ -10,6 +10,7 @@ import QuestionsTab from "@/components/qb/QuestionsTab";
 import ImportTab from "@/components/qb/ImportTab";
 import GenerateTab from "@/components/qb/GenerateTab";
 import PapersTab from "@/components/qb/PapersTab";
+import PasswordTab from "@/components/qb/PasswordTab";
 import TeachersTab from "@/components/qb/TeachersTab";
 
 export default function QuestionBankPage() {
@@ -78,7 +79,7 @@ export default function QuestionBankPage() {
   const admin = user.role === "admin";
   const tabs = [
     ["overview", "Overview"], ["questions", "Question bank"], ["add", editing ? "Edit question" : "Add question"], ["import", "Bulk import"],
-    ...(admin ? [["generate", "Generate paper"], ["papers", "Papers"], ["teachers", "Teachers"]] : []),
+    ...(admin ? [["generate", "Generate paper"], ["papers", "Papers"], ["teachers", "Teachers"]] : [["password", "My password"]]),
   ];
   const go = (t) => { if (t !== "add") setEditing(null); if (t !== "papers") setOpenPaper(null); setTab(t); };
 
@@ -106,6 +107,7 @@ export default function QuestionBankPage() {
         {admin && tab === "generate" && <GenerateTab meta={meta} onGenerated={(id) => { setOpenPaper(id); setTab("papers"); }} />}
         {admin && tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} />}
         {admin && tab === "teachers" && <TeachersTab />}
+        {!admin && tab === "password" && <PasswordTab />}
       </div>
     </div>
   );
