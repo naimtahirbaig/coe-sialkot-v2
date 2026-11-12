@@ -126,8 +126,21 @@ export async function createQuestion(sb, user, body) {
   const { errors, data } = parseQuestion(body);
   if (errors.length) throw new QbError(400, errors.join(" "));
   await checkPassage(sb, data);
-  const { error } = await sb.from("qb_questions").insert({ ...data, created_by: user.id, created_by_name: user.name });
+  const { data: row, error } = await sb.from("qb_questions").insert({ ...data, created_by: user.id, created_by_name: user.name }).select("id").single();
   if (error) throw new Error(error.message);
+  return { ok: true, id: row?.id };
+}
+
+// Sets the marks of every question of one type in one class + subject (a teacher: his own; admin: all).
+export async function setTypeMarks(sb, user, b) {
+  const classNum = parseClassNum(b.classNum), subject = cleanStr(b.subject, 60).replace(/\s+/g, " ");
+  const marks = Number(b.marks);
+  if (!classNum || !subject) throw new QbError(400, "Choose a class and subject.");
+  if (!QTYPES[b.qtype]) throw new QbError(400, "Choose a question type.");
+  if (!(marks > 0 && marks <= 100)) throw new QbError(400, "Marks must be between 0 and 100.");
+  let q = sb.from("qb_questions").update({ marks }).eq("class_num", classNum).eq("subject", subject).eq("qtype", b.qtype);
+  if (user.role !== "admin") q = q.eq("created_by", user.id);
+  must(await q);
   return { ok: true };
 }
 

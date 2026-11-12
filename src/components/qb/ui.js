@@ -1,21 +1,24 @@
 "use client";
 // Shared look and fetch helper for the Question Bank pages (client side only).
-export const C = { NAVY: "#150F3F", GOLD: "#F3B129", GREEN: "#0B7A3E", RED: "#B3202A", INK: "#1c1b2e", MUTED: "#5b5a70", LINE: "#DCDAEA" };
+export const C = { NAVY: "#150F3F", GOLD: "#F3B129", GREEN: "#0B7A3E", RED: "#B3202A", INK: "#14142B", MUTED: "#4A4F6A", LINE: "#D3D7E8", BG: "#EDF0F8", SOFT: "#F6F7FC", BLUE: "#2552D4" };
 export const QT = {
   mcq: "Multiple Choice (MCQ)", true_false: "True / False", fill_blank: "Fill in the Blanks",
   short: "Short Question", long: "Long Question",
 };
+// one strong colour per question type, used for the stripe and badge on each question
+export const TYPE_COLOR = { mcq: "#2552D4", short: "#0B7A3E", long: "#7A2FBF", fill_blank: "#C25A00", true_false: "#0A7C86" };
+export const MARK_CHOICES = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 10, 12, 15, 20];
 export const DIFF = ["easy", "medium", "hard"];
 export const CLASSES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
-export const card = { background: "#fff", border: `1px solid ${C.LINE}`, borderRadius: 14, boxShadow: "0 2px 14px rgba(21,15,63,.07)", padding: 18, marginBottom: 16, color: C.INK };
-export const inp = { padding: "10px 12px", fontSize: 15, border: "1.5px solid #9A9DB5", borderRadius: 9, background: "#fff", color: C.INK, width: "100%", boxSizing: "border-box" };
+export const card = { background: "#fff", border: `1px solid ${C.LINE}`, borderRadius: 14, boxShadow: "0 2px 12px rgba(21,15,63,.08)", padding: 18, marginBottom: 16, color: C.INK };
+export const inp = { padding: "10px 12px", fontSize: 15, border: "1.5px solid #8A90AE", borderRadius: 9, background: "#fff", color: C.INK, width: "100%", boxSizing: "border-box" };
 export const lbl = { display: "block", fontWeight: 700, fontSize: 13, color: C.INK, marginBottom: 4 };
 export const btn = (on = true, color = C.NAVY) => ({ padding: "10px 18px", fontSize: 15, fontWeight: 700, borderRadius: 10, border: `2px solid ${color}`, background: on ? color : "#fff", color: on ? "#fff" : color, cursor: "pointer" });
-export const small = { padding: "4px 10px", fontSize: 13, fontWeight: 600, borderRadius: 8, border: `1.5px solid ${C.NAVY}`, background: "#fff", color: C.NAVY, cursor: "pointer" };
+export const small = { padding: "5px 11px", fontSize: 13, fontWeight: 600, borderRadius: 8, border: `1.5px solid ${C.NAVY}`, background: "#fff", color: C.NAVY, cursor: "pointer" };
 export const grid = (min = 190) => ({ display: "grid", gridTemplateColumns: `repeat(auto-fit, minmax(${min}px, 1fr))`, gap: "12px 14px", alignItems: "end" });
-export const th = { textAlign: "left", padding: "8px 10px", background: "#EEF0F7", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4 };
-export const td = { padding: "8px 10px", borderTop: `1px solid ${C.LINE}`, verticalAlign: "top", fontSize: 14 };
+export const th = { textAlign: "left", padding: "9px 10px", background: C.NAVY, color: "#fff", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.5 };
+export const td = { padding: "9px 10px", borderTop: `1px solid ${C.LINE}`, verticalAlign: "top", fontSize: 14 };
 
 export function Msg({ m }) {
   if (!m) return null;

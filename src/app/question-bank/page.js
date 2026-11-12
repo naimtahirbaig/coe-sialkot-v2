@@ -1,11 +1,11 @@
 "use client";
 // Question Bank & Paper Generator.
-//   Teachers: log in, add questions (one by one or by CSV), see the bank.
+//   Teachers: log in, add questions on one scrolling sheet (autosaved) or by CSV, see the bank.
 //   Admin (username "admin" + the site admin password): everything above, plus teacher accounts,
 //   paper generation (class, subject, marks, sections), swap, print/PDF and Word download.
 import { useState, useEffect, useCallback } from "react";
 import { C, QT, card, inp, lbl, btn, grid, th, td, Msg, api } from "@/components/qb/ui";
-import QuestionForm from "@/components/qb/QuestionForm";
+import AddSheet from "@/components/qb/AddSheet";
 import QuestionsTab from "@/components/qb/QuestionsTab";
 import ImportTab from "@/components/qb/ImportTab";
 import GenerateTab from "@/components/qb/GenerateTab";
@@ -18,7 +18,7 @@ export default function QuestionBankPage() {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState("overview");
   const [meta, setMeta] = useState(null);
-  const [editing, setEditing] = useState(null);
+  const [sheetScope, setSheetScope] = useState(null); // set when "Edit" is pressed in the question list
   const [openPaper, setOpenPaper] = useState(null);
   const [login, setLogin] = useState({ username: "", password: "" });
   const [msg, setMsg] = useState(null);
@@ -51,7 +51,7 @@ export default function QuestionBankPage() {
   }
   function logout() { sessionStorage.removeItem("qb_token"); setUser(null); setMeta(null); setMsg(null); }
 
-  const wrap = { minHeight: "100vh", background: "#F4F3FA", fontFamily: "Inter, system-ui, sans-serif", color: C.INK };
+  const wrap = { minHeight: "100vh", background: C.BG, fontFamily: "Inter, system-ui, sans-serif", color: C.INK };
   // the site's global reset removes heading styles, so restore them for this page
   const HEADINGS = `.qb-root h1,.qb-root h2,.qb-root h3{font-weight:800;color:${C.NAVY};margin:14px 0 8px}
 .qb-root h1{font-size:24px}.qb-root h2{font-size:20px}.qb-root h3{font-size:17px}
@@ -62,7 +62,7 @@ export default function QuestionBankPage() {
     return (
       <div style={wrap} className="qb-root">
         <style dangerouslySetInnerHTML={{ __html: HEADINGS }} />
-        <form onSubmit={doLogin} style={{ ...card, maxWidth: 400, margin: "70px auto" }}>
+        <form onSubmit={doLogin} style={{ ...card, maxWidth: 400, margin: "70px auto", borderTop: `5px solid ${C.GOLD}`, padding: 26 }}>
           <h1 style={{ marginTop: 0, color: C.NAVY, fontSize: 24 }}>Question Bank</h1>
           <p style={{ color: C.MUTED }}>Teachers log in to add questions. The admin logs in with username <b>admin</b> to generate papers.</p>
           <Msg m={msg} />
@@ -78,31 +78,30 @@ export default function QuestionBankPage() {
 
   const admin = user.role === "admin";
   const tabs = [
-    ["overview", "Overview"], ["questions", "Question bank"], ["add", editing ? "Edit question" : "Add question"], ["import", "Bulk import"],
+    ["overview", "Overview"], ["questions", "Question bank"], ["add", "Add questions"], ["import", "Bulk import"],
     ...(admin ? [["generate", "Generate paper"], ["papers", "Papers"], ["teachers", "Teachers"]] : [["password", "My password"]]),
   ];
-  const go = (t) => { if (t !== "add") setEditing(null); if (t !== "papers") setOpenPaper(null); setTab(t); };
+  const go = (t) => { setSheetScope(null); if (t !== "papers") setOpenPaper(null); setTab(t); };
 
   return (
     <div style={wrap} className="qb-root">
       <style dangerouslySetInnerHTML={{ __html: HEADINGS }} />
-      <div style={{ background: C.NAVY, color: "#fff", padding: "12px 20px", display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
-        <b style={{ fontSize: 17 }}>Question Bank &amp; Paper Generator</b>
-        <span>{user.name} <span style={{ background: "#334155", borderRadius: 10, padding: "1px 9px", fontSize: 12 }}>{user.role}</span>{" "}
-          <button onClick={logout} style={{ background: "none", border: 0, color: C.GOLD, cursor: "pointer", fontWeight: 700 }}>Log out</button></span>
+      <div className="qb-noprint" style={{ background: C.NAVY, color: "#fff", padding: "13px 20px", borderBottom: `4px solid ${C.GOLD}`, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center", justifyContent: "space-between" }}>
+        <b style={{ fontSize: 18, letterSpacing: 0.2 }}>Question Bank <span style={{ color: C.GOLD }}>&amp;</span> Paper Generator</b>
+        <span>{user.name} <span style={{ background: C.GOLD, color: C.NAVY, borderRadius: 10, padding: "2px 10px", fontSize: 12, fontWeight: 800, textTransform: "uppercase" }}>{user.role}</span>{" "}
+          <button onClick={logout} style={{ background: "none", border: "1.5px solid #fff", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 700, padding: "3px 12px", marginLeft: 6 }}>Log out</button></span>
       </div>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 16px 60px" }}>
         <div className="qb-noprint" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
           {tabs.map(([k, label]) => (
-            <button key={k} onClick={() => go(k)} style={{ ...btn(tab === k), padding: "8px 14px", fontSize: 14 }}>{label}</button>
+            <button key={k} onClick={() => go(k)} style={{ ...btn(tab === k), padding: "9px 16px", fontSize: 14, borderRadius: 999, boxShadow: tab === k ? `0 3px 0 ${C.GOLD}` : "none", borderColor: tab === k ? C.NAVY : C.LINE, color: tab === k ? "#fff" : C.NAVY }}>{label}</button>
           ))}
         </div>
         <Msg m={tab === "overview" ? msg : null} />
 
         {tab === "overview" && <Overview meta={meta} admin={admin} go={go} />}
-        {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} onEdit={(q) => { setEditing(q); setTab("add"); }} />}
-        {tab === "add" && <QuestionForm key={editing ? editing.id : "new"} editing={editing} meta={meta}
-          onDone={(leave = true) => { refreshMeta(); if (leave) { setEditing(null); setTab("questions"); } }} />}
+        {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} onEdit={(q) => { setSheetScope({ classNum: q.class_num, subject: q.subject, focusId: q.id }); setTab("add"); }} />}
+        {tab === "add" && <AddSheet key={sheetScope ? `${sheetScope.classNum}|${sheetScope.subject}|${sheetScope.focusId}` : "free"} meta={meta} user={user} scope={sheetScope} refreshMeta={refreshMeta} />}
         {tab === "import" && <ImportTab onImported={refreshMeta} />}
         {admin && tab === "generate" && <GenerateTab meta={meta} onGenerated={(id) => { setOpenPaper(id); setTab("papers"); }} />}
         {admin && tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} />}
@@ -117,10 +116,10 @@ function Overview({ meta, admin, go }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginBottom: 14 }}>
-        <div style={{ ...card, marginBottom: 0, minWidth: 180 }}><b style={{ fontSize: 30 }}>{meta ? meta.total : "…"}</b><div style={{ color: C.MUTED }}>questions in the bank</div></div>
+        <div style={{ ...card, marginBottom: 0, minWidth: 200, borderTop: `5px solid ${C.GOLD}` }}><b style={{ fontSize: 34, color: C.NAVY }}>{meta ? meta.total : "…"}</b><div style={{ color: C.MUTED }}>questions in the bank</div></div>
       </div>
       <p>
-        <button style={btn()} onClick={() => go("add")}>Add a question</button>{" "}
+        <button style={btn()} onClick={() => go("add")}>Add questions</button>{" "}
         <button style={btn(false)} onClick={() => go("import")}>Bulk import</button>{" "}
         {admin && <button style={btn(false)} onClick={() => go("generate")}>Generate a paper</button>}
       </p>
