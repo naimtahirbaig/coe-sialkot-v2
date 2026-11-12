@@ -65,7 +65,15 @@ export function parseClassNum(v) {
   return n >= 1 && n <= 12 ? n : null;
 }
 
-// input: { classNum, subject, chapter, qtype, text, opts[], correct, answer, marks, difficulty }
+export const MAX_IMAGE_CHARS = 400000; // ~300 KB picture
+export function cleanImage(v) {
+  const s = String(v || "");
+  if (!s) return "";
+  if (s.length > MAX_IMAGE_CHARS || !/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s)) return null;
+  return s;
+}
+
+// input: { classNum, subject, chapter, qtype, text, opts[], correct, answer, marks, difficulty, image, passageId }
 export function parseQuestion(input) {
   const errors = [];
   const d = {};
@@ -83,6 +91,11 @@ export function parseQuestion(input) {
   d.marks = marks;
   d.difficulty = DIFFICULTIES.includes(input.difficulty) ? input.difficulty : "medium";
   d.answer = clean(input.answer, 4000);
+  const img = cleanImage(input.image);
+  if (img === null) errors.push("The picture must be a PNG, JPEG or WebP under 300 KB.");
+  d.image = img || "";
+  d.passage_id = null;
+  if (input.passageId && d.qtype === "mcq" && Number.isInteger(Number(input.passageId))) d.passage_id = Number(input.passageId);
   d.opts = [];
   d.correct = "";
   if (d.qtype === "mcq") {
@@ -123,42 +136,52 @@ export function parseImportRow(raw) {
   });
 }
 
-// ---------- paper specification ----------
-// body: { title, school, classNum, subject, totalMarks, duration, difficulty, instructions, chapters[],
-//         sections:[{ qtype, count, attempt, marks, instr }] }
+// ---------- paper specification (SBA layout) ----------
+// body: { title, school, classNum, subject, subjectTitle, lang, qr, totalMarks, chapters[], difficulty,
+//         partA:{count, marks, passageSize}, partB:[{ parts:[{ marks, qtype }] }] }
+export const PART_QTYPE_KEYS = ["crq", "short", "long", "fill_blank", "true_false"];
+
 export function parsePaperSpec(body) {
   const errors = [];
   const form = {
-    title: clean(body.title, 150), school: clean(body.school, 150),
+    title: clean(body.title, 150), school: clean(body.school, 200),
     classNum: parseClassNum(body.classNum), subject: clean(body.subject, 60),
-    totalMarks: Number(body.totalMarks), duration: Math.max(0, Math.min(600, parseInt(body.duration, 10) || 0)),
+    subjectTitle: clean(body.subjectTitle, 80), lang: body.lang === "ur" ? "ur" : "en",
+    qr: String(body.qr || ""),
+    totalMarks: Number(body.totalMarks),
     difficulty: DIFFICULTIES.includes(body.difficulty) ? body.difficulty : "",
-    instructions: clean(body.instructions, 1000),
     chapters: Array.isArray(body.chapters) ? body.chapters.map((c) => clean(c, 100)).filter(Boolean).slice(0, 100) : [],
   };
   if (!form.classNum || !form.subject) errors.push("Choose a class and a subject.");
-  if (!form.title) errors.push("Enter an exam title (e.g. Annual Examination 2026).");
+  if (!form.title) errors.push("Enter the assessment title.");
+  if (!form.subjectTitle) form.subjectTitle = form.subject.toUpperCase();
   if (!(form.totalMarks > 0)) errors.push("Enter the total marks.");
+  // QR: one of our own bundled files, or an uploaded picture (checked like any other picture)
+  if (form.qr && !/^\/qb\/qr\/[a-z0-9-]+\.png$/.test(form.qr)) {
+    const img = cleanImage(form.qr);
+    if (!img) { errors.push("The QR picture must be a PNG, JPEG or WebP under 300 KB."); form.qr = ""; } else form.qr = img;
+  }
 
-  const specs = [];
-  (Array.isArray(body.sections) ? body.sections : []).slice(0, 12).forEach((s, i) => {
-    const count = parseInt(s.count, 10);
-    const marks = Number(s.marks);
-    const attempt = s.attempt === "" || s.attempt == null ? count : parseInt(s.attempt, 10);
-    if (!QTYPES[s.qtype] || !(count >= 1 && count <= 200) || !(marks > 0 && marks <= 100) || !(attempt >= 1 && attempt <= count)) {
-      errors.push(`Section ${letter(i)}: check the type, number of questions, attempt count (cannot exceed the number of questions) and marks.`);
-      return;
-    }
-    specs.push({ qtype: s.qtype, count, attempt, marks, instr: clean(s.instr, 300) });
+  const a = body.partA || {};
+  const partA = { count: parseInt(a.count, 10), marks: Number(a.marks), passageSize: parseInt(a.passageSize, 10) || 0 };
+  if (!(partA.count >= 0 && partA.count <= 60) || (partA.count > 0 && !(partA.marks > 0 && partA.marks <= 100))) errors.push("Part A: check the number of MCQs and the marks of each.");
+  else if (partA.passageSize < 0 || partA.passageSize > partA.count) errors.push("Part A: the passage questions cannot be more than the number of MCQs.");
+
+  const partB = [];
+  (Array.isArray(body.partB) ? body.partB : []).slice(0, 12).forEach((blk, i) => {
+    const parts = (Array.isArray(blk.parts) ? blk.parts : []).slice(0, 8).map((p) => ({ marks: Number(p.marks), qtype: PART_QTYPE_KEYS.includes(p.qtype) ? p.qtype : "crq" }));
+    if (!parts.length || parts.some((p) => !(p.marks > 0 && p.marks <= 100))) errors.push(`Part B, question ${i + 1}: add at least one part, each with marks.`);
+    else partB.push({ parts });
   });
-  if (!specs.length && !errors.length) errors.push("Add at least one section.");
+  if (!partA.count && !partB.length && !errors.length) errors.push("Add Part A and/or Part B questions.");
+
   if (!errors.length) {
-    const total = specs.reduce((t, s) => t + s.attempt * s.marks, 0);
+    const total = partA.count * partA.marks + partB.reduce((t, q) => t + q.parts.reduce((x, p) => x + p.marks, 0), 0);
     if (Math.abs(total - form.totalMarks) > 0.001) {
-      errors.push(`Your sections add up to ${fmtNum(total)} marks, but the total is ${fmtNum(form.totalMarks)}. Adjust the sections or the total.`);
+      errors.push(`Part A and Part B add up to ${fmtNum(total)} marks, but the total is ${fmtNum(form.totalMarks)}. Adjust the marks or the total.`);
     }
   }
-  return { errors, form, specs };
+  return { errors, form, partA, partB };
 }
 
 // Fresh (never used in an earlier paper) questions first, then the rest; both shuffled.

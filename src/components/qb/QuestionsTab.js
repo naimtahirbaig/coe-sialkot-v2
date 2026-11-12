@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import Rich from "./Rich";
 import { C, QT, DIFF, CLASSES, card, inp, lbl, btn, small, grid, th, td, Msg, api, fmt } from "./ui";
 
 export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
@@ -54,8 +55,8 @@ export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
                       <td style={td}>{q.id}</td>
                       <td style={td}>Class {q.class_num}<br /><span style={{ color: C.MUTED }}>{q.subject}{q.chapter ? ` · ${q.chapter}` : ""}</span></td>
                       <td style={td}>{QT[q.qtype]}<br /><span style={{ color: C.MUTED }}>{q.difficulty}</span></td>
-                      <td style={{ ...td, maxWidth: 420, whiteSpace: "pre-line" }} dir="auto">{q.text}
-                        {q.qtype === "mcq" && <div style={{ fontSize: 13, color: C.MUTED }} dir="auto">{q.opts.map((o, i) => o && <span key={i} style={{ marginRight: 12, ...("ABCD"[i] === q.correct ? { color: C.GREEN, fontWeight: 700 } : {}) }}>{"ABCD"[i]}) {o}</span>)}</div>}
+                      <td style={{ ...td, maxWidth: 420, whiteSpace: "pre-line" }} dir="auto"><Rich text={q.text} />{q.has_image && <span title="has a picture"> 🖼</span>}{q.passage_id && <span style={{ color: C.MUTED }}> · passage #{q.passage_id}</span>}
+                        {q.qtype === "mcq" && <div style={{ fontSize: 13, color: C.MUTED }} dir="auto">{q.opts.map((o, i) => o && <span key={i} style={{ marginRight: 12, ...("ABCD"[i] === q.correct ? { color: C.GREEN, fontWeight: 700 } : {}) }}>{"ABCD"[i]}) <Rich text={o} /></span>)}</div>}
                         {q.qtype === "true_false" && <div style={{ fontSize: 13, color: C.MUTED }}>Answer: {q.correct}</div>}
                       </td>
                       <td style={{ ...td, textAlign: "right" }}>{fmt(q.marks)}</td>

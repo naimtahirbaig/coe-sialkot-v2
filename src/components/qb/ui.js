@@ -54,3 +54,26 @@ export async function api(path, { method = "GET", body, blob } = {}) {
 }
 
 export const fmt = (v) => { const n = Number(v); return Number.isFinite(n) ? String(+n.toFixed(2)) : String(v ?? ""); };
+
+// Reads a picture file and shrinks it so it stays small enough to store (about 100-200 KB).
+export function fileToDataUrl(file, maxSide = 700, mime = "image/jpeg") {
+  return new Promise((resolve, reject) => {
+    if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) return reject(new Error("Choose a PNG, JPEG or WebP picture."));
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+      const g = c.getContext("2d");
+      if (mime === "image/jpeg") { g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); }
+      g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      let q = 0.85, out = c.toDataURL(mime, q);
+      while (out.length > 380000 && q > 0.4) { q -= 0.1; out = c.toDataURL(mime, q); }
+      out.length > 395000 ? reject(new Error("That picture is too large. Try a smaller one.")) : resolve(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not read that picture.")); };
+    img.src = url;
+  });
+}
