@@ -1,9 +1,17 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { C, DIFF, CLASSES, card, inp, lbl, btn, small, grid, Msg, api, fmt, fileToDataUrl } from "./ui";
-import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject } from "@/lib/qbFormats";
+import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject, sortChapters } from "@/lib/qbFormats";
 
 const uid = () => Math.random().toString(36).slice(2);
+const big = (on, color = C.NAVY) => ({ padding: "12px 20px", minHeight: 50, fontSize: 16, fontWeight: 800, borderRadius: 12, border: `3px solid ${color}`, background: on ? color : "#fff", color: on ? "#fff" : color, cursor: "pointer", boxShadow: on ? "0 3px 0 rgba(0,0,0,.25)" : "0 2px 0 rgba(0,0,0,.08)", textAlign: "left", lineHeight: 1.25 });
+const Step = ({ n, title, hint }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "22px 0 10px" }}>
+    <span style={{ width: 34, height: 34, borderRadius: 17, background: C.GOLD, color: C.NAVY, display: "grid", placeItems: "center", fontWeight: 900, fontSize: 18 }}>{n}</span>
+    <div><div style={{ fontSize: 18, fontWeight: 800, color: C.NAVY }}>{title}</div>{hint && <div style={{ fontSize: 13, color: C.MUTED }}>{hint}</div>}</div>
+  </div>
+);
+const CT = [["mcq", "MCQs", C.BLUE], ["short", "Short Questions", C.GREEN], ["long", "Long Questions", "#7A2FBF"]];
 const mkBlocks = (tpl) => tpl.map((b) => ({ key: uid(), parts: b.parts.map((p) => ({ key: uid(), marks: String(p.marks), qtype: p.qtype, section: p.section || "" })) }));
 
 export default function GenerateTab({ meta, onGenerated }) {
@@ -11,11 +19,17 @@ export default function GenerateTab({ meta, onGenerated }) {
   const [partA, setPartA] = useState({ count: "10", marks: "1.5", passageSize: "0" });
   const [partB, setPartB] = useState(mkBlocks([{ parts: [{ marks: 5, qtype: "crq" }, { marks: 5, qtype: "crq" }] }]));
   const [totalTouched, setTotalTouched] = useState(false);
+  const [versions, setVersions] = useState(1);
+  const [contents, setContents] = useState({ mcq: true, short: true, long: true });
+  const [stats, setStats] = useState([]);
   const [avail, setAvail] = useState({});
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
-  const chapters = (meta?.chapters || {})[`${f.classNum}|${f.subject}`] || [];
+  const chapters = useMemo(() => sortChapters(stats.length ? stats.map((x) => x.chapter) : (meta?.chapters || {})[`${f.classNum}|${f.subject}`] || []), [stats, meta, f.classNum, f.subject]);
+  const statOf = (c) => stats.find((x) => x.chapter === c) || { mcq: 0, short: 0, long: 0 };
+  const chosen = f.chapters.length ? f.chapters : chapters;
+  const have = (k) => chosen.reduce((t, c) => t + (statOf(c)[k] || 0), 0);
   const subjectOptions = useMemo(() => { const seen = new Map(); [...SUBJECTS, ...(meta?.subjects || [])].forEach((x) => { const k = normSubject(x); if (k && !seen.has(k)) seen.set(k, x); }); return [...seen.values()]; }, [meta]);
   const sections = sectionsFor(f.subject);
 
@@ -29,11 +43,45 @@ export default function GenerateTab({ meta, onGenerated }) {
   // choosing class + subject loads that subject's standard paper layout, logo QR and language
   function pick(classNum, subject) {
     const fmtd = formatFor(classNum, subject);
+    setContents({ mcq: true, short: true, long: true });
     setF((p) => ({ ...p, classNum, subject, chapters: [], subjectTitle: subject ? fmtd.display : "", lang: fmtd.lang, qr: fmtd.qr }));
     if (classNum && subject) {
       setPartA({ count: String(fmtd.template.partA.count), marks: String(fmtd.template.partA.marks), passageSize: String(fmtd.template.partA.passageSize) });
       setPartB(mkBlocks(fmtd.template.partB));
       setTotalTouched(false);
+    }
+  }
+
+  useEffect(() => {
+    setStats([]);
+    if (!f.classNum || !f.subject) return;
+    let off = false;
+    api(`/api/qb/chapter-stats?classNum=${f.classNum}&subject=${encodeURIComponent(f.subject)}`).then((r) => { if (!off) setStats(r.chapters || []); }).catch(() => {});
+    return () => { off = true; };
+  }, [f.classNum, f.subject]);
+
+  // content buttons: switch MCQs / short / long questions on or off in the layout
+  function toggleContent(k) {
+    const next = { ...contents, [k]: !contents[k] };
+    if (!next.mcq && !next.short && !next.long) return;
+    setContents(next);
+    if (k === "mcq") {
+      const t = formatFor(f.classNum, f.subject).template.partA;
+      setPartA((a) => ({ ...a, count: next.mcq ? String(t.count) : "0", passageSize: next.mcq ? String(t.passageSize) : "0" }));
+      return;
+    }
+    setPartB((blocks) => blocks.map((b) => ({ ...b, parts: b.parts.flatMap((p) => {
+      if (p.qtype === "crq") return next.short && next.long ? [p] : next.short ? [{ ...p, qtype: "short" }] : next.long ? [{ ...p, qtype: "long" }] : [];
+      if (p.qtype === "short" || p.qtype === "long") return next[p.qtype] ? [p] : [];
+      return [p];
+    }) })).filter((b) => b.parts.length));
+  }
+  function allContents() {
+    setContents({ mcq: true, short: true, long: true });
+    if (f.classNum && f.subject) {
+      const t = formatFor(f.classNum, f.subject).template;
+      setPartA({ count: String(t.partA.count), marks: String(t.partA.marks), passageSize: String(t.partA.passageSize) });
+      setPartB(mkBlocks(t.partB)); setTotalTouched(false);
     }
   }
 
@@ -73,10 +121,10 @@ export default function GenerateTab({ meta, onGenerated }) {
     setBusy(true); setMsg(null);
     try {
       const body = {
-        ...f, totalMarks: String(target),
+        ...f, totalMarks: String(target), versions,
         partA, partB: partB.map((b) => ({ parts: b.parts.map((p) => ({ marks: p.marks, qtype: p.qtype, section: p.section })) })),
       };
-      onGenerated((await api("/api/qb/papers", { method: "POST", body })).id);
+      const r = await api("/api/qb/papers", { method: "POST", body }); onGenerated(r.ids || [r.id]);
     } catch (err) { setMsg({ type: "err", text: err.message }); window.scrollTo({ top: 0, behavior: "smooth" }); }
     setBusy(false);
   }
@@ -126,23 +174,58 @@ export default function GenerateTab({ meta, onGenerated }) {
         <div><label style={lbl}>Difficulty</label>
           <select style={inp} value={f.difficulty} onChange={(e) => set("difficulty", e.target.value)}><option value="">Any (mixed)</option>{DIFF.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}</select></div>
       </div>
-      {chapters.length > 0 && (
-        <fieldset style={{ border: `1px dashed ${C.LINE}`, borderRadius: 10, margin: "14px 0", padding: 12 }}>
-          <legend style={{ fontWeight: 700, fontSize: 13 }}>Limit to chapters <span style={{ fontWeight: 400, color: C.MUTED }}>(none ticked = every chapter)</span></legend>
-          {chapters.map((c) => (
-            <label key={c} style={{ fontWeight: 400, marginRight: 16, display: "inline-block" }}>
-              <input type="checkbox" checked={f.chapters.includes(c)} onChange={(e) => set("chapters", e.target.checked ? [...f.chapters, c] : f.chapters.filter((x) => x !== c))} /> {c}
-            </label>
-          ))}
-        </fieldset>
+      <Step n="1" title="Choose the chapters" hint="Tap one chapter or many. Nothing tapped = questions from every chapter." />
+      {!f.classNum || !f.subject ? <p style={{ color: C.MUTED }}>Choose a class and a subject above to see its chapters.</p> : (
+        <>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+            <button type="button" style={big(f.chapters.length === 0, C.GREEN)} onClick={() => set("chapters", [])}>✓ All chapters</button>
+            <button type="button" style={big(false, C.NAVY)} onClick={() => set("chapters", [...chapters])} disabled={!chapters.length}>Select every chapter</button>
+            <button type="button" style={big(false, C.RED)} onClick={() => set("chapters", [])}>Clear</button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(250px,1fr))", gap: 10 }}>
+            {chapters.map((c) => {
+              const on = f.chapters.includes(c), st = statOf(c);
+              return (
+                <button type="button" key={c} style={big(on, C.NAVY)} aria-pressed={on}
+                  onClick={() => set("chapters", on ? f.chapters.filter((x) => x !== c) : [...f.chapters, c])}>
+                  <div>{on ? "✓ " : ""}{c}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9, marginTop: 3 }}>MCQ {st.mcq} · Short {st.short} · Long {st.long}</div>
+                </button>
+              );
+            })}
+            {!chapters.length && <span style={{ color: C.MUTED }}>No chapters in the bank for this subject yet.</span>}
+          </div>
+        </>
       )}
 
+      <Step n="2" title="Choose the contents" hint="Switch on what the paper should contain, taken from the chapters above." />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button type="button" style={big(contents.mcq && contents.short && contents.long, "#B07A00")} onClick={allContents}>All contents</button>
+        {CT.map(([k, label, col]) => (
+          <button type="button" key={k} style={big(contents[k], col)} aria-pressed={contents[k]} onClick={() => toggleContent(k)}>
+            {contents[k] ? "✓ " : ""}{label}
+            <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.9 }}>{f.classNum && f.subject ? `${have(k)} in chosen chapters` : "—"}</div>
+          </button>
+        ))}
+      </div>
+
+      <Step n="3" title="How many versions of the paper?" hint="Each version gets different questions. No question appears in two versions." />
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button type="button" key={n} style={{ ...big(versions === n, C.NAVY), textAlign: "center", minWidth: 96 }} aria-pressed={versions === n} onClick={() => setVersions(n)}>
+            {n}<div style={{ fontSize: 12, fontWeight: 600 }}>{n === 1 ? "version" : "versions"}</div>
+          </button>
+        ))}
+      </div>
+      {versions > 1 && <p style={{ color: C.MUTED, fontSize: 13, margin: "8px 0 0" }}>Versions are named A–{"ABCDE"[versions - 1]}. You need at least {versions}× the questions of one paper in the chosen chapters.</p>}
+
+      <Step n="4" title="Set the paper layout" hint="Marks and number of questions in each part." />
       <h3>Part A — Objective (MCQs)</h3>
       <div style={{ ...grid(150), border: `1px solid ${C.LINE}`, borderRadius: 10, padding: 12, background: "#FBFCFD" }}>
         <div><label style={lbl}>Number of MCQs</label><input style={inp} type="number" min="0" max="60" value={partA.count} onChange={(e) => setPartA({ ...partA, count: e.target.value })} /></div>
         <div><label style={lbl}>Marks of each MCQ <span style={{ fontWeight: 400, color: C.MUTED }}>(allotted now)</span></label><input style={inp} type="number" step="0.5" min="0.5" value={partA.marks} onChange={(e) => setPartA({ ...partA, marks: e.target.value })} /></div>
         <div><label style={lbl}>Questions from a reading passage</label><input style={inp} type="number" min="0" value={partA.passageSize} onChange={(e) => setPartA({ ...partA, passageSize: e.target.value })} /></div>
-        <div style={{ fontSize: 13, paddingBottom: 10 }}><AV id="A" need={(parseInt(partA.count, 10) || 0) - (parseInt(partA.passageSize, 10) || 0)} passage />
+        <div style={{ fontSize: 13, paddingBottom: 10 }}><AV id="A" need={((parseInt(partA.count, 10) || 0) - (parseInt(partA.passageSize, 10) || 0)) * versions} passage />
           <div style={{ color: C.MUTED }}>Part A = {fmt(aTotal)} marks</div></div>
       </div>
 
@@ -168,7 +251,7 @@ export default function GenerateTab({ meta, onGenerated }) {
                   <select style={inp} value={p.section || ""} onChange={(e) => updPart(b.key, p.key, "section", e.target.value)}>
                     <option value="">Any section</option>{sections.map((x) => <option key={x} value={x}>{x}</option>)}</select></div>
               )}
-              <div style={{ paddingBottom: 10, fontSize: 13 }}><AV id={p.key} /></div>
+              <div style={{ paddingBottom: 10, fontSize: 13 }}><AV id={p.key} need={versions} /></div>
               <div style={{ paddingBottom: 6 }}>{b.parts.length > 1 && <button type="button" style={small} onClick={() => rmPart(b.key, p.key)}>Remove</button>}</div>
             </div>
           ))}
@@ -184,7 +267,7 @@ export default function GenerateTab({ meta, onGenerated }) {
       <div style={{ padding: "10px 14px", borderRadius: 10, margin: "10px 0 14px", border: `1.5px solid ${matches ? C.GREEN : C.RED}`, background: matches ? "#E8F6EE" : "#FBEAEA" }}>
         Part A <b>{fmt(aTotal)}</b> + Part B <b>{fmt(bTotal)}</b> = <b>{fmt(sum)}</b> marks · total <b>{target > 0 ? fmt(target) : "–"}</b>
       </div>
-      <button style={btn(!busy)} disabled={busy}>{busy ? "Generating…" : "Generate paper"}</button>
+      <button style={{ ...big(!busy, C.GREEN), textAlign: "center", width: "100%", fontSize: 18 }} disabled={busy}>{busy ? "Generating…" : versions > 1 ? `Generate ${versions} versions` : "Generate paper"}</button>
     </form>
   );
 }

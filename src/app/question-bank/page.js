@@ -103,7 +103,7 @@ export default function QuestionBankPage() {
         {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} onEdit={(q) => { setSheetScope({ classNum: q.class_num, subject: q.subject, focusId: q.id }); setTab("add"); }} />}
         {tab === "add" && <AddSheet key={sheetScope ? `${sheetScope.classNum}|${sheetScope.subject}|${sheetScope.focusId}` : "free"} meta={meta} user={user} scope={sheetScope} refreshMeta={refreshMeta} />}
         {tab === "import" && <ImportTab onImported={refreshMeta} />}
-        {admin && tab === "generate" && <GenerateTab meta={meta} onGenerated={(id) => { setOpenPaper(id); setTab("papers"); }} />}
+        {admin && tab === "generate" && <GenerateTab meta={meta} onGenerated={(ids) => { setOpenPaper(ids.length === 1 ? ids[0] : null); setTab("papers"); }} />}
         {admin && tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} />}
         {admin && tab === "teachers" && <TeachersTab />}
         {!admin && tab === "password" && <PasswordTab />}

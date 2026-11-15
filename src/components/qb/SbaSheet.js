@@ -98,7 +98,7 @@ export default function SbaSheet({ doc, keyOn = false, onSwap = null }) {
           <img className="logo" src={h.logo} alt="PECTAA" />
           <div>
             <div className="t1">{h.title}</div>
-            <div className="t2">{h.gradeLabel}</div>
+            <div className="t2">{h.gradeLabel}{h.version ? ` · ${h.version.toUpperCase()}` : ""}</div>
             <div className="t3">SUBJECT: {h.subjectTitle}</div>
           </div>
           {h.qr ? <img className="qr" src={h.qr} alt="QR code" /> : <div className="qrgap" />}

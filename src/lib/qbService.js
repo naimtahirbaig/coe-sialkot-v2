@@ -259,85 +259,110 @@ export async function availability(sb, a) {
   };
 }
 
+const VERSION_LETTERS = ["A", "B", "C", "D", "E"];
+
+// Chapters of a class + subject with how many MCQ / short / long questions each one holds.
+export async function chapterStats(sb, a) {
+  const classNum = Number(a.get("classNum")), subject = a.get("subject") || "";
+  if (!classNum || !subject) return { chapters: [] };
+  const rows = await fetchAll((o) => sb.from("qb_questions").select("id, chapter, qtype", o).eq("class_num", classNum).eq("subject", subject).order("id"));
+  const by = {};
+  rows.forEach((r) => {
+    const c = r.chapter || "";
+    const x = (by[c] ||= { chapter: c, mcq: 0, short: 0, long: 0, other: 0 });
+    if (r.qtype === "mcq") x.mcq++; else if (r.qtype === "short") x.short++; else if (r.qtype === "long") x.long++; else x.other++;
+  });
+  return { chapters: Object.values(by).filter((x) => x.chapter) };
+}
+
+// Makes 1-5 versions of a paper. A question used in one version is never used in another.
 export async function generatePaper(sb, user, body) {
   const { errors, form, partA, partB } = parsePaperSpec(body);
   const fail = (list) => { throw new QbError(400, list.join(" ")); };
   if (errors.length) fail(errors);
+  const versions = Math.min(5, Math.max(1, parseInt(body.versions, 10) || 1));
 
   const used = await usedBefore(sb, form.classNum, form.subject);
-  const taken = new Set();
+  const taken = new Set(); // every question chosen so far, across all versions
   const problems = [];
   const base = { classNum: form.classNum, subject: form.subject, chapters: form.chapters, difficulty: form.difficulty };
-
-  // ---- Part A: MCQs (optionally a reading passage with its own group of MCQs)
-  let plainIds = [], passageId = null, passageIds = [];
-  if (partA.count > 0) {
-    const rows = await candidateRows(sb, { ...base, qtypes: ["mcq"] });
-    const P = partA.passageSize;
-    if (P > 0) {
-      const groups = {};
-      rows.filter((r) => r.passage_id).forEach((r) => { (groups[r.passage_id] ||= []).push(r.id); });
-      const ok = Object.entries(groups).filter(([, ids]) => ids.length >= P);
-      if (!ok.length) problems.push(`Part A: no reading passage has ${P} MCQs. Add more MCQs to a passage, or set passage questions to 0.`);
-      else {
-        const fresh = ok.filter(([, ids]) => ids.filter((i) => !used.has(i)).length >= P);
-        const pool = fresh.length ? fresh : ok;
-        const [pid, ids] = pool[Math.floor(Math.random() * pool.length)];
-        passageId = Number(pid);
-        passageIds = chooseIds(ids, used, taken, P).ids;
-        passageIds.forEach((i) => taken.add(i));
-      }
-    }
-    const need = partA.count - P;
-    const plain = chooseIds(rows.filter((r) => !r.passage_id).map((r) => r.id), used, taken, need);
-    if (plain.ids.length < need) problems.push(`Part A: need ${need} MCQs, but only ${plain.ids.length} available. Ask teachers to add more, or relax the filters.`);
-    plainIds = plain.ids;
-    plainIds.forEach((i) => taken.add(i));
-  }
-
-  // ---- Part B: constructed-response questions, one bank question per part
   const startNo = partA.count + 1;
-  const bPicks = [];
-  for (let i = 0; i < partB.length; i++) {
-    const picks = [];
-    for (let j = 0; j < partB[i].parts.length; j++) {
-      const part = partB[i].parts[j];
-      const rows = await candidateRows(sb, { ...base, qtypes: PART_QTYPES[part.qtype], section: part.section });
-      const { ids } = chooseIds(rows.map((r) => r.id), used, taken, 1);
-      if (!ids.length) problems.push(`Question ${startNo + i}, part ${j + 1}: no ${PART_TYPES[part.qtype]} question${part.section ? ` in the section “${part.section}”` : ""} is available. Ask teachers to add one, or change the type${part.section ? " or section" : ""}.`);
-      ids.forEach((x) => taken.add(x));
-      picks.push(ids[0] || null);
+  const rowsMcq = partA.count > 0 ? await candidateRows(sb, { ...base, qtypes: ["mcq"] }) : [];
+  const rowsB = {};
+  const poolB = async (part) => { const k = part.qtype + "|" + part.section; return (rowsB[k] ||= (await candidateRows(sb, { ...base, qtypes: PART_QTYPES[part.qtype], section: part.section })).map((r) => r.id)); };
+  const plan = [];
+
+  for (let v = 0; v < versions; v++) {
+    const tag = versions > 1 ? `Version ${VERSION_LETTERS[v]}: ` : "";
+    let plainIds = [], passageId = null, passageIds = [];
+    if (partA.count > 0) {
+      const P = partA.passageSize;
+      if (P > 0) {
+        const groups = {};
+        rowsMcq.filter((r) => r.passage_id).forEach((r) => { (groups[r.passage_id] ||= []).push(r.id); });
+        const ok = Object.entries(groups).filter(([, ids]) => ids.filter((i) => !taken.has(i)).length >= P);
+        if (!ok.length) problems.push(`${tag}Part A: no unused reading passage has ${P} MCQs. Add more MCQs to a passage, set passage questions to 0, or make fewer versions.`);
+        else {
+          const fresh = ok.filter(([, ids]) => ids.filter((i) => !used.has(i) && !taken.has(i)).length >= P);
+          const pool = fresh.length ? fresh : ok;
+          const [pid, ids] = pool[Math.floor(Math.random() * pool.length)];
+          passageId = Number(pid);
+          passageIds = chooseIds(ids, used, taken, P).ids;
+          passageIds.forEach((i) => taken.add(i));
+        }
+      }
+      const need = partA.count - P;
+      const plain = chooseIds(rowsMcq.filter((r) => !r.passage_id).map((r) => r.id), used, taken, need);
+      if (plain.ids.length < need) problems.push(`${tag}Part A: need ${need} MCQs, but only ${plain.ids.length} are left${versions > 1 ? " after the earlier versions" : ""}. Choose more chapters, ask teachers to add more, or make fewer versions.`);
+      plainIds = plain.ids;
+      plainIds.forEach((i) => taken.add(i));
     }
-    bPicks.push(picks);
+    const bPicks = [];
+    for (let i = 0; i < partB.length; i++) {
+      const picks = [];
+      for (let j = 0; j < partB[i].parts.length; j++) {
+        const part = partB[i].parts[j];
+        const { ids } = chooseIds(await poolB(part), used, taken, 1);
+        if (!ids.length) problems.push(`${tag}Question ${startNo + i}, part ${j + 1}: no ${PART_TYPES[part.qtype]} question${part.section ? ` in the section “${part.section}”` : ""} is left${versions > 1 ? " for this version" : ""}. Choose more chapters, ask teachers to add one, or make fewer versions.`);
+        ids.forEach((x) => taken.add(x));
+        picks.push(ids[0] || null);
+      }
+      bPicks.push(picks);
+    }
+    plan.push({ plainIds, passageId, passageIds, bPicks });
   }
   if (problems.length) fail(problems);
 
   // ---- fetch the chosen rows and take a snapshot of each
-  const all = [...taken];
   const rowById = {};
-  for (const part of chunk(all, 100)) must(await sb.from("qb_questions").select("*").in("id", part)).forEach((r) => { rowById[r.id] = r; });
-  let passage = null;
-  if (passageId) {
-    const p = must(await sb.from("qb_passages").select("*").eq("id", passageId).single());
-    passage = { instruction: p.instruction, text: p.text, image: p.image || "", questions: passageIds.map((id) => snapshot(rowById[id], partA.marks)) };
+  for (const part of chunk([...taken], 100)) must(await sb.from("qb_questions").select("*").in("id", part)).forEach((r) => { rowById[r.id] = r; });
+  const ids = [];
+  for (let v = 0; v < versions; v++) {
+    const { plainIds, passageId, passageIds, bPicks } = plan[v];
+    let passage = null;
+    if (passageId) {
+      const p = must(await sb.from("qb_passages").select("*").eq("id", passageId).single());
+      passage = { instruction: p.instruction, text: p.text, image: p.image || "", questions: passageIds.map((id) => snapshot(rowById[id], partA.marks)) };
+    }
+    const letter = versions > 1 ? `Version ${VERSION_LETTERS[v]}` : "";
+    const doc = {
+      header: {
+        title: form.title, gradeLabel: `GRADE-${form.classNum}`, subjectTitle: form.subjectTitle,
+        school: form.school || SCHOOL_LINE, lang: form.lang, qr: form.qr, logo: LOGO, version: letter,
+      },
+      partA: { count: partA.count, marksEach: Number(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id], partA.marks)), passage },
+      partB: partB.map((blk, i) => ({
+        no: startNo + i,
+        parts: blk.parts.map((p, j) => ({ marks: p.marks, spec: p.qtype, section: p.section || "", q: snapshot(rowById[bPicks[i][j]], p.marks) })),
+      })),
+    };
+    const created = must(await sb.from("qb_papers").insert({
+      title: letter ? `${form.title} — ${letter}` : form.title, class_num: form.classNum, subject: form.subject, total_marks: form.totalMarks,
+      filters: { chapters: form.chapters, difficulty: form.difficulty, version: letter }, body: doc, qids: bodyQids(doc),
+    }).select("id").single());
+    ids.push(created.id);
   }
-  const total = (n) => Number(n);
-  const doc = {
-    header: {
-      title: form.title, gradeLabel: `GRADE-${form.classNum}`, subjectTitle: form.subjectTitle,
-      school: form.school || SCHOOL_LINE, lang: form.lang, qr: form.qr, logo: LOGO,
-    },
-    partA: { count: partA.count, marksEach: total(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id], partA.marks)), passage },
-    partB: partB.map((blk, i) => ({
-      no: startNo + i,
-      parts: blk.parts.map((p, j) => ({ marks: p.marks, spec: p.qtype, section: p.section || "", q: snapshot(rowById[bPicks[i][j]], p.marks) })),
-    })),
-  };
-  const created = must(await sb.from("qb_papers").insert({
-    title: form.title, class_num: form.classNum, subject: form.subject, total_marks: form.totalMarks,
-    filters: { chapters: form.chapters, difficulty: form.difficulty }, body: doc, qids: bodyQids(doc),
-  }).select("id").single());
-  return { id: created.id };
+  return { id: ids[0], ids };
 }
 
 const paperOut = (p) => ({
