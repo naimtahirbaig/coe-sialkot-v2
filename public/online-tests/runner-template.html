@@ -101,6 +101,8 @@ input[type=text]:focus{outline:3px solid var(--gold);outline-offset:0;border-col
 .qwrap{padding:30px 26px 36px;display:flex;gap:28px}
 @media (max-width:620px){.qwrap{flex-direction:column-reverse;gap:16px;padding:20px 18px 26px}}
 .qmain{flex:1;min-width:0}
+.qpass{background:#F6F4FB;border-left:4px solid var(--gold);border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:14.5px;line-height:1.55;color:var(--navy);white-space:pre-line;max-height:230px;overflow:auto}
+.qpass.ur{font-size:17px;text-align:right}
 .qtext{font-family:Georgia,serif;font-size:20.5px;line-height:1.45;margin:0 0 22px;color:var(--navy)}
 .opts{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .opt{display:flex;gap:13px;align-items:flex-start;width:100%;text-align:left;
@@ -242,6 +244,7 @@ details.review summary{cursor:pointer;font-family:Georgia,serif;font-size:17px;p
     <div class="progress"><i id="bar"></i></div>
     <div class="qwrap">
       <div class="qmain">
+        <div class="qpass" id="qPass" hidden></div>
         <p class="qtext" id="qText"></p>
         <ul class="opts" id="opts"></ul>
       </div>
@@ -333,7 +336,7 @@ $("stamp").textContent="Opened "+stampText(new Date());
 /* ============ build this attempt's paper ============ */
 var paper=shuffle(BANK.slice()).slice(0,TOTAL).map(function(item){
   var opts=item[1].map(function(t,i){return {text:t,correct:i===item[2]};});
-  return {q:item[0],opts:shuffle(opts)};
+  return {q:item[0],p:item[3]||"",opts:shuffle(opts)};
 });
 
 /* ============ camera ============ */
@@ -477,6 +480,7 @@ function show(i){
   $("qNow").textContent=i+1;
   $("bar").style.width=(i/TOTAL*100)+"%";
   $("qText").textContent=q.q;$("qText").classList.toggle("ur",isUr(q.q));
+  var qp=$("qPass");qp.textContent=q.p||"";qp.hidden=!q.p;qp.classList.toggle("ur",isUr(q.p||""));qp.scrollTop=0;
   var ul=$("opts");ul.innerHTML="";
   var keys=["A","B","C","D","E"];
   q.opts.forEach(function(o,n){
@@ -639,7 +643,7 @@ function storeTok(id,t){try{localStorage.setItem(tokKey(id),t);}catch(e){}}
 function clearTok(id){try{localStorage.removeItem(tokKey(id));}catch(e){}}
 function applyResume(r){
   paper=r.paper.map(function(p,i){
-    var o={q:p.q,opts:p.o.map(function(x){return {text:x[0],correct:!!x[1]};})};
+    var o={q:p.q,p:p.p||"",opts:p.o.map(function(x){return {text:x[0],correct:!!x[1]};})};
     if(r.picks&&r.picks[i]>=0)o.picked=r.picks[i];
     return o;
   });
@@ -656,7 +660,7 @@ function saveProgress(){
   var sentPhotos=photos.length,withPaper=!paperSaved;
   var body={test:TEST_SLUG,studentId:studentId,token:attemptToken,idx:idx,tabSwitches:tabSwitches,camDropped:!!camDropped,faceEvents:faceEvents,noFaceSecs:Math.round(noFaceSecs),multiFace:multiFace,
     shotAt:shotAt,picks:paper.map(function(q){return q.picked===undefined?-1:q.picked;})};
-  if(withPaper)body.paper=paper.map(function(q){return {q:q.q,o:q.opts.map(function(o){return [o.text,o.correct?1:0];})};});
+  if(withPaper)body.paper=paper.map(function(q){return {q:q.q,p:q.p||"",o:q.opts.map(function(o){return [o.text,o.correct?1:0];})};});
   if(sentPhotos!==photosSent)body.photos=photos;
   fetch("/api/online-test/progress",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
   .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})

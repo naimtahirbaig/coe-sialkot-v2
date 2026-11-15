@@ -18,7 +18,13 @@ function when(v) {
 export async function GET(req) {
   const q = new URL(req.url).searchParams;
   const c = (q.get("c") || "").slice(0, 3), s = (q.get("s") || "").slice(0, 40);
-  const ch = (q.get("ch") || "").slice(0, 80), m = (q.get("m") || "").slice(0, 30);
+  let ch = (q.get("ch") || "").slice(0, 80);
+  const m = (q.get("m") || "").slice(0, 30);
+  // the picture font has no Urdu letters: an Urdu chapter title is shown as "Lesson 5" / "Chapter 5"
+  if (/[\u0600-\u06FF]/.test(ch)) {
+    const d = (ch.match(/\d+/) || [""])[0];
+    ch = d ? `${/^(urdu|islamiat)/i.test(s) ? "Lesson" : "Chapter"} ${d}` : "";
+  }
   const r = Math.min(9, Math.max(1, Number(q.get("r")) || 1)), rt = ({ 1: "1ST", 2: "2ND", 3: "3RD" }[r] || `${r}TH`) + " TEST";
   const n = (q.get("n") || "").slice(0, 3), p = (q.get("p") || "").slice(0, 3);
   const from = when(q.get("from")), to = when(q.get("to")), dated = !!(from || to);

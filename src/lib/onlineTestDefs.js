@@ -34,7 +34,10 @@ export function cleanBank(questions) {
       const rawOpts = x.opts.map((o) => String(o ?? "").trim());
       const correctText = rawOpts[c];
       if (!correctText) errors.push(`Question ${n}: the correct answer points to an empty option.`);
-      else bank.push([q, opts, opts.indexOf(correctText)]);
+      else {
+        const p = String(x?.p ?? "").trim().slice(0, 2500);
+        bank.push(p ? [q, opts, opts.indexOf(correctText), p] : [q, opts, opts.indexOf(correctText)]);
+      }
     }
   });
   if (questions.length > MAX_BANK) errors.push(`Too many questions (${MAX_BANK} max).`);
