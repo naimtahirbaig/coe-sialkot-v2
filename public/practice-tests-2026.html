@@ -48,7 +48,9 @@ a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999p
 .tools input[type=search]{flex:1;min-width:180px;padding:10px 12px;border:1.5px solid #cfcce3;border-radius:10px;font-size:15px}
 .lv{font-size:14px;color:var(--navy);white-space:nowrap}
 .empty{text-align:center;color:#5b5a70;padding:30px 0}
-.naim-logo{display:block;width:84px;height:84px;margin:0 auto 10px;border-radius:50%;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.hdr-logos{display:flex;justify-content:center;gap:14px;margin:0 auto 12px;flex-wrap:wrap}
+.hdr-logos img{width:80px;height:80px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+@media (max-width:480px){.hdr-logos{gap:10px}.hdr-logos img{width:60px;height:60px}}
 .wm{position:fixed;inset:0;z-index:20;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .wm img{width:min(75vw,560px);height:auto;opacity:.06}
 .wm-practice{position:fixed;inset:0;z-index:21;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -90,7 +92,7 @@ html.locked .gate{background:#150F3F}
 </style>
 </head>
 <body>
-<header><img class="naim-logo" src="/logo-naim.webp" alt="Dr Naim Tahir Baig — Centre of Excellence Sialkot (Boys)"><small>COE Sialkot (Boys)</small><h1>Practice Tests 2026</h1><p style="margin:10px 0 0;font-size:14px;color:#d8d5ee">Same questions and timer as the real tests · no camera · results are not saved · practise as often as you like</p><p style="margin:8px 0 0;font-size:14px"><a href="/online-tests-2026.html" style="color:#F3B129;font-weight:700">Go to the real Online Tests →</a></p></header>
+<header><div class="hdr-logos"><img src="/ld-naim.webp" alt="Dr Naim Tahir Baig — COE Sialkot (Boys)"><img src="/ld-punjab.webp" alt="Government of the Punjab"><img src="/ld-pectaa.webp" alt="PECTAA"><img src="/ld-daanish.webp" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority"></div><small>COE Sialkot (Boys)</small><h1>Practice Tests 2026</h1><p style="margin:10px 0 0;font-size:14px;color:#d8d5ee">Same questions and timer as the real tests · no camera · results are not saved · practise as often as you like</p><p style="margin:8px 0 0;font-size:14px"><a href="/online-tests-2026.html" style="color:#F3B129;font-weight:700">Go to the real Online Tests →</a></p></header>
 <main><div class="loader" role="status" aria-live="polite">
   <div class="orbit" aria-hidden="true">
     <img src="/ld-naim.webp" alt=""><img src="/ld-punjab.webp" alt=""><img src="/ld-pectaa.webp" alt=""><img src="/ld-daanish.webp" alt="">
