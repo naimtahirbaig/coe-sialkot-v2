@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { C, DIFF, CLASSES, card, inp, lbl, btn, small, grid, Msg, api, fmt, fileToDataUrl } from "./ui";
+import { C, DIFF, CLASSES, card, inp, lbl, btn, small, grid, Msg, api, fmt } from "./ui";
 import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject, sortChapters } from "@/lib/qbFormats";
 
 const uid = () => Math.random().toString(36).slice(2);
@@ -14,8 +14,14 @@ const Step = ({ n, title, hint }) => (
 const CT = [["mcq", "MCQs", C.BLUE], ["short", "Short Questions", C.GREEN], ["long", "Long Questions", "#7A2FBF"]];
 const mkBlocks = (tpl) => tpl.map((b) => ({ key: uid(), parts: b.parts.map((p) => ({ key: uid(), marks: String(p.marks), qtype: p.qtype, section: p.section || "" })) }));
 
-export default function GenerateTab({ meta, onGenerated }) {
-  const [f, setF] = useState({ classNum: "", subject: "", title: SBA_TITLE, school: SCHOOL_LINE, subjectTitle: "", lang: "en", qr: "", difficulty: "", chapters: [], totalMarks: "" });
+const TEST_TITLE = "CLASS TEST";
+const testLayout = () => ({ partA: { count: "10", marks: "1", passageSize: "0" }, partB: [{ parts: [{ marks: 5, qtype: "crq" }, { marks: 5, qtype: "crq" }] }] });
+
+export default function GenerateTab({ meta, user, onGenerated }) {
+  const admin = user?.role === "admin";
+  const [kind, setKind] = useState(admin ? "sba" : "test"); // teachers only make class tests (no PECTAA logo)
+  const isTest = kind === "test";
+  const [f, setF] = useState({ classNum: "", subject: "", title: admin ? SBA_TITLE : TEST_TITLE, school: SCHOOL_LINE, subjectTitle: "", lang: "en", qr: "", difficulty: "", chapters: [], totalMarks: "" });
   const [partA, setPartA] = useState({ count: "10", marks: "1.5", passageSize: "0" });
   const [partB, setPartB] = useState(mkBlocks([{ parts: [{ marks: 5, qtype: "crq" }, { marks: 5, qtype: "crq" }] }]));
   const [totalTouched, setTotalTouched] = useState(false);
@@ -44,12 +50,21 @@ export default function GenerateTab({ meta, onGenerated }) {
   function pick(classNum, subject) {
     const fmtd = formatFor(classNum, subject);
     setContents({ mcq: true, short: true, long: true });
-    setF((p) => ({ ...p, classNum, subject, chapters: [], subjectTitle: subject ? fmtd.display : "", lang: fmtd.lang, qr: fmtd.qr }));
-    if (classNum && subject) {
-      setPartA({ count: String(fmtd.template.partA.count), marks: String(fmtd.template.partA.marks), passageSize: String(fmtd.template.partA.passageSize) });
-      setPartB(mkBlocks(fmtd.template.partB));
-      setTotalTouched(false);
-    }
+    setF((p) => ({ ...p, classNum, subject, chapters: [], subjectTitle: subject ? fmtd.display : "", lang: fmtd.lang, qr: isTest ? "" : fmtd.qr }));
+    if (classNum && subject) { applyLayout(classNum, subject, isTest); }
+  }
+  function applyLayout(classNum, subject, test) {
+    const t = test ? testLayout() : formatFor(classNum, subject).template;
+    setPartA({ count: String(t.partA.count), marks: String(t.partA.marks), passageSize: String(t.partA.passageSize) });
+    setPartB(mkBlocks(t.partB));
+    setTotalTouched(false);
+  }
+  function chooseKind(k) {
+    setKind(k);
+    const test = k === "test";
+    setF((p) => ({ ...p, title: test ? TEST_TITLE : SBA_TITLE, qr: test || !p.classNum || !p.subject ? "" : formatFor(p.classNum, p.subject).qr }));
+    setContents({ mcq: true, short: true, long: true });
+    if (f.classNum && f.subject) applyLayout(f.classNum, f.subject, test);
   }
 
   useEffect(() => {
@@ -66,7 +81,7 @@ export default function GenerateTab({ meta, onGenerated }) {
     if (!next.mcq && !next.short && !next.long) return;
     setContents(next);
     if (k === "mcq") {
-      const t = formatFor(f.classNum, f.subject).template.partA;
+      const t = (isTest ? testLayout() : formatFor(f.classNum, f.subject).template).partA;
       setPartA((a) => ({ ...a, count: next.mcq ? String(t.count) : "0", passageSize: next.mcq ? String(t.passageSize) : "0" }));
       return;
     }
@@ -79,9 +94,7 @@ export default function GenerateTab({ meta, onGenerated }) {
   function allContents() {
     setContents({ mcq: true, short: true, long: true });
     if (f.classNum && f.subject) {
-      const t = formatFor(f.classNum, f.subject).template;
-      setPartA({ count: String(t.partA.count), marks: String(t.partA.marks), passageSize: String(t.partA.passageSize) });
-      setPartB(mkBlocks(t.partB)); setTotalTouched(false);
+      applyLayout(f.classNum, f.subject, isTest);
     }
   }
 
@@ -110,18 +123,12 @@ export default function GenerateTab({ meta, onGenerated }) {
   const addPart = (bk) => setPartB((a) => a.map((b) => (b.key !== bk || b.parts.length >= 8 ? b : { ...b, parts: [...b.parts, { key: uid(), marks: "5", qtype: "crq", section: "" }] })));
   const rmPart = (bk, pk) => setPartB((a) => a.map((b) => (b.key !== bk || b.parts.length < 2 ? b : { ...b, parts: b.parts.filter((p) => p.key !== pk) })));
 
-  async function uploadQr(e) {
-    const file = e.target.files?.[0]; e.target.value = "";
-    if (!file) return;
-    try { set("qr", await fileToDataUrl(file, 400, "image/png")); } catch (err) { setMsg({ type: "err", text: err.message }); }
-  }
-
   async function submit(e) {
     e.preventDefault();
     setBusy(true); setMsg(null);
     try {
       const body = {
-        ...f, totalMarks: String(target), versions,
+        ...f, totalMarks: String(target), versions, kind,
         partA, partB: partB.map((b) => ({ parts: b.parts.map((p) => ({ marks: p.marks, qtype: p.qtype, section: p.section })) })),
       };
       const r = await api("/api/qb/papers", { method: "POST", body }); onGenerated(r.ids || [r.id]);
@@ -139,7 +146,14 @@ export default function GenerateTab({ meta, onGenerated }) {
 
   return (
     <form onSubmit={submit} style={card}>
-      <h2 style={{ marginTop: 0 }}>Generate a question paper</h2>
+      <h2 style={{ marginTop: 0 }}>{isTest ? "Make a class test" : "Generate a question paper"}</h2>
+      {admin && (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+          <button type="button" style={big(!isTest, C.NAVY)} onClick={() => chooseKind("sba")}>PECTAA SBA paper<div style={{ fontSize: 12, fontWeight: 600 }}>with PECTAA logo and QR</div></button>
+          <button type="button" style={big(isTest, "#B07A00")} onClick={() => chooseKind("test")}>Class test<div style={{ fontSize: 12, fontWeight: 600 }}>no PECTAA logo</div></button>
+        </div>
+      )}
+      {isTest && !admin && <p style={{ color: C.MUTED, marginTop: 0 }}>Pick the class, subject and chapters, then the questions are chosen for you. The test has the school name but no PECTAA logo.</p>}
       <Msg m={msg} />
       <div style={grid()}>
         <div><label style={lbl}>Class</label>
@@ -153,22 +167,20 @@ export default function GenerateTab({ meta, onGenerated }) {
           <select style={inp} value={f.lang} onChange={(e) => set("lang", e.target.value)}><option value="en">English (left to right)</option><option value="ur">اردو (right to left)</option></select></div>
       </div>
       <div style={{ ...grid(300), marginTop: 12 }}>
-        <div><label style={lbl}>Assessment title</label><input style={inp} value={f.title} onChange={(e) => set("title", e.target.value)} required /></div>
+        <div><label style={lbl}>{isTest ? "Test title" : "Assessment title"}</label><input style={inp} value={f.title} onChange={(e) => set("title", e.target.value)} required /></div>
         <div><label style={lbl}>School name line</label><input style={inp} value={f.school} onChange={(e) => set("school", e.target.value)} /></div>
       </div>
 
-      <div style={{ display: "flex", gap: 14, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
-        <div style={{ width: 90, height: 90, border: `1px dashed ${C.LINE}`, display: "grid", placeItems: "center", background: "#fff" }}>
-          {f.qr ? <img src={f.qr} alt="QR" style={{ width: 84, height: 84, imageRendering: "pixelated" }} /> : <span style={{ color: C.MUTED, fontSize: 12 }}>no QR</span>}
-        </div>
-        <div style={{ fontSize: 13, color: C.MUTED, maxWidth: 520 }}>
-          {f.qr && f.qr.startsWith("/qb/") ? "Official PECTAA QR code for this subject (from the Grade 8 sample papers)." : f.qr ? "Uploaded QR code." : f.classNum && f.subject ? "No QR code is stored for this class and subject." : "The QR code appears when you choose class and subject."}
-          <div style={{ marginTop: 6 }}>
-            <label style={{ ...small, display: "inline-block" }}>Upload a QR picture<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadQr} style={{ display: "none" }} /></label>{" "}
-            {f.qr && <button type="button" style={small} onClick={() => set("qr", "")}>Remove QR</button>}
+      {!isTest && (
+        <div style={{ display: "flex", gap: 14, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
+          <div style={{ width: 90, height: 90, border: `1px dashed ${C.LINE}`, display: "grid", placeItems: "center", background: "#fff" }}>
+            {f.qr ? <img src={f.qr} alt="QR" style={{ width: 84, height: 84, imageRendering: "pixelated" }} /> : <span style={{ color: C.MUTED, fontSize: 12 }}>no QR</span>}
+          </div>
+          <div style={{ fontSize: 13, color: C.MUTED, maxWidth: 520 }}>
+            {f.qr ? "Official PECTAA QR code for this subject (from the Grade 8 sample papers)." : f.classNum && f.subject ? "No QR code is stored for this class and subject." : "The QR code appears when you choose class and subject."}
           </div>
         </div>
-      </div>
+      )}
 
       <div style={grid()}>
         <div><label style={lbl}>Difficulty</label>

@@ -3,5 +3,5 @@ import { getPaper, deletePaper } from "@/lib/qbService";
 
 export const dynamic = "force-dynamic";
 
-export const GET = route("admin", ({ sb, params }) => getPaper(sb, idOf(params)));
-export const DELETE = route("admin", ({ sb, params }) => deletePaper(sb, idOf(params)));
+export const GET = route("any", ({ sb, user, params }) => getPaper(sb, user, idOf(params)));
+export const DELETE = route("any", ({ sb, user, params }) => deletePaper(sb, user, idOf(params)));

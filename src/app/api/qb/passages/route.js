@@ -5,4 +5,4 @@ export const dynamic = "force-dynamic";
 
 // Reading passages ("Paragraph Instruction") that a group of MCQs can share.
 export const GET = route("any", ({ sb, query }) => listPassages(sb, query));
-export const POST = route("any", ({ sb, user, body }) => createPassage(sb, user, body));
+export const POST = route("admin", ({ sb, user, body }) => createPassage(sb, user, body));

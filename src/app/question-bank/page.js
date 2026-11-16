@@ -1,13 +1,12 @@
 "use client";
 // Question Bank & Paper Generator.
-//   Teachers: log in, add questions on one scrolling sheet (autosaved) or by CSV, see the bank.
-//   Admin (username "admin" + the site admin password): everything above, plus teacher accounts,
-//   paper generation (class, subject, marks, sections), swap, print/PDF and Word download.
+//   Questions are loaded by the admin only (outside this page).
+//   Teachers: log in, browse the bank, make class tests (no PECTAA logo), print them.
+//   Admin (username "admin" + the site admin password): the same, plus SBA papers with the PECTAA logo,
+//   teacher accounts and every paper.
 import { useState, useEffect, useCallback } from "react";
 import { C, QT, card, inp, lbl, btn, grid, th, td, Msg, api } from "@/components/qb/ui";
-import AddSheet from "@/components/qb/AddSheet";
 import QuestionsTab from "@/components/qb/QuestionsTab";
-import ImportTab from "@/components/qb/ImportTab";
 import GenerateTab from "@/components/qb/GenerateTab";
 import PapersTab from "@/components/qb/PapersTab";
 import PasswordTab from "@/components/qb/PasswordTab";
@@ -18,8 +17,7 @@ export default function QuestionBankPage() {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState("overview");
   const [meta, setMeta] = useState(null);
-  const [sheetScope, setSheetScope] = useState(null); // set when "Edit" is pressed in the question list
-  const [openPaper, setOpenPaper] = useState(null);
+    const [openPaper, setOpenPaper] = useState(null);
   const [login, setLogin] = useState({ username: "", password: "" });
   const [msg, setMsg] = useState(null);
 
@@ -64,7 +62,7 @@ export default function QuestionBankPage() {
         <style dangerouslySetInnerHTML={{ __html: HEADINGS }} />
         <form onSubmit={doLogin} style={{ ...card, maxWidth: 400, margin: "70px auto", borderTop: `5px solid ${C.GOLD}`, padding: 26 }}>
           <h1 style={{ marginTop: 0, color: C.NAVY, fontSize: 24 }}>Question Bank</h1>
-          <p style={{ color: C.MUTED }}>Teachers log in to add questions. The admin logs in with username <b>admin</b> to generate papers.</p>
+          <p style={{ color: C.MUTED }}>Teachers log in to make class tests from the question bank. The admin logs in with username <b>admin</b>.</p>
           <Msg m={msg} />
           <label style={lbl}>Username</label>
           <input style={{ ...inp, marginBottom: 12 }} value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} autoCapitalize="none" autoFocus required />
@@ -77,11 +75,10 @@ export default function QuestionBankPage() {
   }
 
   const admin = user.role === "admin";
-  const tabs = [
-    ["overview", "Overview"], ["questions", "Question bank"], ["add", "Add questions"], ["import", "Bulk import"],
-    ...(admin ? [["generate", "Generate paper"], ["papers", "Papers"], ["teachers", "Teachers"]] : [["password", "My password"]]),
-  ];
-  const go = (t) => { setSheetScope(null); if (t !== "papers") setOpenPaper(null); setTab(t); };
+  const tabs = admin
+    ? [["overview", "Overview"], ["questions", "Question bank"], ["generate", "Generate paper"], ["papers", "Papers"], ["teachers", "Teachers"]]
+    : [["overview", "Overview"], ["generate", "Make a class test"], ["papers", "My tests"], ["questions", "Question bank"], ["password", "My password"]];
+  const go = (t) => { if (t !== "papers") setOpenPaper(null); setTab(t); };
 
   return (
     <div style={wrap} className="qb-root">
@@ -100,11 +97,9 @@ export default function QuestionBankPage() {
         <Msg m={tab === "overview" ? msg : null} />
 
         {tab === "overview" && <Overview meta={meta} admin={admin} go={go} />}
-        {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} onEdit={(q) => { setSheetScope({ classNum: q.class_num, subject: q.subject, focusId: q.id }); setTab("add"); }} />}
-        {tab === "add" && <AddSheet key={sheetScope ? `${sheetScope.classNum}|${sheetScope.subject}|${sheetScope.focusId}` : "free"} meta={meta} user={user} scope={sheetScope} refreshMeta={refreshMeta} />}
-        {tab === "import" && <ImportTab onImported={refreshMeta} />}
-        {admin && tab === "generate" && <GenerateTab meta={meta} onGenerated={(ids) => { setOpenPaper(ids.length === 1 ? ids[0] : null); setTab("papers"); }} />}
-        {admin && tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} />}
+        {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} />}
+        {tab === "generate" && <GenerateTab meta={meta} user={user} onGenerated={(ids) => { setOpenPaper(ids.length === 1 ? ids[0] : null); setTab("papers"); }} />}
+        {tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} admin={admin} />}
         {admin && tab === "teachers" && <TeachersTab />}
         {!admin && tab === "password" && <PasswordTab />}
       </div>
@@ -119,9 +114,7 @@ function Overview({ meta, admin, go }) {
         <div style={{ ...card, marginBottom: 0, minWidth: 200, borderTop: `5px solid ${C.GOLD}` }}><b style={{ fontSize: 34, color: C.NAVY }}>{meta ? meta.total : "…"}</b><div style={{ color: C.MUTED }}>questions in the bank</div></div>
       </div>
       <p>
-        <button style={btn()} onClick={() => go("add")}>Add questions</button>{" "}
-        <button style={btn(false)} onClick={() => go("import")}>Bulk import</button>{" "}
-        {admin && <button style={btn(false)} onClick={() => go("generate")}>Generate a paper</button>}
+        <button style={btn()} onClick={() => go("generate")}>{admin ? "Generate a paper" : "Make a class test"}</button>
       </p>
       <h2>Question bank coverage</h2>
       {meta && meta.coverage.length ? (

@@ -7,7 +7,7 @@ import SbaSheet, { SHEET_CSS } from "./SbaSheet";
 const PAGE_CSS = `${SHEET_CSS}
 @media print{ html,body{background:#fff!important} body *{visibility:hidden} .sba,.sba *{visibility:visible} .qb-noprint{display:none!important} .qb-zoomwrap{zoom:1!important;border:0!important} }`;
 
-export default function PapersTab({ openId, setOpenId }) {
+export default function PapersTab({ openId, setOpenId, admin }) {
   const [list, setList] = useState(null);
   const [msg, setMsg] = useState(null);
 
@@ -22,17 +22,17 @@ export default function PapersTab({ openId, setOpenId }) {
       <Msg m={msg} />
       <div style={{ ...card, padding: 0, overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr><th style={th}>#</th><th style={th}>Title</th><th style={th}>Class</th><th style={th}>Subject</th><th style={{ ...th, textAlign: "right" }}>Marks</th><th style={th}>Created</th><th style={th}></th></tr></thead>
+          <thead><tr><th style={th}>#</th><th style={th}>Title</th>{admin && <th style={th}>By</th>}<th style={th}>Class</th><th style={th}>Subject</th><th style={{ ...th, textAlign: "right" }}>Marks</th><th style={th}>Created</th><th style={th}></th></tr></thead>
           <tbody>
             {(list || []).map((p) => (
               <tr key={p.id}>
-                <td style={td}>{p.id}</td><td style={td}><b>{p.title}</b></td><td style={td}>Class {p.classNum}</td><td style={td}>{p.subject}</td>
+                <td style={td}>{p.id}</td><td style={td}><b>{p.title}</b>{p.kind === "test" && <span style={{ marginLeft: 8, background: C.GOLD, color: C.NAVY, borderRadius: 8, padding: "1px 8px", fontSize: 11, fontWeight: 800 }}>CLASS TEST</span>}</td>{admin && <td style={td}>{p.owner}</td>}<td style={td}>Class {p.classNum}</td><td style={td}>{p.subject}</td>
                 <td style={{ ...td, textAlign: "right" }}>{fmt(p.totalMarks)}</td>
                 <td style={td}>{new Date(p.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</td>
                 <td style={td}><button style={small} onClick={() => setOpenId(p.id)}>Open</button></td>
               </tr>
             ))}
-            {list && !list.length && <tr><td style={td} colSpan={7}>No papers yet. Use “Generate paper”.</td></tr>}
+            {list && !list.length && <tr><td style={td} colSpan={8}>Nothing here yet. Use the “Generate / Make a class test” tab.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -76,14 +76,14 @@ function PaperView({ id, onBack }) {
     <div>
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <div className="qb-noprint" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
-        <button style={btn(false)} onClick={onBack}>‹ All papers</button>
+        <button style={btn(false)} onClick={onBack}>‹ Back to the list</button>
         <button style={btn()} onClick={() => window.print()}>Print / Save as PDF (A3)</button>
         <button style={btn(false)} onClick={() => setKeyOn(!keyOn)}>{keyOn ? "Hide answer key" : "Show answer key"}</button>
         <button style={btn(false, C.RED)} onClick={del}>Delete</button>
       </div>
       <div className="qb-noprint">
         <Msg m={msg} />
-        <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Use ↻ on a question to replace it. In the print window choose paper size <b>A3</b>, scale 100%, and turn <b>Headers and footers</b> off.</p>
+        <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Use ↻ on a question to replace it. In the print window choose paper size <b>A3</b> (or A4 with “Fit to page”), scale 100%, and turn <b>Headers and footers</b> off.</p>
       </div>
       <div style={{ overflowX: "auto" }}>
         <div className="qb-zoomwrap" style={{ zoom, width: "fit-content", margin: "0 auto", border: "1px solid #ccc", background: "#fff" }}>

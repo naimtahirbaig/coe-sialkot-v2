@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import Rich from "./Rich";
 import { C, QT, DIFF, CLASSES, card, inp, lbl, btn, small, grid, th, td, Msg, api, fmt } from "./ui";
 
-export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
+export default function QuestionsTab({ meta, refreshMeta }) {
   const [f, setF] = useState({ classNum: "", subject: "", qtype: "", difficulty: "", search: "", mine: false });
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
@@ -39,7 +39,6 @@ export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
         <div><label style={lbl}>Type</label><select style={inp} value={f.qtype} onChange={(e) => set("qtype", e.target.value)}><option value="">All</option>{Object.entries(QT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         <div><label style={lbl}>Difficulty</label><select style={inp} value={f.difficulty} onChange={(e) => set("difficulty", e.target.value)}><option value="">All</option>{DIFF.map((d) => <option key={d}>{d}</option>)}</select></div>
         <div><label style={lbl}>Search</label><input style={inp} value={f.search} onChange={(e) => set("search", e.target.value)} placeholder="words in the question" /></div>
-        <label style={{ fontWeight: 400, paddingBottom: 10 }}><input type="checkbox" checked={f.mine} onChange={(e) => set("mine", e.target.checked)} /> Only mine</label>
       </div>
       <Msg m={msg} />
       {data && (
@@ -61,7 +60,7 @@ export default function QuestionsTab({ meta, onEdit, refreshMeta }) {
                       </td>
                       <td style={td}>{q.created_by_name}</td>
                       <td style={{ ...td, whiteSpace: "nowrap" }}>
-                        {q.canEdit && <><button style={small} onClick={() => onEdit(q)}>Edit</button>{" "}<button style={{ ...small, color: C.RED, borderColor: C.RED }} onClick={() => del(q)}>Delete</button></>}
+                        {q.canEdit && <button style={{ ...small, color: C.RED, borderColor: C.RED }} onClick={() => del(q)}>Delete</button>}
                       </td>
                     </tr>
                   ))}

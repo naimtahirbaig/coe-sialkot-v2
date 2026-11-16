@@ -278,6 +278,10 @@ export async function chapterStats(sb, a) {
 // Makes 1-5 versions of a paper. A question used in one version is never used in another.
 export async function generatePaper(sb, user, body) {
   const { errors, form, partA, partB } = parsePaperSpec(body);
+  // Teachers make class tests (no PECTAA logo, no QR). The admin can make either kind.
+  const isTest = user.role !== "admin" || body.kind === "test";
+  if (isTest) form.qr = "";
+  const owner = { id: user.role === "admin" ? "admin" : user.id, name: user.name };
   const fail = (list) => { throw new QbError(400, list.join(" ")); };
   if (errors.length) fail(errors);
   const versions = Math.min(5, Math.max(1, parseInt(body.versions, 10) || 1));
@@ -348,7 +352,7 @@ export async function generatePaper(sb, user, body) {
     const doc = {
       header: {
         title: form.title, gradeLabel: `GRADE-${form.classNum}`, subjectTitle: form.subjectTitle,
-        school: form.school || SCHOOL_LINE, lang: form.lang, qr: form.qr, logo: LOGO, version: letter,
+        school: form.school || SCHOOL_LINE, lang: form.lang, qr: isTest ? "" : form.qr, logo: isTest ? "" : LOGO, version: letter, kind: isTest ? "test" : "sba",
       },
       partA: { count: partA.count, marksEach: Number(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id], partA.marks)), passage },
       partB: partB.map((blk, i) => ({
@@ -358,7 +362,7 @@ export async function generatePaper(sb, user, body) {
     };
     const created = must(await sb.from("qb_papers").insert({
       title: letter ? `${form.title} — ${letter}` : form.title, class_num: form.classNum, subject: form.subject, total_marks: form.totalMarks,
-      filters: { chapters: form.chapters, difficulty: form.difficulty, version: letter }, body: doc, qids: bodyQids(doc),
+      filters: { chapters: form.chapters, difficulty: form.difficulty, version: letter, owner, kind: isTest ? "test" : "sba" }, body: doc, qids: bodyQids(doc),
     }).select("id").single());
     ids.push(created.id);
   }
@@ -370,26 +374,36 @@ const paperOut = (p) => ({
   createdAt: p.created_at, filters: p.filters, body: p.body,
 });
 
-export async function listPapers(sb) {
-  const rows = must(await sb.from("qb_papers").select("id, title, class_num, subject, total_marks, created_at").order("id", { ascending: false }));
-  return { papers: rows.map((p) => ({ id: p.id, title: p.title, classNum: p.class_num, subject: p.subject, totalMarks: Number(p.total_marks), createdAt: p.created_at })) };
+// A teacher only sees and changes the tests that teacher made; the admin sees everything.
+const ownerOf = (f) => f?.owner || null;
+const canSee = (user, f) => user.role === "admin" || (ownerOf(f) && String(ownerOf(f).id) === String(user.id));
+
+export async function listPapers(sb, user) {
+  const rows = must(await sb.from("qb_papers").select("id, title, class_num, subject, total_marks, created_at, filters").order("id", { ascending: false }));
+  return {
+    papers: rows.filter((p) => canSee(user, p.filters)).map((p) => ({
+      id: p.id, title: p.title, classNum: p.class_num, subject: p.subject, totalMarks: Number(p.total_marks), createdAt: p.created_at,
+      kind: p.filters?.kind || "sba", owner: ownerOf(p.filters)?.name || "Admin",
+    })),
+  };
 }
 
-export async function getPaperRow(sb, id) {
+export async function getPaperRow(sb, id, user) {
   const p = must(await sb.from("qb_papers").select("*").eq("id", id).maybeSingle());
-  if (!p) throw new QbError(404, "Paper not found.");
+  if (!p || (user && !canSee(user, p.filters))) throw new QbError(404, "Paper not found.");
   return p;
 }
-export async function getPaper(sb, id) { return { paper: paperOut(await getPaperRow(sb, id)) }; }
+export async function getPaper(sb, user, id) { return { paper: paperOut(await getPaperRow(sb, id, user)) }; }
 
-export async function deletePaper(sb, id) {
+export async function deletePaper(sb, user, id) {
+  await getPaperRow(sb, id, user);
   must(await sb.from("qb_papers").delete().eq("id", id));
   return { ok: true };
 }
 
 // path: ["A","plain",i] | ["A","passage",i] | ["B",blockIndex,partIndex]
-export async function swapQuestion(sb, id, path) {
-  const p = await getPaperRow(sb, id);
+export async function swapQuestion(sb, user, id, path) {
+  const p = await getPaperRow(sb, id, user);
   const doc = p.body;
   const bad = () => { throw new QbError(404, "Question not found in this paper."); };
   if (!Array.isArray(path)) bad();

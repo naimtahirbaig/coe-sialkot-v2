@@ -5,4 +5,4 @@ export const dynamic = "force-dynamic";
 
 // POST { path: ["A","plain",2] | ["A","passage",1] | ["B",0,1] }
 // replaces that question with another of the same type and marks
-export const POST = route("admin", ({ sb, body, params }) => swapQuestion(sb, idOf(params), body.path));
+export const POST = route("any", ({ sb, user, body, params }) => swapQuestion(sb, user, idOf(params), body.path));

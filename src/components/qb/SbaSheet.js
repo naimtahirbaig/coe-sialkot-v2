@@ -18,6 +18,7 @@ export const SHEET_CSS = `
 .sba *{box-sizing:border-box}
 .sba .box{border:3.2pt solid #000;padding:7pt 15pt 4pt}
 .sba .hd{display:grid;grid-template-columns:92pt 1fr 92pt;align-items:start}
+.sba .hd.plain{grid-template-columns:1fr}
 .sba .logo{width:88pt;height:auto;display:block}
 .sba .qr{width:84pt;height:84pt;image-rendering:pixelated;justify-self:end;display:block}
 .sba .qrgap{width:84pt;height:84pt}
@@ -94,14 +95,14 @@ export default function SbaSheet({ doc, keyOn = false, onSwap = null }) {
   return (
     <article className={`sba${rtl ? " rtl" : ""}`}>
       <div className="box">
-        <div className="hd">
-          <img className="logo" src={h.logo} alt="PECTAA" />
+        <div className={`hd${h.logo || h.qr ? "" : " plain"}`}>
+          {h.logo ? <img className="logo" src={h.logo} alt="PECTAA" /> : null}
           <div>
             <div className="t1">{h.title}</div>
             <div className="t2">{h.gradeLabel}{h.version ? ` · ${h.version.toUpperCase()}` : ""}</div>
             <div className="t3">SUBJECT: {h.subjectTitle}</div>
           </div>
-          {h.qr ? <img className="qr" src={h.qr} alt="QR code" /> : <div className="qrgap" />}
+          {h.qr ? <img className="qr" src={h.qr} alt="QR code" /> : h.logo ? <div className="qrgap" /> : null}
         </div>
         <div className="marks">[Part A: {fmt(aTotal)} Marks Part B: {fmt(bTotal)} Marks Total: {fmt(aTotal + bTotal)} Marks]</div>
         <div className="fl"><b>School Name:</b><span className="ln">{h.school}</span></div>
