@@ -56,7 +56,9 @@ a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999p
 .gate{position:fixed;inset:0;z-index:100;background:rgba(21,15,63,.72);display:none;align-items:center;justify-content:center;padding:16px}
 .gate.on{display:flex}
 .gate .box{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:26px 24px;text-align:center;border-top:6px solid #F3B129;box-shadow:0 20px 60px rgba(0,0,0,.4)}
-.gate img{width:76px;height:76px;border-radius:50%}
+.gate-logos{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+.gate-logos img{width:64px;height:64px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(21,15,63,.2);border:1px solid #ecebf4}
+@media (max-width:380px){.gate-logos img{width:54px;height:54px}}
 .gate h3{margin:12px 0 6px;color:#150F3F;font-size:20px}
 .gate p{margin:0 0 16px;color:#4a4866;font-size:14.5px}
 .gate input{width:100%;padding:13px 14px;font-size:20px;text-align:center;letter-spacing:.12em;border:2px solid #cfcce3;border-radius:10px}
@@ -218,7 +220,9 @@ load(0);
 <footer>Use a device with a working camera. Each student can take each test (1st to 5th) only once. Do not switch tabs during the test.</footer>
 <div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateT">
   <form class="box" id="gateF" autocomplete="off" novalidate>
-    <img src="/logo-naim.webp" alt="">
+    <div class="gate-logos">
+      <img src="/ld-naim.webp" alt="Dr Naim Tahir Baig — COE Sialkot (Boys)"><img src="/ld-punjab.webp" alt="Government of the Punjab"><img src="/ld-pectaa.webp" alt="PECTAA"><img src="/ld-daanish.webp" alt="Punjab Daanish Schools &amp; Centres of Excellence Authority">
+    </div>
     <h3 id="gateT">Are you a student of COE Sialkot (Boys)?</h3>
     <p>The real Online Tests are only for our students. Write the <b>password</b> given by your teacher.</p>
     <input id="gateRoll" type="password" maxlength="60" placeholder="Password" aria-label="Password" autocapitalize="off" autocorrect="off" spellcheck="false">
