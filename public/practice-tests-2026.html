@@ -66,19 +66,35 @@ a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999p
 .gate button{flex:1;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;border:1.5px solid #150F3F}
 .gate .go{background:#150F3F;color:#fff}.gate .no{background:#fff;color:#150F3F}
 .gate button:disabled{opacity:.5}
+/* loading: four logos circling the message */
+.loader{position:relative;width:250px;height:250px;margin:36px auto;display:flex;align-items:center;justify-content:center}
+.loader p{margin:0;color:#150F3F;font-weight:700;font-size:16px;text-align:center}
+.orbit{position:absolute;inset:0;border:2px dashed #cfcce3;border-radius:50%;animation:orbit 6s linear infinite}
+.orbit img{position:absolute;left:50%;top:50%;width:66px;height:66px;margin:-33px 0 0 -33px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(21,15,63,.22)}
+.orbit img:nth-child(1){transform:rotate(0deg) translateY(-125px) rotate(0deg);animation:up1 6s linear infinite}
+.orbit img:nth-child(2){animation:up2 6s linear infinite}
+.orbit img:nth-child(3){animation:up3 6s linear infinite}
+.orbit img:nth-child(4){animation:up4 6s linear infinite}
+@keyframes orbit{to{transform:rotate(360deg)}}
+/* each logo sits at its place on the ring and turns back so it always stays upright */
+@keyframes up1{from{transform:rotate(0deg) translateY(-125px) rotate(0deg)}to{transform:rotate(0deg) translateY(-125px) rotate(-360deg)}}
+@keyframes up2{from{transform:rotate(90deg) translateY(-125px) rotate(-90deg)}to{transform:rotate(90deg) translateY(-125px) rotate(-450deg)}}
+@keyframes up3{from{transform:rotate(180deg) translateY(-125px) rotate(-180deg)}to{transform:rotate(180deg) translateY(-125px) rotate(-540deg)}}
+@keyframes up4{from{transform:rotate(270deg) translateY(-125px) rotate(-270deg)}to{transform:rotate(270deg) translateY(-125px) rotate(-630deg)}}
+@media (prefers-reduced-motion:reduce){.orbit,.orbit img{animation:none}
+  .orbit img:nth-child(2){transform:rotate(90deg) translateY(-125px) rotate(-90deg)}.orbit img:nth-child(3){transform:rotate(180deg) translateY(-125px) rotate(-180deg)}.orbit img:nth-child(4){transform:rotate(270deg) translateY(-125px) rotate(-270deg)}}
 footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
 html.locked .gate{background:#150F3F}
 </style>
 </head>
 <body>
 <header><img class="naim-logo" src="/logo-naim.webp" alt="Dr Naim Tahir Baig — Centre of Excellence Sialkot (Boys)"><small>COE Sialkot (Boys)</small><h1>Practice Tests 2026</h1><p style="margin:10px 0 0;font-size:14px;color:#d8d5ee">Same questions and timer as the real tests · no camera · results are not saved · practise as often as you like</p><p style="margin:8px 0 0;font-size:14px"><a href="/online-tests-2026.html" style="color:#F3B129;font-weight:700">Go to the real Online Tests →</a></p></header>
-<main>
-<h2>Class 8th</h2>
-<a class="test" href="/online-tests-2026/class-8-geography-ch3.html">
-<div><b>Geography – Chapter 3</b><span>Environmental Pollution · 52 timed MCQs · camera required</span></div>
-<i>Start test</i>
-</a>
-</main>
+<main><div class="loader" role="status" aria-live="polite">
+  <div class="orbit" aria-hidden="true">
+    <img src="/ld-naim.webp" alt=""><img src="/ld-punjab.webp" alt=""><img src="/ld-pectaa.webp" alt=""><img src="/ld-daanish.webp" alt="">
+  </div>
+  <p>Loading tests…</p>
+</div></main>
 <div class="wm" aria-hidden="true"><img src="/logo-naim-wm.webp" alt=""></div>
 <div class="wm-practice" aria-hidden="true"><span>PRACTICE</span></div>
 <script>
