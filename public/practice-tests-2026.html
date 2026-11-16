@@ -67,6 +67,7 @@ a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999p
 .gate .go{background:#150F3F;color:#fff}.gate .no{background:#fff;color:#150F3F}
 .gate button:disabled{opacity:.5}
 footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
+html.locked .gate{background:#150F3F}
 </style>
 </head>
 <body>
@@ -204,28 +205,31 @@ load(0);
   <form class="box" id="gateF" autocomplete="off" novalidate>
     <img src="/logo-naim.webp" alt="">
     <h3 id="gateT">Are you a student of COE Sialkot (Boys)?</h3>
-    <p>The real Online Tests are only for our students. Write your <b>roll number</b> as your password.</p>
-    <input id="gateRoll" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="Roll number" aria-label="Roll number">
+    <p>The real Online Tests are only for our students. Write the <b>password</b> given by your teacher.</p>
+    <input id="gateRoll" type="password" maxlength="60" placeholder="Password" aria-label="Password" autocapitalize="off" autocorrect="off" spellcheck="false">
     <div class="err" id="gateErr"></div>
     <div class="row"><button type="button" class="no" id="gateNo">Cancel</button><button type="submit" class="go" id="gateGo">Continue →</button></div>
   </form>
 </div>
 <script>
 (function(){
-  var DEST="/online-tests-2026.html",g=document.getElementById("gate"),inp=document.getElementById("gateRoll"),err=document.getElementById("gateErr"),go=document.getElementById("gateGo");
-  function open(e){e.preventDefault();err.textContent="";inp.value="";g.classList.add("on");setTimeout(function(){inp.focus();},50);}
-  function close(){g.classList.remove("on");}
-  document.querySelectorAll('a[href="'+DEST+'"]').forEach(function(a){a.addEventListener("click",open);});
+  var DEST="/online-tests-2026.html",KEY="coeOT",g=document.getElementById("gate"),inp=document.getElementById("gateRoll"),err=document.getElementById("gateErr"),go=document.getElementById("gateGo");
+  var ON_HUB=location.pathname.indexOf("/online-tests-2026")===0;
+  function passed(){try{return sessionStorage.getItem(KEY)==="1";}catch(e){return false;}}
+  function show(){err.textContent="";inp.value="";g.classList.add("on");setTimeout(function(){inp.focus();},50);}
+  function close(){if(ON_HUB){location.href="/practice-tests-2026.html";return;}g.classList.remove("on");}
+  if(ON_HUB){document.getElementById("gateNo").textContent="Go to Practice";if(!passed()){document.documentElement.classList.add("locked");show();}}
+  else document.querySelectorAll('a[href="'+DEST+'"]').forEach(function(a){a.addEventListener("click",function(e){if(passed())return;e.preventDefault();show();});});
   document.getElementById("gateNo").onclick=close;
-  g.addEventListener("click",function(e){if(e.target===g)close();});
-  document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});
+  if(!ON_HUB){g.addEventListener("click",function(e){if(e.target===g)close();});document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});}
   document.getElementById("gateF").addEventListener("submit",function(e){
-    e.preventDefault();var roll=inp.value.replace(/\s+/g,"");
-    if(!/^\d{1,8}$/.test(roll)){err.textContent="Write your roll number (digits only).";inp.focus();return;}
+    e.preventDefault();var pw=inp.value.trim();
+    if(!pw){err.textContent="Write the password.";inp.focus();return;}
     go.disabled=true;go.textContent="Checking…";err.textContent="";
-    fetch("/api/online-test/check-student",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({roll:roll})})
+    fetch("/api/online-test/check-student",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})})
     .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
-    .then(function(x){if(!x.ok)throw new Error(x.j.error||"Not found");location.href=DEST;})
+    .then(function(x){if(!x.ok)throw new Error(x.j.error||"Wrong password");try{sessionStorage.setItem(KEY,"1");}catch(e){}
+      if(ON_HUB){g.classList.remove("on");document.documentElement.classList.remove("locked");go.disabled=false;go.textContent="Continue →";}else location.href=DEST;})
     .catch(function(ex){err.textContent=ex.message==="Failed to fetch"?"No internet connection. Please try again.":ex.message;go.disabled=false;go.textContent="Continue →";inp.select();});
   });
 })();

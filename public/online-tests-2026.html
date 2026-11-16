@@ -53,7 +53,21 @@ a.test i{font-style:normal;background:var(--green);color:#fff;border-radius:999p
 .wm img{width:min(75vw,560px);height:auto;opacity:.06}
 .wm-practice{position:fixed;inset:0;z-index:21;pointer-events:none;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .wm-practice span{transform:rotate(-32deg);font:900 clamp(80px,22vw,230px)/1 system-ui,Arial,sans-serif;letter-spacing:.06em;color:#009846;opacity:.09;white-space:nowrap}
+.gate{position:fixed;inset:0;z-index:100;background:rgba(21,15,63,.72);display:none;align-items:center;justify-content:center;padding:16px}
+.gate.on{display:flex}
+.gate .box{background:#fff;border-radius:16px;max-width:420px;width:100%;padding:26px 24px;text-align:center;border-top:6px solid #F3B129;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.gate img{width:76px;height:76px;border-radius:50%}
+.gate h3{margin:12px 0 6px;color:#150F3F;font-size:20px}
+.gate p{margin:0 0 16px;color:#4a4866;font-size:14.5px}
+.gate input{width:100%;padding:13px 14px;font-size:20px;text-align:center;letter-spacing:.12em;border:2px solid #cfcce3;border-radius:10px}
+.gate input:focus{outline:none;border-color:#150F3F}
+.gate .err{color:#B3202A;font-weight:600;font-size:14px;min-height:20px;margin:8px 0 4px}
+.gate .row{display:flex;gap:10px;margin-top:8px}
+.gate button{flex:1;padding:12px;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;border:1.5px solid #150F3F}
+.gate .go{background:#150F3F;color:#fff}.gate .no{background:#fff;color:#150F3F}
+.gate button:disabled{opacity:.5}
 footer{text-align:center;font-size:13px;color:#5b5a70;padding-bottom:24px}
+html.locked .gate{background:#150F3F}
 </style>
 </head>
 <body>
@@ -186,5 +200,38 @@ load(0);
 })();
 </script>
 <footer>Use a device with a working camera. Each student can take each test (1st to 5th) only once. Do not switch tabs during the test.</footer>
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateT">
+  <form class="box" id="gateF" autocomplete="off" novalidate>
+    <img src="/logo-naim.webp" alt="">
+    <h3 id="gateT">Are you a student of COE Sialkot (Boys)?</h3>
+    <p>The real Online Tests are only for our students. Write the <b>password</b> given by your teacher.</p>
+    <input id="gateRoll" type="password" maxlength="60" placeholder="Password" aria-label="Password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="err" id="gateErr"></div>
+    <div class="row"><button type="button" class="no" id="gateNo">Cancel</button><button type="submit" class="go" id="gateGo">Continue →</button></div>
+  </form>
+</div>
+<script>
+(function(){
+  var DEST="/online-tests-2026.html",KEY="coeOT",g=document.getElementById("gate"),inp=document.getElementById("gateRoll"),err=document.getElementById("gateErr"),go=document.getElementById("gateGo");
+  var ON_HUB=location.pathname.indexOf("/online-tests-2026")===0;
+  function passed(){try{return sessionStorage.getItem(KEY)==="1";}catch(e){return false;}}
+  function show(){err.textContent="";inp.value="";g.classList.add("on");setTimeout(function(){inp.focus();},50);}
+  function close(){if(ON_HUB){location.href="/practice-tests-2026.html";return;}g.classList.remove("on");}
+  if(ON_HUB){document.getElementById("gateNo").textContent="Go to Practice";if(!passed()){document.documentElement.classList.add("locked");show();}}
+  else document.querySelectorAll('a[href="'+DEST+'"]').forEach(function(a){a.addEventListener("click",function(e){if(passed())return;e.preventDefault();show();});});
+  document.getElementById("gateNo").onclick=close;
+  if(!ON_HUB){g.addEventListener("click",function(e){if(e.target===g)close();});document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});}
+  document.getElementById("gateF").addEventListener("submit",function(e){
+    e.preventDefault();var pw=inp.value.trim();
+    if(!pw){err.textContent="Write the password.";inp.focus();return;}
+    go.disabled=true;go.textContent="Checking…";err.textContent="";
+    fetch("/api/online-test/check-student",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw})})
+    .then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});})
+    .then(function(x){if(!x.ok)throw new Error(x.j.error||"Wrong password");try{sessionStorage.setItem(KEY,"1");}catch(e){}
+      if(ON_HUB){g.classList.remove("on");document.documentElement.classList.remove("locked");go.disabled=false;go.textContent="Continue →";}else location.href=DEST;})
+    .catch(function(ex){err.textContent=ex.message==="Failed to fetch"?"No internet connection. Please try again.":ex.message;go.disabled=false;go.textContent="Continue →";inp.select();});
+  });
+})();
+</script>
 </body>
 </html>
