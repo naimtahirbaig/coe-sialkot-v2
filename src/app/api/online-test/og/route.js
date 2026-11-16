@@ -25,9 +25,10 @@ export async function GET(req) {
     const d = (ch.match(/\d+/) || [""])[0];
     ch = d ? `${/^(urdu|islamiat)/i.test(s) ? "Lesson" : "Chapter"} ${d}` : "";
   }
-  const r = Math.min(9, Math.max(1, Number(q.get("r")) || 1)), rt = ({ 1: "1ST", 2: "2ND", 3: "3RD" }[r] || `${r}TH`) + " TEST";
+  const practice = q.get("mode") === "practice";
+  const r = Math.min(9, Math.max(1, Number(q.get("r")) || 1)), rt = practice ? "PRACTICE TEST" : ({ 1: "1ST", 2: "2ND", 3: "3RD" }[r] || `${r}TH`) + " TEST";
   const n = (q.get("n") || "").slice(0, 3), p = (q.get("p") || "").slice(0, 3);
-  const from = when(q.get("from")), to = when(q.get("to")), dated = !!(from || to);
+  const from = practice ? null : when(q.get("from")), to = practice ? null : when(q.get("to")), dated = !!(from || to);
   const title = ch ? `${s} — ${ch}` : s;
   const fs = dated ? (title.length > 45 ? 34 : title.length > 28 ? 40 : 50) : (title.length > 28 ? 56 : 70);
   return new ImageResponse(
@@ -37,10 +38,10 @@ export async function GET(req) {
           background: "#241C63", border: "3px solid #F3B129", borderRadius: 18, color: "#fff" }}>
           <div style={{ fontSize: 31, fontWeight: 700, letterSpacing: 3, display: "flex" }}>CENTRE OF EXCELLENCE SIALKOT (BOYS)</div>
           <div style={{ fontSize: 15, color: "#b8b4d8", letterSpacing: 2, marginTop: 8, display: "flex" }}>PUNJAB DAANISH SCHOOLS &amp; CENTRES OF EXCELLENCE AUTHORITY</div>
-          <div style={{ marginTop: dated ? 14 : 26, background: "#E5705F", color: "#150F3F", fontSize: 24, fontWeight: 700, padding: "10px 28px", borderRadius: 30, display: "flex" }}>{`CLASS ${c}  ·  ${rt}`}</div>
+          <div style={{ marginTop: dated ? 14 : 26, background: practice ? "#2FB36D" : "#E5705F", color: "#150F3F", fontSize: 24, fontWeight: 700, padding: "10px 28px", borderRadius: 30, display: "flex" }}>{c ? `CLASS ${c}  ·  ${rt}` : rt}</div>
           <div style={{ marginTop: dated ? 12 : 26, fontSize: fs, fontWeight: 700, display: "flex", textAlign: "center", padding: "0 50px" }}>{title}</div>
-          <div style={{ marginTop: 8, fontSize: 27, color: "#ffd466", display: "flex" }}>{`MCQs Online Test  ·  ${m}`}</div>
-          <div style={{ marginTop: dated ? 6 : 12, fontSize: 22, color: "#c3c0de", display: "flex" }}>{`${n} MCQs  ·  ${n} Marks  ·  ${p} seconds per question`}</div>
+          <div style={{ marginTop: 8, fontSize: 27, color: "#ffd466", display: "flex" }}>{practice ? `Practice MCQs  ·  No camera  ·  Not saved` : `MCQs Online Test  ·  ${m}`}</div>
+          {n ? <div style={{ marginTop: dated ? 6 : 12, fontSize: 22, color: "#c3c0de", display: "flex" }}>{`${n} MCQs  ·  ${n} Marks  ·  ${p} seconds per question`}</div> : <div style={{ marginTop: 12, fontSize: 22, color: "#c3c0de", display: "flex" }}>Classes 6th, 7th and 8th  ·  All subjects  ·  Chapter-wise</div>}
           {dated ? (
             <div style={{ marginTop: 18, display: "flex", gap: 22 }}>
               {[["TEST STARTS", from, "#2FB36D"], ["DEADLINE", to, "#F3B129"]].filter((b) => b[1]).map((b) => (
@@ -52,7 +53,7 @@ export async function GET(req) {
               ))}
             </div>
           ) : (
-          <div style={{ marginTop: 26, background: "#F3B129", color: "#150F3F", fontSize: 26, fontWeight: 700, padding: "15px 36px", borderRadius: 40, display: "flex" }}>Start the Test — Result Card at the End</div>
+          <div style={{ marginTop: 26, background: "#F3B129", color: "#150F3F", fontSize: 26, fontWeight: 700, padding: "15px 36px", borderRadius: 40, display: "flex" }}>{practice ? "Practise Now — As Many Times As You Like" : "Start the Test — Result Card at the End"}</div>
           )}
           <div style={{ marginTop: dated ? 14 : 22, fontSize: 19, color: "#F3B129", fontWeight: 700, letterSpacing: 3, display: "flex" }}>COESIALKOT.COM</div>
         </div>

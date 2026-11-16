@@ -67,6 +67,25 @@ export default function PracticeTestsPage() {
       accent="#a78bfa"
     >
 
+      {/* ── Chapter-wise MCQ practice (same tests as the online tests, no camera, not saved) ── */}
+      <a href="/practice-tests-2026.html" style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+        textDecoration: 'none', marginBottom: 28, padding: '20px 22px', borderRadius: 14,
+        background: 'linear-gradient(135deg, #150F3F 0%, #2A2065 100%)', border: '2px solid #F3B129',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      }}>
+        <div style={{ minWidth: 220, flex: 1 }}>
+          <div style={{ color: '#F3B129', fontSize: 12, fontWeight: 700, letterSpacing: 2 }}>NEW · CLASSES 6TH, 7TH &amp; 8TH</div>
+          <div style={{ color: '#fff', fontSize: 21, fontWeight: 800, marginTop: 4 }}>Chapter-wise MCQ Practice — All Subjects</div>
+          <div style={{ color: '#c3c0de', fontSize: 14, marginTop: 6 }}>
+            Same questions and timer as the online tests · no camera · results not saved · practise as many times as you like
+          </div>
+        </div>
+        <span style={{ background: '#2FB36D', color: '#fff', fontWeight: 700, padding: '11px 20px', borderRadius: 999, whiteSpace: 'nowrap' }}>
+          Start practising →
+        </span>
+      </a>
+
       {/* ── Filters ── */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 28 }}>
         <select value={subject} onChange={e => setSubject(e.target.value)} style={selectStyle}>
