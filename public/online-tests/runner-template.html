@@ -419,7 +419,8 @@ function closedUI(){
   var h=document.querySelector("#setup h2.section");if(h)h.textContent="This test is closed";
 }
 function opt(v,t,dis){var o=document.createElement("option");o.value=v;o.textContent=t;if(dis)o.disabled=true;return o;}
-fetch("/api/online-test/roster?class="+CLASS_NUM+"&test="+encodeURIComponent(TEST_SLUG),{cache:"no-store"})
+// practice tests do not load the school roster at all
+if(!PRACTICE)fetch("/api/online-test/roster?class="+CLASS_NUM+"&test="+encodeURIComponent(TEST_SLUG),{cache:"no-store"})
  .then(function(r){return r.json();})
  .then(function(d){
    if(d.error)throw new Error(d.error);
@@ -451,9 +452,10 @@ var student={},started=null,starting=false;
 $("btnStart").addEventListener("click",function(){
   if(starting)return;
   if(PRACTICE){
-    var pt=$("fTeacher").value,pso=$("fStudent").options[$("fStudent").selectedIndex];
-    if(!pt||!pso||!pso.value||!$("fClass").value){$("setupErr").textContent="Choose your teacher, section and name before starting.";return;}
-    student={teacher:pt,name:pso.dataset.name,cls:$("fClass").value,roll:$("fRoll").value};studentId=pso.value;
+    var pn=$("pName").value.replace(/\s+/g," ").trim(),pc=$("pClass").value.replace(/\s+/g," ").trim();
+    if(pn.length<2){$("setupErr").textContent="Type your name before starting.";$("pName").focus();return;}
+    if(!pc){$("setupErr").textContent="Type your class before starting.";$("pClass").focus();return;}
+    student={teacher:"",name:pn.slice(0,40),cls:pc.slice(0,20),roll:""};
     $("setupErr").textContent="";started=new Date();
     $("setup").classList.add("hidden");$("test").classList.remove("hidden");window.scrollTo(0,0);
     show(0);return;
@@ -560,7 +562,7 @@ function finish(){
   $("result").classList.remove("hidden");
   window.scrollTo(0,0);
 
-  $("resWho").textContent=student.name+"  •  Class "+student.cls+"  •  Roll No. "+student.roll+"  •  Teacher: "+student.teacher;
+  $("resWho").textContent=PRACTICE?(student.name+"  •  Class "+student.cls+"  •  Practice test (not saved)"):(student.name+"  •  Class "+student.cls+"  •  Roll No. "+student.roll+"  •  Teacher: "+student.teacher);
   $("rScore").textContent=correct;
   $("rPct").textContent=pct+"%";
   $("rGrade").textContent=grade;
@@ -832,7 +834,7 @@ function render(store){
 
   /* ---- student block ---- */
   g.textAlign="left";
-  var rows=[["Student name",student.name],["Class & section",student.cls],
+  var rows=PRACTICE?[["Student name",student.name],["Class",student.cls]]:[["Student name",student.name],["Class & section",student.cls],
             ["Roll number",student.roll],["Teacher name",student.teacher]];
   var y=330;
   rows.forEach(function(r,i){
@@ -948,7 +950,7 @@ $("btnDownload").addEventListener("click",function(){
   if(!cardURL)cardURL=$("card").toDataURL("image/png");
   var a=document.createElement("a");
   a.href=cardURL;
-  a.download=(PRACTICE?"Practice_":"ResultCard_")+(previous.length?"Attempt"+(previous.length+1)+"_":"")+SUBJECT.replace(/\s+/g,"")+"_"+(student.roll||"roll")+"_"+(student.name||"student").replace(/\s+/g,"")+".png";
+  a.download=(PRACTICE?"Practice_":"ResultCard_")+(previous.length?"Attempt"+(previous.length+1)+"_":"")+SUBJECT.replace(/\s+/g,"")+"_"+(PRACTICE?"Class"+String(student.cls).replace(/\s+/g,""):(student.roll||"roll"))+"_"+(student.name||"student").replace(/\s+/g,"")+".png";
   document.body.appendChild(a);a.click();document.body.removeChild(a);
 });
 $("btnPrint").addEventListener("click",function(){window.print();});
@@ -1006,8 +1008,21 @@ if(PRACTICE)(function(){
   bar.textContent="PRACTICE TEST — no camera needed, nothing is saved, and you can practise as many times as you like.";
   var sp=$("setup");sp.insertBefore(bar,sp.querySelector("h2").nextSibling);
   var ld=sp.querySelectorAll(".lede");
-  if(ld[0])ld[0].textContent="Choose your teacher, your section and your own name, then press Start practice.";
-  if(ld[1])ld[1].textContent="Your name is printed on your practice result card only. Practice results are not sent to the school record.";
+  if(ld[0])ld[0].textContent="Type your name and class, then press Start practice.";
+  if(ld[1])ld[1].textContent="Your name and class are printed on your practice result card only. Nothing is sent to the school record.";
+  // manual name + class only — no teacher, section or student list
+  var grid=sp.querySelector(".field-grid");
+  if(grid){
+    grid.style.display="none";
+    var pg=document.createElement("div");pg.className="field-grid";
+    pg.innerHTML='<div><label for="pName">Student name</label><input type="text" id="pName" maxlength="40" autocomplete="name" placeholder="Type your name" dir="auto"></div>'+
+      '<div><label for="pClass">Class</label><input type="text" id="pClass" maxlength="20" placeholder="e.g. '+CLASS_NUM+' Iqbal"></div>';
+    grid.parentNode.insertBefore(pg,grid.nextSibling);
+    try{var sv=JSON.parse(sessionStorage.getItem("practiceWho")||"null");if(sv){$("pName").value=sv.n||"";$("pClass").value=sv.c||"";}}catch(e){}
+    var rem=function(){try{sessionStorage.setItem("practiceWho",JSON.stringify({n:$("pName").value,c:$("pClass").value}));}catch(e){}};
+    $("pName").addEventListener("input",rem);$("pClass").addEventListener("input",rem);
+    $("pClass").addEventListener("keydown",function(e){if(e.key==="Enter")$("btnStart").click();});
+  }
   var wp=document.createElement("div");wp.className="wm-practice";wp.setAttribute("aria-hidden","true");wp.innerHTML="<span>PRACTICE</span>";document.body.appendChild(wp);
   var pt=document.querySelector(".paper-title");if(pt)pt.textContent="PRACTICE TEST — MCQs — "+String(DEF.month).replace(/\s*—\s*Practice$/,"");
 })();
