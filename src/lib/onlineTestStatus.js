@@ -1,3 +1,5 @@
+import { fetchAll } from "@/lib/fetchAll";
+
 // Live / Closed state of an online test.
 //   • no settings row            → CLOSED (a test is closed until the admin makes it live)
 //   • is_open = false            → closed by hand (beats the dates)
@@ -29,8 +31,7 @@ export async function isTestOpen(supabase, test) {
 
 // every test that has a settings row → { slug: state }   (throws if the database cannot be read)
 export async function allStates(supabase) {
-  const { data, error } = await supabase.from("online_test_settings").select("*");
-  if (error) throw new Error(error.message);
+  const data = await fetchAll((opts) => supabase.from("online_test_settings").select("*", opts).order("test_slug"));
   const out = {};
   (data || []).forEach((r) => { out[r.test_slug] = stateOf(r); });
   return out;

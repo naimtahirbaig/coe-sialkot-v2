@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchAll } from "@/lib/fetchAll";
 import { getSupabaseFast, cleanError } from "@/lib/supabaseFast";
 import { allStates, stateOf } from "@/lib/onlineTestStatus";
 import { roundOf, baseSlug } from "@/lib/onlineTestDefs";
@@ -13,14 +14,15 @@ export const revalidate = 0;
 export async function GET(req) {
   const month = new URL(req.url).searchParams.get("month");
   const supabase = getSupabaseFast();
-  let q = supabase.from("online_test_defs")
-    .select("slug, title, class_num, subject, chapter, month_label, per_q, paper_size, created_at")
-    .order("class_num").order("created_at");
-  if (month) q = q.eq("month_label", month);
-  const { data, error } = await q;
-  let states;
+  let data, states;
   try {
-    if (error) throw new Error(error.message);
+    data = await fetchAll((opts) => {
+      let q = supabase.from("online_test_defs")
+        .select("slug, title, class_num, subject, chapter, month_label, per_q, paper_size, created_at", opts)
+        .order("class_num").order("created_at").order("slug");
+      if (month) q = q.eq("month_label", month);
+      return q;
+    });
     states = await allStates(supabase);
   } catch (e) {
     return NextResponse.json({ tests: [], error: cleanError(e), dbDown: true }, { status: 503, headers: { "Cache-Control": "no-store" } });

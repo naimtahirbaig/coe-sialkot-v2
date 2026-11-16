@@ -20,7 +20,14 @@ try {
 const { createClient } = await import("@supabase/supabase-js");
 const supabase = createClient(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const { data: defs, error } = await supabase.from("online_test_defs").select("*");
+// read every row (Supabase gives at most 1000 per request)
+const defs = []; let error = null;
+for (let from = 0; ; from += 1000) {
+  const r = await supabase.from("online_test_defs").select("slug, title, class_num, subject, chapter, month_label, per_q, paper_size, questions").order("slug").range(from, from + 999);
+  if (r.error) { error = r.error; break; }
+  defs.push(...r.data);
+  if (r.data.length < 1000) break;
+}
 if (error) { console.error(error.message); process.exit(1); }
 const have = new Set(defs.map((d) => d.slug));
 const bases = defs.filter((d) => !/-test-[2-9]$/.test(d.slug)).map((d) => ({
