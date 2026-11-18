@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { groupExams, monthName } from "@/lib/awardListExams";
 import ResultSheetsPanel from "@/components/ResultSheetsPanel";
+import InnerPage from "@/components/site/InnerPage";
 
 const NAVY = "#150F3F";
 const NAVY_LIGHT = "#1F1760";
@@ -39,142 +40,71 @@ export default function ExamsHub() {
   const years = Object.keys(grouped).sort((a, b) => b - a);
 
   return (
-    <div className="min-h-screen text-white"
-         style={{ background: `radial-gradient(circle at top, ${NAVY_LIGHT}, #0A0826 60%)` }}>
-      <div className="max-w-4xl mx-auto p-4 md:p-8">
-
-        <div className="flex items-center gap-4 rounded-2xl p-5 md:p-6 mb-8 shadow-xl border"
-             style={{ background: `linear-gradient(135deg, ${NAVY}, ${NAVY_LIGHT})`, borderColor: `${GOLD}33` }}>
-          <img src="/coe-logo.png" alt="COE Sialkot logo"
-               className="h-14 w-14 md:h-16 md:w-16 rounded-full ring-2 shrink-0"
-               style={{ ["--tw-ring-color"]: GOLD }} />
-          <div className="min-w-0">
-            <h1 className="text-xl md:text-3xl font-bold tracking-tight">Examinations</h1>
-            <p className="text-xs md:text-sm uppercase tracking-widest mt-0.5" style={{ color: GOLD }}>
-              Centre of Excellence Sialkot
-            </p>
+    <InnerPage section="exams" title="Examinations" light="Office"
+      lede="Every exam link in one place: marks entry, proformas, result cards and office tools."
+      toc={[{ id: "marks", label: "Enter marks" }, { id: "results", label: "Results" }, { id: "sheets", label: "Result sheets" }, { id: "office", label: "Office" }]}>
+      <Section id="marks" title="Enter marks" note="Teachers: open your exam, enter the PIN and choose your class section.">
+        {!loaded && <p className="ip-empty">Loading exams…</p>}
+        {loaded && years.length === 0 && <p className="ip-empty">No exams have been set up yet.</p>}
+        {years.map((y) => (
+          <div key={y} className="ex-year">
+            <h3>{y}</h3>
+            {Object.keys(grouped[y]).sort((a, b) => b - a).map((m) => (
+              <div key={m} className="ex-month">
+                <p className="ex-mname">{monthName(m)}</p>
+                {grouped[y][m].map((ex) => {
+                  const url = `${SITE}/award-list/${ex.slug}`;
+                  return <LinkRow key={ex.id} href={`/award-list/${ex.slug}`} title={ex.name} subtitle={`${monthName(ex.month)} ${ex.year}`}
+                    badge={ex.is_current ? "Current" : null} onCopy={() => copy(url)} copied={copied === url} />;
+                })}
+              </div>
+            ))}
           </div>
-        </div>
-
-        {/* ---------------- Marks entry, per exam ---------------- */}
-        <Section title="Enter marks" note="Teachers — open your exam, enter the PIN, choose your class-section.">
-          {!loaded && <p className="text-sm text-white/50">Loading exams…</p>}
-          {loaded && years.length === 0 && (
-            <p className="text-sm text-white/50">No exams have been set up yet.</p>
-          )}
-
-          {years.map((y) => (
-            <div key={y} className="mb-5">
-              <h3 className="text-sm font-bold mb-2" style={{ color: GOLD }}>{y}</h3>
-              {Object.keys(grouped[y]).sort((a, b) => b - a).map((m) => (
-                <div key={m} className="mb-3">
-                  <div className="text-[11px] uppercase tracking-widest text-white/40 mb-1.5">
-                    {monthName(m)}
-                  </div>
-                  <div className="space-y-2">
-                    {grouped[y][m].map((ex) => {
-                      const url = `${SITE}/award-list/${ex.slug}`;
-                      return (
-                        <LinkRow
-                          key={ex.id}
-                          href={`/award-list/${ex.slug}`}
-                          title={ex.name}
-                          subtitle={`${monthName(ex.month)} ${ex.year}`}
-                          badge={ex.is_current ? "Current" : null}
-                          onCopy={() => copy(url)}
-                          copied={copied === url}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </Section>
-
-        {/* ---------------- Results ---------------- */}
-        <Section title="Results" note="Open with the teachers' PIN or the admin password.">
-          <div className="space-y-2">
-            <LinkRow href="/proformas"
-                     title="Teacher-wise & Class-wise Proformas"
-                     subtitle="Live result summaries · Excel download"
-                     onCopy={() => copy(`${SITE}/proformas`)}
-                     copied={copied === `${SITE}/proformas`} />
-            <LinkRow href="/result-cards"
-                     title="Result Cards"
-                     subtitle="Progress report cards · colourful or ink-friendly · PNG & PDF"
-                     onCopy={() => copy(`${SITE}/result-cards`)}
-                     copied={copied === `${SITE}/result-cards`} />
-          </div>
-        </Section>
-
-        {/* ---------------- Result sheets (admin) ---------------- */}
-        <ResultSheetsPanel />
-
-        {/* ---------------- Office ---------------- */}
-        <Section title="Office" note="Admin password required.">
-          <div className="space-y-2">
-            <LinkRow href="/admin/exams"
-                     title="Manage Exams"
-                     subtitle="Create exams, copy teacher links, set the current exam" />
-            <LinkRow href="/admin/award-lists"
-                     title="Award Lists"
-                     subtitle="Lock or unlock subjects · download award lists" />
-            <LinkRow href="/admin/warning-letter"
-                     title="Student Warning Letter"
-                     subtitle="Discipline notices" />
-          </div>
-        </Section>
-
-        <p className="text-[11px] text-white/40 mt-10 text-center">
-          New exams appear here automatically once they are created in Manage Exams.
-        </p>
-      </div>
-    </div>
+        ))}
+      </Section>
+      <hr className="ip-rule" />
+      <Section id="results" title="Results" note="Open with the teachers’ PIN or the admin password.">
+        <LinkRow href="/proformas" title="Teacher-wise and class-wise proformas" subtitle="Live result summaries with Excel download"
+          onCopy={() => copy(`${SITE}/proformas`)} copied={copied === `${SITE}/proformas`} />
+        <LinkRow href="/result-cards" title="Result cards" subtitle="Progress report cards, colourful or ink-friendly, PNG and PDF"
+          onCopy={() => copy(`${SITE}/result-cards`)} copied={copied === `${SITE}/result-cards`} />
+      </Section>
+      <hr className="ip-rule" />
+      <section id="sheets">
+        <h2>Result sheets</h2>
+        <div className="ip-darkbox"><ResultSheetsPanel /></div>
+      </section>
+      <hr className="ip-rule" />
+      <Section id="office" title="Office" note="Admin password required.">
+        <LinkRow href="/admin/exams" title="Manage exams" subtitle="Create exams, copy teacher links, set the current exam" />
+        <LinkRow href="/admin/award-lists" title="Award lists" subtitle="Lock or unlock subjects and download award lists" />
+        <LinkRow href="/admin/warning-letter" title="Student warning letter" subtitle="Discipline notices" />
+      </Section>
+      <p className="ip-meta">New exams appear here automatically once they are created in Manage exams.</p>
+    </InnerPage>
   );
 }
 
-function Section({ title, note, children }) {
+function Section({ id, title, note, children }) {
   return (
-    <section className="mb-8">
-      <h2 className="text-lg md:text-xl font-bold mb-1" style={{ color: GOLD }}>{title}</h2>
-      {note && <p className="text-xs text-white/50 mb-3">{note}</p>}
-      {children}
+    <section id={id}>
+      <h2>{title}</h2>
+      {note && <p className="ex-note">{note}</p>}
+      <div className="ex-rows">{children}</div>
     </section>
   );
 }
 
 function LinkRow({ href, title, subtitle, badge, onCopy, copied }) {
   return (
-    <div className="flex items-center gap-3 rounded-xl px-4 py-3 border transition hover:brightness-125"
-         style={{ borderColor: badge ? GOLD : "#ffffff1a", background: badge ? `${GOLD}12` : "#ffffff06" }}>
-      <a href={href} className="flex-1 min-w-0">
-        <div className="font-semibold flex items-center gap-2 flex-wrap">
-          <span>{title}</span>
-          {badge && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold border"
-                  style={{ color: GOLD, borderColor: `${GOLD}66`, background: `${GOLD}1f` }}>
-              {badge}
-            </span>
-          )}
-        </div>
-        {subtitle && <div className="text-xs text-white/50 truncate">{subtitle}</div>}
-        <div className="text-[11px] font-mono mt-0.5 truncate" style={{ color: `${GOLD}cc` }}>
-          coesialkot.com{href}
-        </div>
+    <div className={`ex-row${badge ? " cur" : ""}`}>
+      <a href={href} className="ex-main">
+        <b>{title}{badge && <span className="ip-tag gold">{badge}</span>}</b>
+        {subtitle && <span>{subtitle}</span>}
+        <code>coesialkot.com{href}</code>
       </a>
-      {onCopy && (
-        <button onClick={onCopy}
-                className="text-xs font-semibold rounded-lg px-3 py-1.5 border shrink-0"
-                style={{ borderColor: `${GOLD}55`, color: copied ? NAVY : GOLD,
-                         background: copied ? GOLD : "transparent" }}>
-          {copied ? "Copied" : "Copy"}
-        </button>
-      )}
-      <a href={href} className="text-lg shrink-0" style={{ color: GOLD }} aria-label={`Open ${title}`}>
-        &rarr;
-      </a>
+      {onCopy && <button type="button" className="ex-copy" onClick={onCopy}>{copied ? "Copied" : "Copy link"}</button>}
+      <a href={href} className="ip-btn ex-open" aria-label={`Open ${title}`}>Open</a>
     </div>
   );
 }

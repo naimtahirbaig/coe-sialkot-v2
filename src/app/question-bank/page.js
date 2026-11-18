@@ -65,7 +65,7 @@ export default function QuestionBankPage() {
           <p style={{ color: C.MUTED }}>Teachers log in to make class tests from the question bank. The admin logs in with username <b>admin</b>.</p>
           <Msg m={msg} />
           <label style={lbl}>Username</label>
-          <input style={{ ...inp, marginBottom: 12 }} value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} autoCapitalize="none" autoFocus required />
+          <input style={{ ...inp, marginBottom: 12 }} value={login.username} onChange={(e) => setLogin({ ...login, username: e.target.value })} autoCapitalize="none" required />
           <label style={lbl}>Password</label>
           <input style={{ ...inp, marginBottom: 16 }} type="password" value={login.password} onChange={(e) => setLogin({ ...login, password: e.target.value })} required />
           <button style={btn()}>Log in</button>

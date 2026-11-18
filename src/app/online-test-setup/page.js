@@ -200,7 +200,7 @@ export default function OnlineTestSetup() {
   );
 
   return (
-    <div style={{ position: "fixed", inset: 0, overflowY: "auto", background: "#F3F2F9", zIndex: 40, colorScheme: "light", color: INK, fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}>
+    <div style={{ background: "#F3F2F9", colorScheme: "light", color: INK, fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" }}>
       <header style={{ background: NAVY, color: "#fff", borderBottom: `5px solid ${GOLD}`, padding: "18px 16px 16px" }}>
         <div style={{ maxWidth: 920, margin: "0 auto", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 220 }}>
@@ -238,7 +238,7 @@ export default function OnlineTestSetup() {
             <form onSubmit={(e) => { e.preventDefault(); if (pw) verify(pw); }}>
               <H n={1} t="Sign in" sub="Enter the admin password to set up an online test." />
               <label style={{ fontWeight: 600, fontSize: 14 }}>Admin password<br />
-                <input type="password" autoFocus autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} style={{ ...inp, marginTop: 6, maxWidth: 420 }} placeholder="Password" />
+                <input type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} style={{ ...inp, marginTop: 6, maxWidth: 420 }} placeholder="Password" />
               </label>
               <Nav hideBack nextLabel="Continue →" disabled={!pw} onNext={() => verify(pw)} />
             </form>

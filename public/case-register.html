@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>UMC Case Register — Centre of Excellence (B), Sialkot</title>
+<link rel="stylesheet" href="/site-chrome.css">
+<script src="/site-chrome.js" data-section="teachers" data-title="UMC Case" data-light="Register" data-short="1" data-lede="Report, review and decide examination cases in one place." defer></script>
 <style>
   :root {
     /* Pulled directly from the school's own logo (Punjab Daanish Schools
@@ -50,7 +52,7 @@
   }
   * { box-sizing: border-box; }
   html, body {
-    height: 100%;
+    min-height: 100%;
     margin: 0;
   }
   body {
@@ -104,7 +106,7 @@
     gap: 16px;
     flex-wrap: wrap;
     position: sticky;
-    top: 0;
+    top: var(--sc-h, 0px);
     z-index: 40;
     border-bottom: 3px solid var(--gold);
   }

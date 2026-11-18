@@ -16,9 +16,10 @@
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
-  background: var(--bg0);
-  color: var(--t1);
+  font-family: 'Source Sans 3', 'DM Sans', system-ui, sans-serif;
+  background: #F6F5FA;
+  color: #15142E;
+  margin: 0;
 }
 
 ::-webkit-scrollbar { width: 6px; }

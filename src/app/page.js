@@ -8,61 +8,7 @@ import { supabase } from '@/lib/supabase';
 // Slideshow: full-screen, big two-colour name, a tilted photo card that changes with each slide.
 // Below: control bar, notices strip, students, staff, footer. Gold quick buttons on the right edge.
 
-const MENU = [
-  {
-    label: 'Students',
-    intro: 'Everything a student needs: practise, take tests and revise.',
-    links: [
-      { href: '/practice-tests-2026.html', title: 'Practice tests',     text: 'Any chapter, any time, nothing saved' },
-      { href: '/online-tests-2026.html',   title: 'Online Tests 2026',  text: 'Real chapter tests on announced dates' },
-      { href: '/student-resources',        title: 'Student resources',  text: 'Notes, past papers and date sheets' },
-      { href: '/practice-tests',           title: 'Quizzes',            text: 'Flashcards, matching and quick quizzes' },
-    ],
-  },
-  {
-    label: 'Tests & Results',
-    intro: 'Online MCQ tests for Classes 6, 7 and 8, with a result card for every test.',
-    links: [
-      { href: '/online-tests-2026.html',   title: 'Online Tests 2026',    text: 'Password from your class teacher' },
-      { href: '/practice-tests-2026.html', title: 'Practice tests',       text: 'Same questions and timer, no camera' },
-      { href: '/result-cards',             title: 'Result cards',         text: 'Printable progress report cards' },
-      { href: '/exams',                    title: 'Examinations',         text: 'All exam links in one place' },
-    ],
-  },
-  {
-    label: 'Teachers',
-    intro: 'Tools for teachers and the office. Most ask for your password.',
-    links: [
-      { href: '/question-bank',       title: 'Question Bank',       text: 'Add questions and make class tests' },
-      { href: '/online-test-setup',   title: 'Online test setup',   text: 'Choose a test, set dates, make it live' },
-      { href: '/online-test-results', title: 'Online test results', text: 'Result cards, letters and downloads' },
-      { href: '/award-list',          title: 'Award lists',         text: 'Enter marks for your class and section' },
-      { href: '/proformas',           title: 'Proformas',           text: 'Teacher-wise and class-wise details' },
-      { href: '/admin',               title: 'Administration',      text: 'Papers, results, promotion and letters' },
-    ],
-  },
-  {
-    label: 'Notes & Exams',
-    intro: 'Mid-Term SBA 2026-27: date sheet, syllabus and expected questions for Classes 6, 7 and 8.',
-    links: [
-      { href: '/mid-term-2026-27.html',        title: 'Mid-Term date sheet',      text: '7 to 18 December 2026, Classes 6, 7 and 8' },
-      { href: '/mid-term-2026-27.html#syllabus', title: 'Mid-Term syllabus',      text: 'Units and lessons for every paper' },
-      { href: '/notes-2026.html',              title: 'Notes & expected questions', text: '51 files in 8 subjects, ready to download' },
-      { href: '/notes-2026.html?class=6',      title: 'Class 6 notes',            text: 'MCQs and subjective questions' },
-      { href: '/notes-2026.html?class=7',      title: 'Class 7 notes',            text: 'MCQs and subjective questions' },
-      { href: '/notes-2026.html?class=8',      title: 'Class 8 notes',            text: 'MCQs, subjective and updated History & Geography' },
-    ],
-  },
-  { label: 'Notice Board', href: '/notice-board' },
-];
-
-const QUICK = [
-  { href: '/practice-tests-2026.html', label: 'Practice tests', icon: 'pencil' },
-  { href: '/online-tests-2026.html',   label: 'Online Tests',   icon: 'check' },
-  { href: '/notes-2026.html',          label: 'Notes',          icon: 'book' },
-  { href: '/mid-term-2026-27.html',    label: 'Date sheet',     icon: 'cal' },
-  { href: '/notice-board',             label: 'Notice board',   icon: 'bell' },
-];
+// The header menu, quick buttons and footer are shared: src/components/site/
 
 const SLIDES = [
   { id: 'online', photo: '/home/photos/assembly-wide.webp', caption: 'Online Tests 2026', href: '/online-tests-2026.html',
@@ -383,70 +329,6 @@ export default function HomePage() {
   return (
     <div className="hp" style={{ '--pattern': PATTERN, '--pattern-dark': PATTERN_DARK }}>
       <style>{CSS}</style>
-      <a href="#main" className="hp-skip">Skip to content</a>
-
-      {/* ── Header over the slideshow ── */}
-      <header ref={headRef} className={`ix-head${solid ? ' solid' : ''}${open >= 0 ? ' menu-open' : ''}`} onMouseLeave={() => setOpen(-1)}>
-        <Link href="/" className="ix-badge" aria-label="Centre of Excellence Sialkot (Boys), home">
-          <img src="/logo.png" alt="" width="150" height="150" />
-        </Link>
-        <div className="ix-rows">
-          <div className="ix-util">
-            <span className="ix-name">Centre of Excellence Sialkot <b>(Boys)</b></span>
-            <nav aria-label="Quick links">
-              <a href="/notes-2026.html">Notes &amp; expected questions</a>
-              <a href="/mid-term-2026-27.html" className="ix-hot">Mid-Term date sheet</a>
-              <Link href="/notice-board">Notice board</Link>
-              <Link href="/login" className="ix-sign"><Icon name="user" />Sign in</Link>
-            </nav>
-          </div>
-          <nav className="ix-nav" aria-label="Main">
-            {MENU.map((m, i) => m.href ? (
-              <a key={m.label} href={m.href} className="ix-top" onMouseEnter={() => setOpen(-1)}>{m.label}</a>
-            ) : (
-              <button
-                key={m.label} type="button" className={open === i ? 'ix-top on' : 'ix-top'}
-                aria-expanded={open === i} aria-controls={`ix-panel-${i}`}
-                onMouseEnter={() => setOpen(i)} onClick={(e) => { e.stopPropagation(); setOpen(open === i ? -1 : i); }}
-              >{m.label}</button>
-            ))}
-            <a href="/practice-tests-2026.html" className="ix-cta">Start practising</a>
-          </nav>
-        </div>
-        <button type="button" className="ix-burger" aria-label="Menu" aria-expanded={mob} onClick={() => setMob(true)}><span /><span /><span /></button>
-
-        {/* full-width menu panels */}
-        {MENU.map((m, i) => !m.href && (
-          <div key={m.label} id={`ix-panel-${i}`} className={open === i ? 'ix-panel on' : 'ix-panel'} hidden={open !== i}>
-            <div className="ix-panel-in">
-              <div className="ix-panel-intro"><h2>{m.label}</h2><p>{m.intro}</p></div>
-              <ul>
-                {m.links.map((l) => (
-                  <li key={l.href + l.title}><a href={l.href}><b>{l.title}</b><span>{l.text}</span></a></li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
-      </header>
-
-      {/* phone menu */}
-      <div className={mob ? 'ix-mob on' : 'ix-mob'} hidden={!mob} role="dialog" aria-modal="true" aria-label="Menu">
-        <div className="ix-mob-top">
-          <img src="/logo.png" alt="" width="54" height="54" />
-          <button type="button" aria-label="Close menu" onClick={() => setMob(false)}>×</button>
-        </div>
-        {MENU.map((m) => m.href ? (
-          <a key={m.label} href={m.href} className="ix-mob-link" onClick={() => setMob(false)}>{m.label}</a>
-        ) : (
-          <details key={m.label}>
-            <summary>{m.label}</summary>
-            {m.links.map((l) => <a key={l.href + l.title} href={l.href} onClick={() => setMob(false)}>{l.title}</a>)}
-          </details>
-        ))}
-        <Link href="/login" className="ix-mob-sign" onClick={() => setMob(false)}>Sign in</Link>
-      </div>
-
       {/* ── Slideshow ── */}
       <section
         className="ix-hero" aria-roledescription="carousel" aria-label="Centre of Excellence Sialkot"
@@ -507,14 +389,8 @@ export default function HomePage() {
           ))}
       </section>
 
-      {/* gold quick buttons on the right edge */}
-      <nav className="ix-quick" aria-label="Quick access">
-        {QUICK.map((q) => (
-          <a key={q.href} href={q.href}><Icon name={q.icon} /><span>{q.label}</span></a>
-        ))}
-      </nav>
 
-      <main id="main">
+      <main>
         {/* ── Upcoming examination ── */}
         <section className="ex" aria-labelledby="ex-h">
           <div className="ex-in">
@@ -723,31 +599,6 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* ── Footer: white card on navy ── */}
-      <footer className="ft" style={{ backgroundImage: `${PATTERN}, linear-gradient(135deg, #16154F, #0C0C3C)` }}>
-        <div className="ft-card">
-          <div className="ft-top">
-            <div className="ft-id">
-              <img src="/logo.png" alt="" width="120" height="120" />
-              <p>Centre of Excellence<br />Sialkot (Boys)</p>
-            </div>
-            <div className="ft-right">
-              <div className="ft-logos">{AUTHORITIES.map((a) => <img key={a.name} src={a.src} alt={a.name} width="52" height="52" />)}</div>
-              <p>Punjab Daanish Schools &amp; Centres of Excellence Authority, Government of the Punjab</p>
-              <p className="ft-ur" lang="ur" dir="rtl">سینٹر آف ایکسیلینس سیالکوٹ (بوائز)</p>
-            </div>
-          </div>
-          <nav className="ft-links" aria-label="Footer">
-            <a href="/practice-tests-2026.html">Practice tests</a>
-            <a href="/online-tests-2026.html">Online Tests</a>
-            <a href="/student-resources">Student resources</a>
-            <a href="/notice-board">Notice board</a>
-            <a href="#staff">Staff</a>
-            <Link href="/login">Sign in</Link>
-          </nav>
-          <p className="ft-credit">Designed and developed by <b>Dr Naim Tahir Baig</b>. © {new Date().getFullYear()} Centre of Excellence Sialkot (Boys)</p>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -764,57 +615,6 @@ const CSS = `
 .hp-wrap{max-width:1180px;margin:0 auto;padding-left:24px;padding-right:24px}
 .hp-skip{position:absolute;left:-999px;top:0;background:var(--gold);color:var(--deep);padding:10px 16px;z-index:200;font-weight:700}
 .hp-skip:focus{left:12px;top:12px}
-
-/* ── header over the slideshow ── */
-.ix-head{position:fixed;top:0;left:0;right:0;z-index:90;display:flex;align-items:flex-start;justify-content:flex-end;padding:0 40px 0 220px;
-  background:linear-gradient(180deg,rgba(12,12,60,.82) 0%,rgba(12,12,60,.35) 70%,rgba(12,12,60,0) 100%);transition:background .3s,box-shadow .3s}
-.ix-head.solid,.ix-head.menu-open{background:var(--deep);box-shadow:0 6px 24px rgba(0,0,0,.25)}
-.hp .ix-badge{position:absolute;left:40px;top:14px;display:block;border-radius:50%;background:#fff;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.35);transition:all .3s}
-.ix-badge img{display:block;width:150px;height:150px;border-radius:50%}
-.ix-head.solid .ix-badge{top:8px;padding:3px}
-.ix-head.solid .ix-badge img{width:78px;height:78px}
-.ix-rows{display:flex;flex-direction:column;align-items:flex-end;padding-top:12px}
-.ix-util{display:flex;align-items:center;gap:28px;font-size:15.5px;color:#fff}
-.ix-name{font-family:'Josefin Sans',sans-serif;font-weight:700;font-size:16px;opacity:.95}
-.ix-name b{color:var(--gold2)}
-.ix-util nav{display:flex;align-items:center;gap:22px}
-.hp .ix-util a{color:#fff;text-decoration:none;font-weight:600}
-.hp .ix-util a:hover{color:var(--gold2)}
-.hp .ix-util .ix-sign{display:flex;align-items:center;gap:6px;background:var(--gold);color:var(--deep);padding:6px 14px;border-radius:999px}
-.hp .ix-util .ix-sign:hover{background:var(--gold2);color:var(--deep)}
-.ix-sign svg{width:18px;height:18px}
-.ix-nav{display:flex;align-items:center;gap:6px;margin-top:10px;padding-bottom:12px}
-.hp .ix-top{background:none;border:0;color:#fff;font:700 19px 'Josefin Sans',sans-serif;padding:10px 16px 8px;border-radius:8px;cursor:pointer;text-decoration:none}
-.hp .ix-top:hover,.hp .ix-top.on{background:var(--royal);color:var(--gold2)}
-.hp .ix-cta{margin-left:10px;background:var(--gold);color:var(--deep);font-weight:700;padding:10px 20px;border-radius:10px;text-decoration:none}
-.hp .ix-cta:hover{background:var(--gold2)}
-.ix-burger{display:none;margin:22px 0 0;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.4);border-radius:10px;width:48px;height:44px;padding:11px 12px;cursor:pointer}
-.ix-burger span{display:block;height:2px;background:#fff;margin:4px 0;border-radius:2px}
-
-.ix-panel{position:absolute;left:0;right:0;top:100%;background:var(--royal);color:#fff;box-shadow:0 20px 40px rgba(0,0,0,.3)}
-.ix-panel[hidden]{display:none}
-.ix-panel-in{max-width:1180px;margin:0 auto;padding:40px 24px 48px 240px;display:grid;grid-template-columns:260px 1fr;gap:48px}
-.ix-panel-intro h2{font-size:28px;color:var(--gold2);margin-bottom:8px}
-.ix-panel-intro p{margin:0;color:#D6D9F2}
-.ix-panel ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 36px}
-.hp .ix-panel a{display:block;text-decoration:none;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.14)}
-.ix-panel a b{display:block;font-size:19px}
-.ix-panel a span{color:#C7CBEA;font-size:15px}
-.hp .ix-panel a:hover b{color:var(--gold2)}
-
-/* phone menu */
-.ix-mob{position:fixed;inset:0;z-index:150;background:var(--deep);color:#fff;padding:16px 20px 30px;overflow:auto}
-.ix-mob[hidden]{display:none}
-.ix-mob-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.ix-mob-top img{border-radius:50%;background:#fff;padding:2px}
-.ix-mob-top button{background:none;border:1.5px solid rgba(255,255,255,.4);color:#fff;font-size:30px;line-height:1;width:46px;height:46px;border-radius:10px;cursor:pointer}
-.ix-mob details,.hp .ix-mob-link{display:block;border-bottom:1px solid rgba(255,255,255,.14)}
-.ix-mob summary,.hp .ix-mob-link{font:700 21px 'Josefin Sans',sans-serif;padding:16px 4px;cursor:pointer;text-decoration:none;list-style:none}
-.ix-mob summary::-webkit-details-marker{display:none}
-.ix-mob summary::after{content:"+";float:right;color:var(--gold2)}
-.ix-mob details[open] summary::after{content:"–"}
-.hp .ix-mob details a{display:block;padding:10px 12px;color:#D6D9F2;text-decoration:none}
-.hp .ix-mob-sign{display:block;margin-top:22px;text-align:center;background:var(--gold);color:var(--deep);font-weight:700;padding:14px;border-radius:12px;text-decoration:none}
 
 /* ── slideshow ── */
 .ix-hero{position:relative;height:min(92vh,880px);min-height:640px;overflow:hidden;background:var(--deep);color:#fff}
@@ -856,13 +656,6 @@ const CSS = `
 .ix-news-item em{font-style:normal;font-family:'Source Sans 3',sans-serif;font-size:13px;background:var(--red);border-radius:6px;padding:2px 8px;margin-right:8px;vertical-align:3px}
 .hp .ix-news-item:hover b{color:var(--gold2)}
 .ix-news-item.skel{min-height:96px;background:linear-gradient(90deg,#1B1A5C,#22216A,#1B1A5C)}
-
-/* gold quick buttons */
-.ix-quick{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:80;display:flex;flex-direction:column;gap:8px}
-.hp .ix-quick a{display:flex;align-items:center;gap:10px;background:var(--gold);color:var(--deep);text-decoration:none;font-weight:700;height:56px;padding:0 16px 0 17px;border-radius:30px 0 0 30px;box-shadow:0 6px 16px rgba(0,0,0,.2);transform:translateX(calc(100% - 56px));transition:transform .25s ease}
-.ix-quick a span{white-space:nowrap;opacity:0;transition:opacity .2s}
-.hp .ix-quick a:hover span,.hp .ix-quick a:focus-visible span{opacity:1}
-.hp .ix-quick a:hover,.hp .ix-quick a:focus-visible{transform:none;background:var(--gold2)}
 
 /* lower sections */
 .hp-sec{padding:64px 0}
@@ -1058,25 +851,6 @@ const CSS = `
 .mb::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(12,12,60,.75),rgba(12,12,60,.35));backdrop-filter:blur(1px)}
 .mb-motto{position:relative;margin:0;font:700 clamp(54px,9vw,150px)/1 'Josefin Sans',sans-serif;letter-spacing:-.03em;color:#fff}
 .mb-pill{position:relative;display:inline-block;margin-top:-6px;background:var(--gold);color:var(--deep);font:700 clamp(20px,2.2vw,32px) 'Josefin Sans',sans-serif;padding:14px 60px 10px;border-radius:12px}
-
-/* ══ Footer ══ */
-.ft{padding:60px 2.5% 50px;background-size:120px 120px,cover;background-blend-mode:soft-light,normal}
-.ft-card{max-width:1600px;margin:0 auto;background:#fff;border-radius:34px;padding:56px 6% 40px;color:var(--ink)}
-.ft-top{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap;padding-bottom:36px;border-bottom:1.5px solid var(--line)}
-.ft-id{display:flex;flex-direction:column;gap:12px}
-.ft-id img{border-radius:50%}
-.ft-id p{margin:0;font:400 clamp(26px,2.6vw,38px)/1.15 Georgia,'Times New Roman',serif;letter-spacing:.02em;text-transform:uppercase;color:var(--deep)}
-.ft-right{display:flex;flex-direction:column;align-items:flex-end;gap:12px;text-align:right;max-width:560px}
-.ft-right p{margin:0;font-size:18px;color:var(--moss)}
-.ft-logos{display:flex;gap:12px}
-.ft-logos img{border-radius:50%;box-shadow:0 0 0 1px var(--line)}
-.ft-ur{font-family:COEUrdu,'Noto Nastaliq Urdu',serif;font-size:20px !important;line-height:2}
-.ft-links{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px 0;padding:26px 0 10px}
-.hp .ft-links a{font-size:18px;color:var(--ink);text-decoration:none;padding:0 18px;border-left:1.5px solid var(--line)}
-.hp .ft-links a:first-child{border-left:0}
-.hp .ft-links a:hover{color:var(--royal);text-decoration:underline}
-.ft-credit{margin:8px 0 0;text-align:right;font-size:16px;color:var(--moss)}
-.ft-credit b{color:var(--royal)}
 
 /* ══ small screens ══ */
 @media (max-width:1000px){

@@ -57,61 +57,20 @@ export default function AdminAuth({ children }) {
   if (!checked) return null;
 
   if (!authed) return (
-    <div style={{ minHeight:'100vh', background:navy, display:'flex', flexDirection:'column', fontFamily:'Georgia, serif' }}>
-      <div style={{ height:4, background:gold }} />
-      <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'2rem' }}>
-        <div style={{ width:'100%', maxWidth:380 }}>
-
-          {/* Logo */}
-          <div style={{ textAlign:'center', marginBottom:'2rem' }}>
-            <div style={{ width:72, height:72, borderRadius:'50%', background:gold, border:`3px solid ${goldLt}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem', overflow:'hidden' }}>
-              <img src="/logo.png" alt="COE" style={{ width:64, height:64, objectFit:'contain' }} />
-            </div>
-            <h1 style={{ color:cream, margin:'0 0 0.25rem', fontSize:'1.3rem', fontWeight:700 }}>COE Sialkot</h1>
-            <p style={{ color:textSec, margin:0, fontSize:'0.78rem', textTransform:'uppercase', letterSpacing:'0.8px' }}>Admin Portal</p>
-          </div>
-
-          {/* Gold rule */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:'1.75rem' }}>
-            <div style={{ flex:1, height:1, background:gold }} />
-            <span style={{ color:gold, fontSize:14 }}>⚜</span>
-            <div style={{ flex:1, height:1, background:gold }} />
-          </div>
-
-          {/* Login form */}
-          <div style={{ background:navyMid, border:`1px solid ${border}`, borderRadius:12, padding:'2rem' }}>
-            <h2 style={{ color:goldLt, margin:'0 0 1.5rem', fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'1px', textAlign:'center' }}>Sign In</h2>
-            <form onSubmit={handleLogin}>
-              <div style={{ marginBottom:'1rem' }}>
-                <label style={{ display:'block', color:textSec, fontSize:'0.72rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'0.35rem', fontWeight:600 }}>Username</label>
-                <input required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username"
-                  style={{ width:'100%', padding:'0.75rem 1rem', background:navyDeep, border:`1px solid ${borderLt}`, borderRadius:8, color:cream, fontSize:'0.95rem', boxSizing:'border-box', fontFamily:'Georgia, serif' }}
-                  placeholder="Admin username" />
-              </div>
-              <div style={{ marginBottom:'1.5rem' }}>
-                <label style={{ display:'block', color:textSec, fontSize:'0.72rem', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'0.35rem', fontWeight:600 }}>Password</label>
-                <input required type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password"
-                  style={{ width:'100%', padding:'0.75rem 1rem', background:navyDeep, border:`1px solid ${borderLt}`, borderRadius:8, color:cream, fontSize:'0.95rem', boxSizing:'border-box', fontFamily:'Georgia, serif' }}
-                  placeholder="••••••••" />
-              </div>
-              {error && (
-                <div style={{ background:'#2d0e0e', color:'#f09595', border:'1px solid #f09595', padding:'0.7rem 1rem', borderRadius:8, marginBottom:'1rem', fontSize:'0.85rem', textAlign:'center' }}>
-                  {error}
-                </div>
-              )}
-              <button type="submit" disabled={loading}
-                style={{ width:'100%', padding:'0.9rem', background:gold, color:navy, border:'none', borderRadius:10, fontSize:'1rem', fontWeight:700, cursor:'pointer', opacity:loading ? 0.7 : 1, fontFamily:'Georgia, serif' }}>
-                {loading ? 'Signing in…' : 'Sign In →'}
-              </button>
-            </form>
-          </div>
-
-          <p style={{ color:'#2a3f6a', fontSize:'0.7rem', textAlign:'center', marginTop:'1.5rem', textTransform:'uppercase', letterSpacing:'0.5px' }}>
-            Punjab Daanish Schools & COE Authority
-          </p>
+    <div className="ip-wrap">
+      <div className="ip-signin">
+        <div className="ip-signin-side">
+          <img src="/logo.png" alt="" width="88" height="88" />
+          <h2>Office sign in</h2>
+          <p>School administration tools: papers, student records, online tests, award lists and result cards.</p>
         </div>
+        <form className="ip-signin-form" onSubmit={handleLogin}>
+          <label>Username<input className="ip-field" required value={username} onChange={e => setUsername(e.target.value)} autoComplete="username" placeholder="Admin username" /></label>
+          <label>Password<input className="ip-field" required type="password" value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" placeholder="Password" /></label>
+          {error && <p className="ip-err" role="alert">{error}</p>}
+          <button type="submit" className="ip-btn" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+        </form>
       </div>
-      <div style={{ height:4, background:gold }} />
     </div>
   );
 

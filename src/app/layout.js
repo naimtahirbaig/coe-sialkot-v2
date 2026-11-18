@@ -1,4 +1,5 @@
 import './globals.css'
+import SiteChrome from '@/components/site/SiteChrome'
 
 export const metadata = {
   title: 'Centre of Excellence Sialkot (Boys)',
@@ -34,7 +35,13 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <head>
+        {/* shared header, footer and inner-page styles (also used by the plain .html pages) */}
+        <link rel="stylesheet" href="/site-chrome.css" />
+      </head>
+      <body>
+        <SiteChrome>{children}</SiteChrome>
+      </body>
     </html>
   )
 }

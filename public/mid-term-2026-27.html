@@ -14,6 +14,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site-chrome.css">
+<script src="/site-chrome.js" data-section="exams" data-title="Mid-Term" data-light="SBA 2026-27" data-crumb="Mid-Term date sheet and syllabus" data-lede="Date sheet and syllabus for Classes 6, 7 and 8. Check your class, then revise each paper’s syllabus." data-photo="/home/photos/class8-biology.webp" defer></script>
 <style>
 @font-face{font-family:COEUrdu;src:url('/fonts/noto-nastaliq-urdu-400.woff2') format('woff2');font-display:swap}
 :root{--navy:#16154F;--deep:#0C0C3C;--royal:#1F2A86;--gold:#E39C24;--gold2:#F6C766;--red:#C8364A;--paper:#F6F5FA;--ink:#15142E;--moss:#4E4C6B;--line:#DEDCEA}
@@ -21,33 +23,21 @@
 body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 'Source Sans 3',system-ui,sans-serif}
 a{color:var(--royal)}
 a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
-h1,h2,h3{font-family:'Josefin Sans',sans-serif;margin:0}
-.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
-header{background:linear-gradient(135deg,var(--navy),var(--deep));color:#fff;border-bottom:5px solid var(--gold);padding:22px 0 30px}
-.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-.top a{color:#fff;text-decoration:none;font-weight:600}
-.top a:hover{color:var(--gold2)}
-.logos{display:flex;gap:10px}
-.logos img{width:58px;height:58px;border-radius:50%;background:#fff}
-.pill{display:inline-block;background:var(--gold);color:var(--deep);font:700 18px 'Josefin Sans',sans-serif;padding:6px 14px 3px;border-radius:8px;margin-top:26px}
-header h1{font-size:clamp(34px,5.4vw,60px);line-height:1.05;margin-top:12px}
-header p{color:#D9D8EE;margin:12px 0 0;font-size:18px;max-width:46em}
-.count{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
-.count div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 16px;min-width:96px;text-align:center}
+main h2,main h3{font-family:'Josefin Sans',sans-serif;margin:0}
+.lead-box{border:2px solid var(--gold);border-radius:22px;padding:22px 26px;margin:0 0 34px}
+.lead-box p{margin:0 0 14px;color:var(--royal);font-size:18px}
+.count{display:flex;gap:12px;margin:0 0 6px;flex-wrap:wrap}
+.count div{background:var(--navy);border-radius:12px;padding:10px 16px;min-width:96px;text-align:center}
 .count b{display:block;font:700 34px 'Josefin Sans',sans-serif;color:var(--gold2)}
 .count span{font-size:14px;color:#D9D8EE}
-nav.jump{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line)}
-nav.jump .wrap{display:flex;gap:6px;overflow-x:auto;padding-top:10px;padding-bottom:10px}
-nav.jump a{flex:none;text-decoration:none;font-weight:700;color:var(--navy);padding:8px 14px;border-radius:999px;border:1.5px solid var(--line)}
-nav.jump a:hover{border-color:var(--gold)}
-section{padding:46px 0 10px}
-h2{font-size:32px;color:var(--navy)}
+main section{padding:10px 0 10px}
+main section+section{border-top:9px solid transparent;border-image:linear-gradient(var(--navy) 0 4px,#fff 4px 5px,var(--gold) 5px 9px) 1;margin-top:46px;padding-top:46px}
 .sub{color:var(--moss);margin:6px 0 20px}
 .tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
 .tabs button{border:1.5px solid var(--navy);background:#fff;color:var(--navy);font:700 16px 'Source Sans 3',sans-serif;padding:9px 18px;border-radius:999px;cursor:pointer}
 .tabs button[aria-pressed="true"]{background:var(--navy);color:#fff}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 4px 18px rgba(22,21,79,.06)}
-table{width:100%;border-collapse:collapse}
+main table{width:100%;border-collapse:collapse}
 th,td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 thead th{background:var(--navy);color:#fff;font-weight:700;font-size:15px}
 tbody tr:last-child td{border-bottom:0}
@@ -71,15 +61,13 @@ tr.next td.d::after{content:"Next";display:inline-block;margin-left:8px;backgrou
 .btn{display:inline-block;background:var(--gold);color:var(--deep);font-weight:700;text-decoration:none;padding:9px 16px;border-radius:9px;border:0;cursor:pointer;font-size:15px}
 .btn.line{background:#fff;border:1.5px solid var(--navy);color:var(--navy)}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
-footer{margin-top:50px;background:var(--deep);color:#C5C4DC;text-align:center;padding:24px 16px;font-size:15px}
-footer a{color:#fff}
+.nfoot{text-align:center;color:var(--moss);padding:0 16px 40px;font-size:15px;margin:0}
 @media (max-width:700px){
   .offi{grid-template-columns:1fr}
   th,td{padding:11px 10px;font-size:15.5px}
-  .logos img{width:44px;height:44px}
-}
+  }
 @media print{
-  header,nav.jump,.actions,.tabs,.offi,footer{display:none}
+  .ip-toc,.actions,.tabs,.offi,.nfoot,.lead-box{display:none}
   body{background:#fff}
   section{padding:10px 0;break-inside:avoid}
   .card{box-shadow:none}
@@ -88,24 +76,14 @@ footer a{color:#fff}
 </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="top">
-      <a href="/">← Home</a>
-      <div class="logos"><img src="/logo.png" alt="Punjab Daanish Schools & Centres of Excellence Authority"><img src="/ld-pectaa.webp" alt="PECTAA"><img src="/ld-punjab.webp" alt="Government of the Punjab"></div>
-    </div>
-    <span class="pill">Upcoming examination</span>
-    <h1>Mid-Term SBA 2026-27</h1>
-    <p>Mid-Term School-Based Assessment for Classes 6, 7 and 8, from Monday 7 to Friday 18 December 2026. Check your class below, then revise each paper's syllabus.</p>
-    <div class="count" id="count" aria-live="polite"></div>
-  </div>
-</header>
+<div class="ip"><div class="ip-wrap"><div class="ip-grid">
+<aside class="ip-toc" aria-label="On this page"><h2>On This Page</h2><ul>
+  <li><a href="#datesheet">Date sheet</a></li><li><a href="#syllabus">Syllabus</a></li><li><a href="#official">Official copies</a></li><li><a href="/notes-2026.html">Notes &amp; expected questions</a></li><li><a href="/practice-tests-2026.html">Practice tests</a></li>
+</ul></aside>
+<div class="ip-body">
+<div class="lead-box"><p>Classes 6, 7 and 8 sit the Mid-Term School Based Assessment from Monday 7 to Friday 18 December 2026.</p><div class="count" id="count" aria-live="polite"></div></div>
 
-<nav class="jump" aria-label="On this page"><div class="wrap">
-  <a href="#datesheet">Date sheet</a><a href="#syllabus">Syllabus</a><a href="#official">Official copies</a><a href="/notes-2026.html">Notes &amp; expected questions</a><a href="/practice-tests-2026.html">Practice tests</a>
-</div></nav>
-
-<main class="wrap">
+<main>
   <section id="datesheet">
     <h2>Date sheet</h2>
     <p class="sub">Choose your class. Past papers are greyed out and the next paper is highlighted.</p>
@@ -142,7 +120,8 @@ footer a{color:#fff}
     </div>
   </section>
 </main>
-<footer>Centre of Excellence Sialkot (Boys) · <a href="/notice-board">Notice board</a> · <a href="/">Home</a></footer>
+</div></div></div></div>
+<p class="nfoot">Centre of Excellence Sialkot (Boys) · <a href="/notice-board">Notice board</a> · <a href="/">Home</a></p>
 
 <script>
 (function(){

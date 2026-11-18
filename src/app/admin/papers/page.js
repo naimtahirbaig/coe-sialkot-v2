@@ -397,7 +397,7 @@ function AdminPapersInner() {
       background: NAVY, color: '#fff', padding: '16px 24px',
       borderBottom: `4px solid ${GOLD}`,
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      flexWrap: 'wrap', gap: 10, position: 'sticky', top: 0, zIndex: 5,
+      flexWrap: 'wrap', gap: 10, position: 'sticky', top: 'var(--sc-h)', zIndex: 5,
     },
     modalTitle: { margin: 0, fontFamily: 'Georgia, serif', fontSize: 18, fontWeight: 700 },
     modalSub: { margin: 0, fontSize: 12, opacity: 0.85 },

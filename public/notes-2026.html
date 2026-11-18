@@ -13,15 +13,21 @@
 <meta property="og:image" content="https://www.coesialkot.com/notes/covers/8-mathematics-mcqs.webp">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site-chrome.css">
+<script src="/site-chrome.js" data-section="exams" data-title="Notes &amp;" data-light="Expected Questions" data-crumb="Notes &amp; expected questions" data-lede="Chapter-wise MCQs and subjective questions for Classes 6, 7 and 8 in the PECTAA paper style. Read online or download to your phone." defer></script>
 <style>
 :root{--navy:#16154F;--deep:#0C0C3C;--royal:#1F2A86;--gold:#E39C24;--gold2:#F6C766;--green:#0F3D2E;--paper:#F6F5FA;--ink:#15142E;--moss:#4E4C6B;--line:#DEDCEA}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.55 'Source Sans 3',system-ui,sans-serif}
 a{color:var(--royal)}
 a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
-h1,h2,h3{font-family:'Josefin Sans',sans-serif;margin:0}
+main h2,main h3,.feat h2,.feat h3{font-family:'Josefin Sans',sans-serif;margin:0}
 .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-header{background:linear-gradient(135deg,var(--navy),var(--deep));color:#fff;border-bottom:5px solid var(--gold);overflow:hidden}
+.feat-out{padding:0 24px}
+@media (max-width:560px){.feat-out{padding:0 12px}.feat .wrap{padding:0 18px}}
+.feat{max-width:1180px;margin:0 auto 34px;background:linear-gradient(135deg,var(--navy),var(--deep));color:#fff;border-radius:22px;overflow:hidden;position:relative}
+.feat::after{content:"";position:absolute;left:-80px;bottom:-110px;width:240px;height:240px;border-radius:50%;background:var(--royal);opacity:.8;pointer-events:none}
+.feat .wrap{position:relative;z-index:1;padding:0 34px}
 .top{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:20px;flex-wrap:wrap}
 .top a{color:#fff;text-decoration:none;font-weight:600}
 .top a:hover{color:var(--gold2)}
@@ -29,7 +35,7 @@ header{background:linear-gradient(135deg,var(--navy),var(--deep));color:#fff;bor
 .logos img{width:52px;height:52px;border-radius:50%;background:#fff}
 .hero{display:grid;grid-template-columns:1fr 1.1fr;gap:30px;align-items:center;padding:30px 0 40px}
 .pill{display:inline-block;background:var(--gold);color:var(--deep);font:700 18px 'Josefin Sans',sans-serif;padding:6px 14px 3px;border-radius:8px}
-.hero h1{font-size:clamp(36px,5vw,62px);line-height:1.04;margin-top:14px}
+.hero h2{font-size:clamp(36px,5vw,62px);line-height:1.04;margin-top:14px}
 .hero p{color:#D9D8EE;font-size:18px;margin:14px 0 0;max-width:32em}
 .stats{display:flex;gap:26px;margin-top:22px;flex-wrap:wrap}
 .stats b{display:block;font:700 34px 'Josefin Sans',sans-serif;color:var(--gold2)}
@@ -43,7 +49,7 @@ header{background:linear-gradient(135deg,var(--navy),var(--deep));color:#fff;bor
 .show-ctrl button:hover{border-color:var(--gold2);color:var(--gold2)}
 .show-cap{position:absolute;left:0;right:0;bottom:50px;text-align:center;font-weight:700;color:var(--gold2)}
 /* filter bar */
-.bar{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(22,21,79,.05)}
+.bar{position:sticky;top:var(--sc-h);z-index:5;background:#fff;border-bottom:1px solid var(--line);box-shadow:0 2px 10px rgba(22,21,79,.05)}
 .bar .wrap{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
 .seg{display:flex;background:var(--paper);border-radius:999px;padding:4px}
 .seg button{border:0;background:none;font:700 16px 'Source Sans 3',sans-serif;color:var(--navy);padding:8px 16px;border-radius:999px;cursor:pointer}
@@ -74,24 +80,22 @@ main{padding:30px 0 40px}
 .acts .vw{border:1.5px solid var(--navy);color:var(--navy)}
 .acts a:hover{filter:brightness(1.06)}
 .empty{text-align:center;color:var(--moss);padding:40px 0}
-footer{background:var(--deep);color:#C5C4DC;text-align:center;padding:24px 16px;font-size:15px}
-footer a{color:#fff}
+.nfoot{text-align:center;color:var(--moss);padding:10px 16px 40px;font-size:15px;margin:0}
 @media (max-width:860px){.hero{grid-template-columns:1fr}.show{height:330px}.show a{width:180px;margin-left:-90px}}
 @media (max-width:420px){.grid{grid-template-columns:1fr}.bar .exam{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.show a{transition:none}}
 </style>
 </head>
 <body>
-<header>
+<div class="feat-out"><section class="feat" aria-label="Notes at a glance">
   <div class="wrap">
     <div class="top">
-      <a href="/">← Home</a>
+      <span class="pill">Notes &amp; expected questions</span>
       <div class="logos"><img src="/ld-naim.webp" alt="Dr Naim Tahir Baig, COE Sialkot (Boys)"><img src="/ld-punjab.webp" alt="Government of the Punjab"><img src="/ld-pectaa.webp" alt="PECTAA"><img src="/logo.png" alt="Punjab Daanish Schools & Centres of Excellence Authority"></div>
     </div>
     <div class="hero">
       <div>
-        <span class="pill">Notes &amp; expected questions</span>
-        <h1>Revise for the Mid-Term SBA</h1>
+        <h2>Revise for the Mid-Term SBA</h2>
         <p>Expected questions for Classes 6, 7 and 8 in every subject, in the PECTAA paper style: chapter-wise MCQs and subjective questions. Read online or download to your phone.</p>
         <div class="stats" id="stats"></div>
       </div>
@@ -101,7 +105,7 @@ footer a{color:#fff}
       </div>
     </div>
   </div>
-</header>
+</section></div>
 
 <div class="bar"><div class="wrap">
   <div class="seg" role="group" aria-label="Class" id="cls"></div>
@@ -111,7 +115,7 @@ footer a{color:#fff}
 </div></div>
 
 <main class="wrap" id="list"><p class="empty">Loading notes…</p></main>
-<footer>Prepared by Dr Naim Tahir Baig and the teachers of Centre of Excellence Sialkot (Boys) · <a href="/mid-term-2026-27.html">Mid-Term date sheet</a> · <a href="/practice-tests-2026.html">Practice tests</a></footer>
+<p class="nfoot">Prepared by Dr Naim Tahir Baig and the teachers of Centre of Excellence Sialkot (Boys) · <a href="/mid-term-2026-27.html">Mid-Term date sheet</a> · <a href="/practice-tests-2026.html">Practice tests</a></p>
 
 <script>
 (function(){

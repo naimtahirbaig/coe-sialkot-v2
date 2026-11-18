@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import InnerPage from '@/components/site/InnerPage'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -84,166 +85,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(201,163,62,0.06) 0%, transparent 50%), #0a0f1c',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      fontFamily: "'DM Sans', sans-serif",
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 420,
-        background: '#1a2236',
-        border: '1px solid #2a3654',
-        borderRadius: 16,
-        padding: '40px 36px',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
-      }}>
-        {/* Logo & Header */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: '50%', background: 'white',
-            margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', boxShadow: '0 4px 12px rgba(201,163,62,0.3)',
-          }}>
-            <img src="/logo.jpeg" alt="COE Sialkot" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          </div>
-          <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: '#f1f5f9', marginBottom: 4 }}>
-            Centre of Excellence Sialkot
-          </h1>
-          <p style={{ fontSize: 12, color: '#c9a33e', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            Boys Campus — Portal Login
-          </p>
+    <InnerPage section="portal" title="Portal" light="Sign In" short
+      lede="Teachers, students, parents and the school office sign in here with their school email.">
+      <div className="ip-signin">
+        <div className="ip-signin-side">
+          <img src="/logo.png" alt="" width="88" height="88" />
+          <h2>{showForgot ? 'Forgotten your password?' : 'Welcome back'}</h2>
+          <p>{showForgot
+            ? 'Enter your school email and we will send you a link to choose a new password.'
+            : 'Your portal opens straight after you sign in: lessons, timetables, results and messages.'}</p>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-            borderRadius: 8, padding: '10px 14px', marginBottom: 20,
-            fontSize: 13, color: '#ef4444',
-          }}>
-            {error}
-          </div>
-        )}
-
-        {/* Reset Password Success */}
-        {resetSent && (
-          <div style={{
-            background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
-            borderRadius: 8, padding: '10px 14px', marginBottom: 20,
-            fontSize: 13, color: '#10b981',
-          }}>
-            Password reset link sent to your email. Check your inbox.
-          </div>
-        )}
-
-        {/* Login Form */}
-        <div>
-          <div style={{ marginBottom: 18 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>
-              Email Address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your.email@coesialkot.edu.pk"
-              style={{
-                width: '100%', padding: '12px 14px', background: '#111827',
-                border: '1px solid #2a3654', borderRadius: 8, color: '#f1f5f9',
-                fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif",
-                transition: 'border-color 0.2s', boxSizing: 'border-box',
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#2a3654'}
-            />
-          </div>
-
+        <form className="ip-signin-form" onSubmit={showForgot ? handleForgotPassword : handleLogin}>
+          {error && <p className="ip-err" role="alert">{error}</p>}
+          {resetSent && <p className="ip-ok" role="status">Password reset link sent to your email. Check your inbox.</p>}
+          <label>Email address
+            <input className="ip-field" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="your.email@coesialkot.edu.pk" autoComplete="email" />
+          </label>
           {!showForgot && (
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin(e)}
-                style={{
-                  width: '100%', padding: '12px 14px', background: '#111827',
-                  border: '1px solid #2a3654', borderRadius: 8, color: '#f1f5f9',
-                  fontSize: 14, outline: 'none', fontFamily: "'DM Sans', sans-serif",
-                  transition: 'border-color 0.2s', boxSizing: 'border-box',
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#2a3654'}
-              />
-            </div>
+            <label>Password
+              <input className="ip-field" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" autoComplete="current-password" />
+            </label>
           )}
-
-          {/* Login / Reset Button */}
-          {showForgot ? (
-            <button
-              onClick={handleForgotPassword}
-              disabled={loading}
-              style={{
-                width: '100%', padding: '13px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-                color: 'white', border: 'none', borderRadius: 8, fontSize: 15,
-                fontWeight: 600, cursor: loading ? 'wait' : 'pointer',
-                fontFamily: "'DM Sans', sans-serif", opacity: loading ? 0.7 : 1,
-                transition: '0.2s',
-              }}
-            >
-              {loading ? 'Sending...' : 'Send Reset Link'}
-            </button>
-          ) : (
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              style={{
-                width: '100%', padding: '13px',
-                background: 'linear-gradient(135deg, #c9a33e, #a8862f)',
-                color: '#0a0f1c', border: 'none', borderRadius: 8, fontSize: 15,
-                fontWeight: 600, cursor: loading ? 'wait' : 'pointer',
-                fontFamily: "'DM Sans', sans-serif", opacity: loading ? 0.7 : 1,
-                transition: '0.2s',
-              }}
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          )}
-
-          {/* Forgot Password Toggle */}
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <button
-              onClick={() => { setShowForgot(!showForgot); setError(''); setResetSent(false); }}
-              style={{
-                background: 'none', border: 'none', color: '#64748b',
-                fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                transition: '0.2s',
-              }}
-              onMouseEnter={(e) => e.target.style.color = '#c9a33e'}
-              onMouseLeave={(e) => e.target.style.color = '#64748b'}
-            >
-              {showForgot ? '← Back to Login' : 'Forgot Password?'}
-            </button>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          marginTop: 32, paddingTop: 20, borderTop: '1px solid #2a3654',
-          textAlign: 'center', fontSize: 11, color: '#64748b', lineHeight: 1.6,
-        }}>
-          Punjab Daanish Schools & Centres of Excellence Authority<br />
-          Government of Punjab
-        </div>
+          <button type="submit" className="ip-btn" disabled={loading}>
+            {showForgot ? (loading ? 'Sending…' : 'Send reset link') : (loading ? 'Signing in…' : 'Sign in')}
+          </button>
+          <button type="button" className="ip-linkbtn" onClick={() => { setShowForgot(!showForgot); setError(''); setResetSent(false) }}>
+            {showForgot ? 'Back to sign in' : 'Forgotten your password?'}
+          </button>
+        </form>
       </div>
-    </div>
+      <p className="ip-note">Students taking an online test do not need to sign in. Open the test link your teacher shared, or go to <a href="/online-tests-2026.html">Online Tests 2026</a>.</p>
+    </InnerPage>
   )
 }
