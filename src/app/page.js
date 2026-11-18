@@ -41,12 +41,26 @@ const MENU = [
       { href: '/admin',               title: 'Administration',      text: 'Papers, results, promotion and letters' },
     ],
   },
+  {
+    label: 'Notes & Exams',
+    intro: 'Mid-Term SBA 2026-27: date sheet, syllabus and expected questions for Classes 6, 7 and 8.',
+    links: [
+      { href: '/mid-term-2026-27.html',        title: 'Mid-Term date sheet',      text: '7 to 18 December 2026, Classes 6, 7 and 8' },
+      { href: '/mid-term-2026-27.html#syllabus', title: 'Mid-Term syllabus',      text: 'Units and lessons for every paper' },
+      { href: '/notes-2026.html',              title: 'Notes & expected questions', text: '51 files in 8 subjects, ready to download' },
+      { href: '/notes-2026.html?class=6',      title: 'Class 6 notes',            text: 'MCQs and subjective questions' },
+      { href: '/notes-2026.html?class=7',      title: 'Class 7 notes',            text: 'MCQs and subjective questions' },
+      { href: '/notes-2026.html?class=8',      title: 'Class 8 notes',            text: 'MCQs, subjective and updated History & Geography' },
+    ],
+  },
   { label: 'Notice Board', href: '/notice-board' },
 ];
 
 const QUICK = [
   { href: '/practice-tests-2026.html', label: 'Practice tests', icon: 'pencil' },
   { href: '/online-tests-2026.html',   label: 'Online Tests',   icon: 'check' },
+  { href: '/notes-2026.html',          label: 'Notes',          icon: 'book' },
+  { href: '/mid-term-2026-27.html',    label: 'Date sheet',     icon: 'cal' },
   { href: '/notice-board',             label: 'Notice board',   icon: 'bell' },
 ];
 
@@ -171,6 +185,21 @@ const EVENTS = [
   { src: '/home/photos/event-9.webp', date: '2 Jun 2026', title: 'Science in Action', text: 'Class 8 Liaqat explores chemical reactions in the biology lab.' },
   { src: '/home/photos/event-8.webp', date: '2 Jun 2026', title: 'In the Library', text: 'Class 6 students exploring knowledge in the school library.' },
 ];
+
+// ── Mid-Term SBA 2026-27 date sheet, Classes 6–8 (PECTAA Annex-D) ──
+const EL = 'Art & Drawing / Zarai Taleem / Itlaqi Barqiat / Home Economics / Punjabi / Farsi';
+const DATESHEET = [
+  ['2026-12-07', 'Mon', '7 Dec', 'English', 'Mathematics', 'Science'],
+  ['2026-12-08', 'Tue', '8 Dec', 'Islamiat / Ethics', 'Tarjuma-tul-Quran', EL],
+  ['2026-12-09', 'Wed', '9 Dec', 'History', 'English', 'Tarjuma-tul-Quran'],
+  ['2026-12-10', 'Thu', '10 Dec', EL, 'Geography', 'Urdu'],
+  ['2026-12-11', 'Fri', '11 Dec', 'Urdu', 'Islamiat / Ethics', 'Geography'],
+  ['2026-12-14', 'Mon', '14 Dec', 'Mathematics', 'Science', 'English'],
+  ['2026-12-15', 'Tue', '15 Dec', 'Tarjuma-tul-Quran', 'History', 'Islamiat / Ethics'],
+  ['2026-12-16', 'Wed', '16 Dec', 'Science', 'Urdu', 'Mathematics'],
+  ['2026-12-17', 'Thu', '17 Dec', 'Geography', 'Computer / Arabic', 'History'],
+  ['2026-12-18', 'Fri', '18 Dec', 'Computer / Arabic', EL, 'Computer / Arabic'],
+];
 // ── drawings for the slides that have no screenshot ──
 function BooksDrawing() {
   return (
@@ -268,6 +297,8 @@ function Icon({ name }) {
   if (name === 'bank') return <svg {...p}><path d="M3 9l9-5 9 5" /><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18" /></svg>;
   if (name === 'book') return <svg {...p}><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M4 19V5M8 7h7" /></svg>;
   if (name === 'shield') return <svg {...p}><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z" /><path d="M8.5 12l2.5 2.5 4.5-5" /></svg>;
+  if (name === 'cal') return <svg {...p}><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>;
+  if (name === 'dl') return <svg {...p}><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>;
   if (name === 'user') return <svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>;
   return null;
 }
@@ -299,6 +330,21 @@ export default function HomePage() {
   const [colI, setColI] = useState(0);         // which class column is open
   const [lb, setLb] = useState(null);          // event picture opened full size
   const lfRef = useRef(null);
+  const [exC, setExC] = useState(6);          // date sheet class on the home page
+  const [covers, setCovers] = useState([]);   // notes covers for the rotating belt
+  const [examLeft, setExamLeft] = useState([['–', 'days'], ['–', 'hours']]);
+  const [todayPk, setTodayPk] = useState('');
+  useEffect(() => {
+    fetch('/notes/notes.json').then((r) => r.json()).then((d) => setCovers(d.filter((n) => n.kind === 'mcqs'))).catch(() => {});
+    try { const g = +localStorage.getItem('coeExamClass'); if (g >= 6 && g <= 8) setExC(g); } catch {}
+    const start = new Date('2026-12-07T10:00:00+05:00').getTime();
+    const t = () => {
+      const ms = start - Date.now();
+      setTodayPk(new Date().toLocaleString('en-CA', { timeZone: 'Asia/Karachi' }).slice(0, 10));
+      setExamLeft(ms > 0 ? [[Math.floor(ms / 864e5), 'days'], [Math.floor((ms % 864e5) / 36e5), 'hours'], [Math.floor((ms % 36e5) / 6e4), 'minutes']] : null);
+    };
+    t(); const id = setInterval(t, 30000); return () => clearInterval(id);
+  }, []);
   const timer = useRef(null);
   const headRef = useRef(null);
 
@@ -348,7 +394,8 @@ export default function HomePage() {
           <div className="ix-util">
             <span className="ix-name">Centre of Excellence Sialkot <b>(Boys)</b></span>
             <nav aria-label="Quick links">
-              <Link href="/student-resources">Student resources</Link>
+              <a href="/notes-2026.html">Notes &amp; expected questions</a>
+              <a href="/mid-term-2026-27.html" className="ix-hot">Mid-Term date sheet</a>
               <Link href="/notice-board">Notice board</Link>
               <Link href="/login" className="ix-sign"><Icon name="user" />Sign in</Link>
             </nav>
@@ -468,6 +515,68 @@ export default function HomePage() {
       </nav>
 
       <main id="main">
+        {/* ── Upcoming examination ── */}
+        <section className="ex" aria-labelledby="ex-h">
+          <div className="ex-in">
+            <div className="ex-left">
+              <span className="pill">Upcoming examination</span>
+              <h2 id="ex-h">Mid-Term SBA 2026-27</h2>
+              <p>Classes 6, 7 and 8 · Monday 7 to Friday 18 December 2026</p>
+              <div className="ex-count" aria-live="polite">
+                {examLeft ? examLeft.map(([n, l]) => <div key={l}><b>{n}</b><span>{l}</span></div>) : <div className="wide"><b>On now</b><span>Check today's paper</span></div>}
+              </div>
+              <div className="ex-acts">
+                <a href="/mid-term-2026-27.html" className="ex-btn gold"><Icon name="cal" />Full date sheet</a>
+                <a href="/mid-term-2026-27.html#syllabus" className="ex-btn">Syllabus</a>
+                <a href="/notes-2026.html" className="ex-btn">Expected questions</a>
+              </div>
+            </div>
+            <div className="ex-right">
+              <div className="ex-tabs" role="group" aria-label="Class">
+                {[6, 7, 8].map((c) => <button key={c} type="button" aria-pressed={exC === c} onClick={() => setExC(c)}>Class {c}</button>)}
+              </div>
+              <ol className="ex-list">
+                {DATESHEET.map((r) => (
+                  <li key={r[0]} className={r[0] < todayPk ? 'done' : ''}>
+                    <time><b>{r[1]}</b>{r[2]}</time><span>{r[exC - 3]}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Notes: rotating book covers ── */}
+        <section className="nb" aria-labelledby="nb-h">
+          <div className="nb-head">
+            <div>
+              <span className="pill">Download</span>
+              <h2 id="nb-h" className="giant">Notes</h2>
+            </div>
+            <div className="nb-copy">
+              <p>Expected questions for the Mid-Term in the PECTAA paper style, for every subject of Classes 6, 7 and 8. Chapter-wise MCQs and subjective questions, free to read online or download.</p>
+              <div className="nb-cls">
+                {[6, 7, 8].map((c) => <a key={c} href={`/notes-2026.html?class=${c}`}>Class {c} notes</a>)}
+                <a href="/notes-2026.html" className="all">All 51 files</a>
+              </div>
+            </div>
+          </div>
+          {covers.length > 0 && (
+            <div className="nb-belt" aria-label="Book covers">
+              <ul className="nb-run">
+                {[...covers, ...covers].map((n, i) => (
+                  <li key={i} aria-hidden={i >= covers.length ? 'true' : undefined}>
+                    <a href={n.file} target="_blank" rel="noopener" tabIndex={i >= covers.length ? -1 : undefined}>
+                      <img src={n.cover} alt={`Expected questions: ${n.subject}, Class ${n.cls}`} loading="lazy" width="180" />
+                      <span>Class {n.cls} · {n.subject}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+
         {/* ── Why choose: tabs change the colour of the whole section ── */}
         <section className="wy" style={{ '--wy1': WHY[whyI].bg, '--wy2': WHY[whyI].bg2, '--wyh': WHY[whyI].h || '#F6C766', backgroundImage: `${PATTERN}, linear-gradient(120deg, var(--wy1), var(--wy2))` }} aria-labelledby="wy-h">
           <div className="wy-in">
@@ -1042,4 +1151,65 @@ const CSS = `
 .lb>button{position:absolute;top:18px;right:20px;width:50px;height:50px;border-radius:50%;border:2px solid rgba(255,255,255,.6);background:none;color:#fff;font-size:32px;line-height:1;cursor:pointer}
 @media (max-width:1000px){.lf-track{grid-auto-columns:calc((100% - 30px)/2)}}
 @media (max-width:560px){.lf-arrow{display:none}.lf-track{grid-auto-columns:82%;gap:18px}.lf{padding:64px 0 56px}.lf-row{padding:0 16px}}
+
+/* ══ header: hot link ══ */
+.hp .ix-util .ix-hot{color:var(--gold2);border-bottom:2px solid var(--gold)}
+
+/* ══ Upcoming examination ══ */
+.ex{background:linear-gradient(120deg,#0C0C3C,#1F2A86);color:#fff;position:relative;overflow:hidden}
+.ex::before{content:"";position:absolute;inset:0;background:var(--pattern) 0 0/120px 120px;opacity:.06}
+.ex-in{position:relative;max-width:1280px;margin:0 auto;padding:80px 6%;display:grid;grid-template-columns:1fr 1.05fr;gap:56px;align-items:start}
+.ex .pill{font-size:clamp(18px,1.6vw,22px);padding:7px 14px 4px;border-radius:8px}
+.ex-left h2{font:700 clamp(40px,5.2vw,74px)/1 'Josefin Sans',sans-serif !important;margin:16px 0 10px !important}
+.ex-left p{color:#D9D8EE;font-size:19px;margin:0}
+.ex-count{display:flex;gap:12px;margin:28px 0}
+.ex-count div{min-width:100px;text-align:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:12px 10px}
+.ex-count b{display:block;font:700 44px/1.05 'Josefin Sans',sans-serif;color:var(--gold2)}
+.ex-count span{font-size:14px;color:#D9D8EE}
+.ex-count .wide{text-align:left;padding:12px 18px}
+.ex-acts{display:flex;gap:10px;flex-wrap:wrap}
+.hp .ex-btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.55);padding:11px 18px;border-radius:10px}
+.hp .ex-btn:hover{border-color:var(--gold2);color:var(--gold2)}
+.hp .ex-btn.gold{background:var(--gold);border-color:var(--gold);color:var(--deep)}
+.hp .ex-btn.gold:hover{background:var(--gold2);color:var(--deep)}
+.ex-right{background:#fff;color:var(--ink);border-radius:20px;padding:22px 22px 12px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.ex-tabs{display:flex;gap:6px;background:var(--paper);border-radius:999px;padding:4px;margin-bottom:10px}
+.ex-tabs button{flex:1;border:0;background:none;font:700 16px 'Source Sans 3',sans-serif;color:var(--navy);padding:9px;border-radius:999px;cursor:pointer}
+.ex-tabs button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.ex-list{list-style:none;margin:0;padding:0}
+.ex-list li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:10px 6px;border-bottom:1px solid var(--line);align-items:baseline}
+.ex-list li:last-child{border-bottom:0}
+.ex-list time{font-size:15px;color:var(--moss);white-space:nowrap}
+.ex-list time b{display:inline-block;width:38px;color:var(--royal)}
+.ex-list span{font-weight:700;color:var(--navy);font-size:16.5px}
+.ex-list li.done{opacity:.45}
+
+/* ══ Notes belt ══ */
+.nb{background:#fff;padding:90px 0 80px;overflow:hidden}
+.nb-head{max-width:1280px;margin:0 auto;padding:0 6% 46px;display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:end}
+.nb-copy p{font-size:19px;line-height:1.75;color:var(--moss);margin:0 0 18px}
+.nb-cls{display:flex;flex-wrap:wrap;gap:8px}
+.hp .nb-cls a{text-decoration:none;font-weight:700;color:var(--navy);border:2px solid var(--line);padding:9px 16px;border-radius:999px}
+.hp .nb-cls a:hover{border-color:var(--gold)}
+.hp .nb-cls a.all{background:var(--gold);border-color:var(--gold);color:var(--deep)}
+.nb-belt{mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
+.nb-run{list-style:none;margin:0;padding:10px 0 20px;display:flex;gap:26px;width:max-content;animation:belt 80s linear infinite}
+.nb-belt:hover .nb-run,.nb-belt:focus-within .nb-run{animation-play-state:paused}
+@keyframes belt{to{transform:translateX(-50%)}}
+.hp .nb-run a{display:block;width:180px;text-decoration:none;color:var(--navy);transition:transform .25s}
+.hp .nb-run a:hover{transform:translateY(-8px) rotate(-1.5deg)}
+.nb-run img{display:block;width:180px;height:auto;border-radius:5px;box-shadow:0 14px 30px rgba(12,12,60,.28)}
+.nb-run span{display:block;margin-top:12px;font-weight:700;font-size:15px;text-align:center}
+@media (prefers-reduced-motion:reduce){.nb-run{animation:none;flex-wrap:nowrap;overflow-x:auto;width:auto}.nb-run li[aria-hidden]{display:none}.nb-belt{mask-image:none;overflow-x:auto}}
+@media (max-width:1000px){
+  .ex-in{grid-template-columns:1fr;gap:34px;padding:60px 24px}
+  .nb-head{grid-template-columns:1fr;gap:20px;padding:0 24px 34px}
+}
+@media (max-width:560px){
+  .ex-count div{min-width:0;flex:1}
+  .ex-count b{font-size:34px}
+  .ex-list li{grid-template-columns:92px 1fr;gap:8px}
+  .ex-list time b{width:34px}
+  .hp .nb-run a,.nb-run img{width:140px}
+}
 `;
