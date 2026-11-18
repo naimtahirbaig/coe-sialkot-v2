@@ -115,6 +115,7 @@ var PRACTICE_ALIAS={"oct-2026-class-8-geography-ch3":"online-tests-2026-class-8-
 var F={cls:0,subj:"all",live:false,q:""};
 try{var sv=JSON.parse(sessionStorage.getItem(PRACTICE?"hubFp":"hubF")||"null");if(sv)F=sv;}catch(e){}
 if(PRACTICE)F.live=false;
+try{var qc=+new URLSearchParams(location.search).get("class");if(qc>=1&&qc<=12){F.cls=qc;F.subj="all";}}catch(e){}
 function saveF(){try{sessionStorage.setItem(PRACTICE?"hubFp":"hubF",JSON.stringify(F));}catch(e){}}
 function render(items,closed){
   var main=document.querySelector("main");main.innerHTML="";
