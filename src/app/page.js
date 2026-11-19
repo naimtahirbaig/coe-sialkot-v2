@@ -11,15 +11,15 @@ import { supabase } from '@/lib/supabase';
 // The header menu, quick buttons and footer are shared: src/components/site/
 
 const SLIDES = [
-  { id: 'online', photo: '/home/photos/assembly-wide.webp', caption: 'Online Tests 2026', href: '/online-tests-2026.html',
+  { id: 'online', photo: '/home/photos/classroom-english.webp', caption: 'Online Tests 2026', href: '/online-tests-2026.html',
     pic: { kind: 'img', src: '/home/home-test.webp', alt: 'A question from a Class 6 General Science online test with a 15-second timer' } },
-  { id: 'practice', photo: '/home/photos/class10-sound.webp', caption: 'Practise any chapter', href: '/practice-tests-2026.html',
+  { id: 'practice', photo: '/home/photos/library-2.webp', caption: 'Practise any chapter', href: '/practice-tests-2026.html',
     pic: { kind: 'img', src: '/home/home-practice.webp', alt: 'The Practice Tests page with class and subject filters' } },
-  { id: 'result', photo: '/home/photos/assembly-lines.webp', caption: 'A result card for every test', href: '/online-tests-2026.html',
+  { id: 'result', photo: '/home/photos/exam-hall.webp', caption: 'A result card for every test', href: '/online-tests-2026.html',
     pic: { kind: 'img', src: '/home/home-result.webp', alt: 'A student result card: 9 out of 10 in General Science, Class 6' } },
-  { id: 'notes', photo: '/home/photos/class8-biology.webp', caption: 'Notes, papers & date sheets', href: '/student-resources',
+  { id: 'notes', photo: '/home/photos/library-1.webp', caption: 'Notes, papers & date sheets', href: '/student-resources',
     pic: { kind: 'books' } },
-  { id: 'bank', photo: '/home/photos/class10-sound2.webp', caption: 'Question Bank for teachers', href: '/question-bank',
+  { id: 'bank', photo: '/home/photos/classroom-science.webp', caption: 'Question Bank for teachers', href: '/question-bank',
     pic: { kind: 'paperdraw' } },
 ];
 
@@ -82,9 +82,9 @@ const WHY = [
 // ── "Learning at" columns ──
 const CLASSES = [
   { n: 6, photo: '/home/photos/class6-science.webp', sections: 6, href: '/practice-tests-2026.html?class=6', note: 'Online and practice tests in 9 subjects', subjects: ['English', 'Urdu', 'Mathematics', 'General Science', 'Computer Science', 'Islamiat', 'Tarjuma-tul-Quran', 'History', 'Geography'] },
-  { n: 7, photo: '/home/photos/assembly-lines.webp', sections: 6, href: '/practice-tests-2026.html?class=7', note: 'Online and practice tests in 9 subjects', subjects: ['English', 'Urdu', 'Mathematics', 'General Science', 'Computer Science', 'Islamiat', 'Tarjuma-tul-Quran', 'History', 'Geography'] },
+  { n: 7, photo: '/home/photos/classroom-english.webp', sections: 6, href: '/practice-tests-2026.html?class=7', note: 'Online and practice tests in 9 subjects', subjects: ['English', 'Urdu', 'Mathematics', 'General Science', 'Computer Science', 'Islamiat', 'Tarjuma-tul-Quran', 'History', 'Geography'] },
   { n: 8, photo: '/home/photos/class8-biology.webp', sections: 7, href: '/practice-tests-2026.html?class=8', note: 'Online and practice tests in 10 subjects', subjects: ['English', 'Urdu', 'Mathematics', 'General Science', 'Computer Science', 'Islamiat', 'Tarjuma-tul-Quran', 'History', 'Geography', 'Fine Arts'] },
-  { n: 9, photo: '/home/photos/assembly-podium.webp', sections: 6, href: '/student-resources', note: 'Notes, past papers and date sheets', subjects: ['Physics', 'Chemistry', 'Biology', 'Mathematics', 'Computer', 'English', 'Urdu', 'Islamiat', 'Pakistan Studies'] },
+  { n: 9, photo: '/home/photos/assembly-rows.webp', sections: 6, href: '/student-resources', note: 'Notes, past papers and date sheets', subjects: ['Physics', 'Chemistry', 'Biology', 'Mathematics', 'Computer', 'English', 'Urdu', 'Islamiat', 'Pakistan Studies'] },
   { n: 10, photo: '/home/photos/class10-sound.webp', sections: 6, href: '/student-resources', note: 'Notes, past papers and date sheets', subjects: ['Physics', 'Chemistry', 'Biology', 'Mathematics', 'Computer', 'English', 'Urdu', 'Islamiat', 'Pakistan Studies'] },
 ];
 
@@ -114,6 +114,18 @@ const AUTH3 = [
   { src: '/ld-daanish.webp', name: 'Punjab Daanish Schools & Centres of Excellence Authority' },
 ];
 
+
+// ── Our Campus: photographs of the two school buildings, lawns and library ──
+const CAMPUS = [
+  { src: '/home/photos/new-campus.webp', title: 'The new campus', text: 'Classrooms, labs and offices around a green courtyard', cls: 'big' },
+  { src: '/home/photos/old-campus.webp', title: 'The historic main building', text: 'Flags at the entrance of the red-brick old campus', cls: 'tall', pos: 'center 62%' },
+  { src: '/home/photos/library-2.webp', title: 'The school library', text: 'Reading period for the junior classes' },
+  { src: '/home/photos/lawn-arches.webp', title: 'The arched verandas', text: 'Classrooms open onto the lawns' },
+  { src: '/home/photos/lawn-palm.webp', title: 'The gardens', text: 'Palms, hedges and fruit trees between the buildings' },
+  { src: '/home/photos/lawn-2.webp', title: 'The main lawn', text: 'Open grass for breaks and outdoor activities' },
+  { src: '/home/photos/lawn-1.webp', title: 'The fruit garden', text: 'Citrus trees in front of the classroom block' },
+  { src: '/home/photos/library-1.webp', title: 'Reading together', text: 'Every class has its own library period' },
+];
 
 // ── Life at COE: event posters from the school (WhatsApp collages, Sept–May 2026) ──
 const EVENTS = [
@@ -553,6 +565,24 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* ── Our campus ── */}
+        <section className="cp" aria-labelledby="cp-h">
+          <div className="cp-in">
+            <h2 id="cp-h">Our <b>Campus</b></h2>
+            <p className="cp-lede">Two red-brick buildings in Sialkot with arched verandas, lawns and a library, home to 1,420 boys from Class 6 to Class 10.</p>
+            <ul className="cp-grid">
+              {CAMPUS.map((c) => (
+                <li key={c.src} className={c.cls || ''}>
+                  <button type="button" onClick={() => setLb({ src: c.src, title: c.title, date: c.text })} aria-label={`Open picture: ${c.title}`}>
+                    <img src={c.src} alt={`${c.title}: ${c.text}`} loading="lazy" style={c.pos ? { objectPosition: c.pos } : undefined} />
+                    <span className="cp-cap"><b>{c.title}</b>{c.text}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
         {/* ── At a glance ── */}
         <section className="gl" aria-labelledby="gl-h">
           <div className="gl-in">
@@ -593,7 +623,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Motto band ── */}
-        <section className="mb" style={{ backgroundImage: `url(/home/photos/assembly-wide.webp)` }}>
+        <section className="mb" style={{ backgroundImage: `url(/home/photos/old-campus.webp)`, backgroundPosition: 'center 58%' }}>
           <p className="mb-motto">Learn. Practise. Excel.</p>
           <span className="mb-pill">Centre of Excellence Sialkot (Boys)</span>
         </section>
@@ -896,6 +926,25 @@ const CSS = `
   .wy-text,.wy-card{animation:none}
   .hp .lr-col,.lr-more,.lr-plus{transition:none}
 }
+
+/* ══ Our campus ══ */
+.cp{background:var(--paper);padding:90px 0 96px}
+.cp-in{max-width:1320px;margin:0 auto;padding:0 4%}
+.cp h2{text-align:center;font:400 clamp(40px,5.4vw,78px)/1.05 'Josefin Sans',sans-serif !important;color:var(--royal);margin:0}
+.cp h2 b{font-weight:700;color:var(--navy)}
+.cp-lede{max-width:40em;margin:22px auto 46px;text-align:center;font-size:19px;line-height:1.75;color:var(--moss)}
+.cp-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:240px;gap:16px}
+.cp-grid li.big{grid-column:span 2;grid-row:span 2}
+.cp-grid li.tall{grid-row:span 2}
+.cp-grid button{position:relative;display:block;width:100%;height:100%;padding:0;border:0;border-radius:18px;overflow:hidden;cursor:zoom-in;background:var(--deep)}
+.cp-grid li.big button{border-radius:18px 18px 18px 120px}
+.cp-grid img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .6s}
+.cp-grid button:hover img{transform:scale(1.04)}
+.cp-cap{position:absolute;left:0;right:0;bottom:0;padding:40px 18px 14px;background:linear-gradient(transparent,rgba(12,12,60,.85));color:#E6E8F2;text-align:left;font-size:15px;line-height:1.35}
+.cp-cap b{display:block;color:#fff;font:700 19px 'Josefin Sans',sans-serif;margin-bottom:2px}
+.cp-grid li.big .cp-cap{padding-left:120px}
+@media (max-width:900px){.cp-grid{grid-template-columns:repeat(2,1fr);grid-auto-rows:200px}.cp-grid li.tall{grid-row:span 2}.cp-grid li.big{grid-column:span 2;grid-row:span 1}.cp-grid li.big .cp-cap{padding-left:18px}.cp-grid li.big button{border-radius:18px}}
+@media (max-width:560px){.cp{padding:60px 0}.cp-grid{grid-auto-rows:170px;gap:10px}}
 
 /* ══ Life at COE ══ */
 .lf{position:relative;background:#fff;padding:90px 0 80px;text-align:center;overflow:hidden}

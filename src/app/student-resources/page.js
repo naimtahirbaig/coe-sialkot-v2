@@ -67,7 +67,7 @@ export default function StudentResourcesPage() {
   );
 
   return (
-    <InnerPage section="students" title="Student" light="Resources"
+    <InnerPage section="students" title="Student" light="Resources" photo="/home/photos/library-1.webp"
       lede="Read online or download notes, past papers and date sheets, free for every student."
       toc={[{ id: 'find', label: 'Find material' }, { id: 'list', label: 'Results' }, { id: 'more', label: 'More for students' }]}>
 

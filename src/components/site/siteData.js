@@ -77,7 +77,7 @@ export const FOOT_LINKS = [
 // Sections for the gold bar on inner pages: name, banner photo and the pages inside
 export const SECTIONS = {
   students: {
-    label: 'Students', href: '/practice-tests-2026.html', photo: '/home/photos/assembly-wide.webp',
+    label: 'Students', href: '/practice-tests-2026.html', photo: '/home/photos/library-2.webp',
     sub: [
       { href: '/practice-tests-2026.html', label: 'Practice tests' },
       { href: '/online-tests-2026.html', label: 'Online Tests 2026' },
@@ -87,7 +87,7 @@ export const SECTIONS = {
     ],
   },
   exams: {
-    label: 'Notes & Exams', href: '/mid-term-2026-27.html', photo: '/home/photos/class8-biology.webp',
+    label: 'Notes & Exams', href: '/mid-term-2026-27.html', photo: '/home/photos/exam-hall.webp',
     sub: [
       { href: '/mid-term-2026-27.html', label: 'Mid-Term date sheet' },
       { href: '/mid-term-2026-27.html#syllabus', label: 'Syllabus' },
@@ -97,7 +97,7 @@ export const SECTIONS = {
     ],
   },
   notices: {
-    label: 'Notice Board', href: '/notice-board', photo: '/home/photos/assembly-podium.webp',
+    label: 'Notice Board', href: '/notice-board', photo: '/home/photos/assembly-speech.webp',
     sub: [
       { href: '/notice-board', label: 'All notices' },
       { href: '/mid-term-2026-27.html', label: 'Mid-Term date sheet' },
@@ -105,7 +105,7 @@ export const SECTIONS = {
     ],
   },
   teachers: {
-    label: 'Teachers', href: '/question-bank', photo: '/home/photos/class10-sound.webp',
+    label: 'Teachers', href: '/question-bank', photo: '/home/photos/classroom-science.webp',
     sub: [
       { href: '/question-bank', label: 'Question Bank' },
       { href: '/online-test-setup', label: 'Online test setup' },
@@ -117,7 +117,7 @@ export const SECTIONS = {
     ],
   },
   portal: {
-    label: 'Portal', href: '/login', photo: '/home/photos/assembly-lines.webp',
+    label: 'Portal', href: '/login', photo: '/home/photos/new-campus.webp',
     sub: [
       { href: '/login', label: 'Sign in' },
       { href: '/notice-board', label: 'Notice board' },
@@ -129,14 +129,14 @@ export const SECTIONS = {
 // the others are working tools: SiteChrome draws the banner, gold bar, breadcrumb and title,
 // then shows the tool underneath (dark = the tool keeps its navy working screen).
 export const PAGES = [
-  { re: /^\/practice-tests\/online/, section: 'students', title: 'Practice', light: 'Quiz', dark: true },
+  { re: /^\/practice-tests\/online/, photo: '/home/photos/library-1.webp', section: 'students', title: 'Practice', light: 'Quiz', dark: true },
   { re: /^\/(notice-board|student-resources|practice-tests|online-tests|exams|login|reset-password)(\/|$)/, own: true },
   { re: /^\/question-bank/, section: 'teachers', title: 'Question', light: 'Bank', lede: 'Make class tests and term papers from the school question bank.' },
-  { re: /^\/online-test-setup/, section: 'teachers', title: 'Online Test', light: 'Setup', lede: 'Choose a test, set its dates and share the link with your class.' },
-  { re: /^\/online-test-results/, section: 'teachers', title: 'Online Test', light: 'Results', lede: 'Marks, result cards and answer keys for every online test.' },
-  { re: /^\/award-list/, section: 'teachers', title: 'Award', light: 'Lists', lede: 'Enter your section’s subject marks with your PIN.', dark: true },
-  { re: /^\/proformas/, section: 'teachers', title: 'Teacher', light: 'Proformas', lede: 'Teacher-wise and class-wise detail proformas, ready to download.', dark: true },
-  { re: /^\/result-cards/, section: 'exams', title: 'Result', light: 'Cards', lede: 'Progress report cards for a whole section, ready to print.', dark: true },
+  { re: /^\/online-test-setup/, photo: '/home/photos/classroom-english.webp', section: 'teachers', title: 'Online Test', light: 'Setup', lede: 'Choose a test, set its dates and share the link with your class.' },
+  { re: /^\/online-test-results/, photo: '/home/photos/exam-hall.webp', section: 'teachers', title: 'Online Test', light: 'Results', lede: 'Marks, result cards and answer keys for every online test.' },
+  { re: /^\/award-list/, photo: '/home/photos/classroom-english.webp', section: 'teachers', title: 'Award', light: 'Lists', lede: 'Enter your section’s subject marks with your PIN.', dark: true },
+  { re: /^\/proformas/, photo: '/home/photos/assembly-staff.webp', section: 'teachers', title: 'Teacher', light: 'Proformas', lede: 'Teacher-wise and class-wise detail proformas, ready to download.', dark: true },
+  { re: /^\/result-cards/, photo: '/home/photos/assembly-rows.webp', section: 'exams', title: 'Result', light: 'Cards', lede: 'Progress report cards for a whole section, ready to print.', dark: true },
   { re: /^\/admin\/papers/, section: 'teachers', title: 'Exam', light: 'Papers', crumb: 'Administration' },
   { re: /^\/admin\/students/, section: 'teachers', title: 'Student', light: 'Records', crumb: 'Administration' },
   { re: /^\/admin\/exams/, section: 'teachers', title: 'Exams', light: 'Office', crumb: 'Administration', dark: true },
@@ -146,13 +146,13 @@ export const PAGES = [
   { re: /^\/admin\/award-lists/, section: 'teachers', title: 'Award Lists', light: 'Admin', crumb: 'Administration', dark: true },
   { re: /^\/admin\/proformas/, section: 'teachers', title: 'Proformas', light: 'Admin', crumb: 'Administration' },
   { re: /^\/admin\/result-cards/, section: 'teachers', title: 'Result Cards', light: 'Admin', crumb: 'Administration' },
-  { re: /^\/admin/, section: 'teachers', title: 'School', light: 'Administration', lede: 'Office tools for the school’s records, papers and results.' },
-  { re: /^\/exam\/teacher/, section: 'teachers', title: 'Teacher', light: 'Examination Portal', lede: 'Write your paper and send it to the examination office.' },
-  { re: /^\/exam\/paper-template/, section: 'teachers', title: 'Paper', light: 'Template Builder' },
-  { re: /^\/portal\/admin/, section: 'portal', title: 'Admin', light: 'Portal' },
-  { re: /^\/portal\/management/, section: 'portal', title: 'Management', light: 'Portal' },
-  { re: /^\/portal\/teacher/, section: 'portal', title: 'Teacher', light: 'Portal' },
-  { re: /^\/portal\/student/, section: 'portal', title: 'Student', light: 'Portal' },
-  { re: /^\/portal\/parent/, section: 'portal', title: 'Parent', light: 'Portal' },
+  { re: /^\/admin/, photo: '/home/photos/old-campus.webp', section: 'teachers', title: 'School', light: 'Administration', lede: 'Office tools for the school’s records, papers and results.' },
+  { re: /^\/exam\/teacher/, photo: '/home/photos/classroom-science.webp', section: 'teachers', title: 'Teacher', light: 'Examination Portal', lede: 'Write your paper and send it to the examination office.' },
+  { re: /^\/exam\/paper-template/, photo: '/home/photos/exam-hall.webp', section: 'teachers', title: 'Paper', light: 'Template Builder' },
+  { re: /^\/portal\/admin/, photo: '/home/photos/old-campus.webp', section: 'portal', title: 'Admin', light: 'Portal' },
+  { re: /^\/portal\/management/, photo: '/home/photos/assembly-staff.webp', section: 'portal', title: 'Management', light: 'Portal' },
+  { re: /^\/portal\/teacher/, photo: '/home/photos/classroom-english.webp', section: 'portal', title: 'Teacher', light: 'Portal' },
+  { re: /^\/portal\/student/, photo: '/home/photos/library-2.webp', section: 'portal', title: 'Student', light: 'Portal' },
+  { re: /^\/portal\/parent/, photo: '/home/photos/assembly-rows.webp', section: 'portal', title: 'Parent', light: 'Portal' },
 ];
 export const pageFor = (path) => PAGES.find((p) => p.re.test(path)) || null;

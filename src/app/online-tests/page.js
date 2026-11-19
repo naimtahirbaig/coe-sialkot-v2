@@ -55,7 +55,7 @@ export default function OnlineTestsPage() {
   const countFor = (level) => tests.filter((t) => t.class_level === level).length;
 
   return (
-    <InnerPage section="students" title="September" light="MCQ Tests" short crumb="MCQ Tests, September 2026"
+    <InnerPage section="students" title="September" light="MCQ Tests" short photo="/home/photos/classroom-english.webp" crumb="MCQ Tests, September 2026"
       lede="The September 2026 MCQ tests. Choose your class, then your subject; no sign-in is needed.">
       <div className="ip-box ot-note">The new chapter-wise tests for 2026 are on <a href="/online-tests-2026.html">Online Tests 2026</a>, and you can practise them on <a href="/practice-tests-2026.html">Practice Tests</a>.</div>
       <div className="ip-seg" role="group" aria-label="Class">

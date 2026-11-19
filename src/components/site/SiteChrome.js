@@ -123,7 +123,7 @@ export default function SiteChrome({ children }) {
       <div id="main">
         {framed ? (
           <div className="ip">
-            <PageHead section={pg.section} title={pg.title} light={pg.light} crumb={pg.crumb} lede={pg.lede} short />
+            <PageHead section={pg.section} title={pg.title} light={pg.light} crumb={pg.crumb} lede={pg.lede} photo={pg.photo} short />
             <div className={`ip-tool${pg.dark ? ' dark' : ''}`}>{children}</div>
           </div>
         ) : children}
