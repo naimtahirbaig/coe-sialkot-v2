@@ -284,10 +284,15 @@ export default function AwardListExamPage({ params }) {
               Centre of Excellence Sialkot
             </p>
             {exam && (
-              <p className="text-xs sm:text-base font-semibold mt-1 text-white/90">
-                {examLabel(exam)}
-              </p>
+              <p className="al-exam" aria-live="polite">{examLabel(exam)}</p>
             )}
+            <style>{`
+              .al-exam{display:inline-block;margin-top:10px;padding:6px 16px;border-radius:10px;background:#E39C24;color:#0C0C3C;
+                font:800 clamp(20px,3.4vw,34px)/1.15 'Josefin Sans','Source Sans 3',sans-serif;letter-spacing:.01em;white-space:normal;
+                animation:alFlash 1.6s ease-in-out infinite}
+              @keyframes alFlash{0%,100%{background:#E39C24;box-shadow:0 0 0 0 rgba(246,199,102,.0)}50%{background:#F6C766;box-shadow:0 0 0 6px rgba(246,199,102,.45)}}
+              @media (prefers-reduced-motion:reduce){.al-exam{animation:none}}
+            `}</style>
           </div>
         </div>
 
