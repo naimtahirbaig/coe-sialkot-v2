@@ -58,14 +58,14 @@ export async function generateMetadata({ params }) {
 
   const image = KNOWN_OG.has(slug)
     ? `${SITE}/og-award-list-${slug}.png`
-    : `${SITE}/og-award-list.png`;
+    : `${SITE}/og/award-list.jpg`;
 
   return {
     title,
     description,
     robots: { index: false, follow: false }, // PIN-protected internal tool
     openGraph: {
-      title: heading,
+      title: `Award List: ${heading}`,
       description,
       url: `${SITE}/award-list/${slug}`,
       siteName: "Centre of Excellence Sialkot",
@@ -74,7 +74,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: heading,
+      title: `Award List: ${heading}`,
       description,
       images: [image],
     },
