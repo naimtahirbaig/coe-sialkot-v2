@@ -54,6 +54,25 @@ export default function QuestionBankPage() {
   const HEADINGS = `.qb-root h1,.qb-root h2,.qb-root h3{font-weight:800;color:${C.NAVY};margin:14px 0 8px}
 .qb-root h1{font-size:24px}.qb-root h2{font-size:20px}.qb-root h3{font-size:17px}
 .qb-root .qb-paper h2{font-size:18px;color:#000;margin:0}`;
+  // The phone's Back button moves back through the tabs and closes an open paper,
+  // instead of leaving the Question Bank: each tab and each opened paper is a step in the browser history.
+  useEffect(() => {
+    if (!user) return;
+    const here = { qb: { tab, open: openPaper || null } };
+    const now = window.history.state && window.history.state.qb;
+    if (!now) window.history.replaceState({ ...window.history.state, ...here }, "");
+    else if (now.tab !== here.qb.tab || now.open !== here.qb.open) window.history.pushState({ ...window.history.state, ...here }, ""); // keep Next.js's own history data
+  }, [user, tab, openPaper]);
+  useEffect(() => {
+    const onPop = (e) => {
+      const st = e.state && e.state.qb;
+      setTab(st ? st.tab : "overview");
+      setOpenPaper(st ? st.open : null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   if (!ready) return <div style={wrap} />;
 
   if (!user) {
@@ -99,7 +118,10 @@ export default function QuestionBankPage() {
         {tab === "overview" && <Overview meta={meta} admin={admin} go={go} />}
         {tab === "questions" && <QuestionsTab meta={meta} refreshMeta={refreshMeta} />}
         {tab === "generate" && <GenerateTab meta={meta} user={user} onGenerated={(ids) => { setOpenPaper(ids.length === 1 ? ids[0] : null); setTab("papers"); }} />}
-        {tab === "papers" && <PapersTab openId={openPaper} setOpenId={setOpenPaper} admin={admin} />}
+        {tab === "papers" && <PapersTab openId={openPaper} setOpenId={(id) => {
+          // "Back to the list" behaves like the phone's Back button
+          if (!id && window.history.state && window.history.state.qb && window.history.state.qb.open) window.history.back(); else setOpenPaper(id);
+        }} admin={admin} />}
         {admin && tab === "teachers" && <TeachersTab />}
         {!admin && tab === "password" && <PasswordTab />}
       </div>
