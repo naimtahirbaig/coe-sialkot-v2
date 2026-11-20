@@ -4,6 +4,7 @@
 export const SBA_TITLE = "FIRST TERM SCHOOL-BASED ASSESSMENT (SBA) 2026-27";
 export const SCHOOL_LINE = "COE Govt. Boys Pilot Secondary School  (EMIS: coesialkot_boys)";
 export const LOGO = "/qb/pectaa-logo.jpg";
+export const SCHOOL_LOGO = "/coe-logo.png"; // Punjab Daanish Schools & Centres of Excellence Authority
 
 // Part B question types a part can draw from. "crq" = short or long.
 export const PART_TYPES = {

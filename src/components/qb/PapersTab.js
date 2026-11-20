@@ -1,11 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { C, card, btn, small, th, td, Msg, api, fmt } from "./ui";
 import SbaSheet, { SHEET_CSS } from "./SbaSheet";
+import { paperPdf, paperPngs, paperDocx, deliver } from "./paperExport";
 
 // Printing: only the paper is shown, on an A3 page, exactly like the sample SBA papers.
 const PAGE_CSS = `${SHEET_CSS}
-@media print{ html,body{background:#fff!important} body *{visibility:hidden} .sba,.sba *{visibility:visible} .qb-noprint{display:none!important} .qb-zoomwrap{zoom:1!important;border:0!important} }`;
+@media print{ html,body{background:#fff!important} body *{visibility:hidden} .sba,.sba *{visibility:visible} .qb-noprint{display:none!important} .qb-zoomwrap{zoom:1!important;border:0!important}
+  .ip-title,.ip-lede{display:none!important} .ip,.ip-tool,.ip-wrap,#main{position:static!important;padding:0!important;margin:0!important;min-height:0!important} }`;
 
 export default function PapersTab({ openId, setOpenId, admin }) {
   const [list, setList] = useState(null);
@@ -45,6 +47,22 @@ function PaperView({ id, onBack }) {
   const [keyOn, setKeyOn] = useState(false);
   const [msg, setMsg] = useState(null);
   const [zoom, setZoom] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const sheetRef = useRef(null);
+
+  async function download(kind) {
+    const sheet = sheetRef.current && sheetRef.current.querySelector(".sba");
+    if (!sheet || busy) return;
+    setBusy(kind); setMsg(null);
+    try {
+      const base = `${(p.title || "Question paper").replace(/[\\/:*?"<>|]+/g, " ").trim()} - Class ${p.classNum} ${p.subject || ""}`.trim() + (keyOn ? " - answer key" : "");
+      const files = kind === "pdf" ? await paperPdf(sheet, base) : kind === "png" ? await paperPngs(sheet, base) : await paperDocx(p.body, keyOn, base);
+      const r = await deliver(files, `${base} - PNG pages.zip`);
+      if (r === "saved") setMsg({ type: "ok", text: `${kind === "docx" ? "Word file" : kind.toUpperCase()} downloaded${files.length > 1 ? ` (${files.length} pages in one .zip)` : ""}. On a phone, look in Downloads or Files.` });
+    } catch (e) {
+      setMsg({ type: "err", text: "Could not make the file: " + (e && e.message ? e.message : e) + ". Try another format or Print." });
+    } finally { setBusy(false); }
+  }
 
   const load = useCallback(async () => {
     try { setP((await api(`/api/qb/papers/${id}`)).paper); } catch (e) { setMsg({ type: "err", text: e.message }); }
@@ -77,15 +95,19 @@ function PaperView({ id, onBack }) {
       <style dangerouslySetInnerHTML={{ __html: PAGE_CSS }} />
       <div className="qb-noprint" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12, alignItems: "center" }}>
         <button style={btn(false)} onClick={onBack}>‹ Back to the list</button>
-        <button style={btn()} onClick={() => window.print()}>Print / Save as PDF (A3)</button>
+        <span style={{ fontWeight: 800, color: C.NAVY, marginLeft: 4 }}>Download:</span>
+        {[["pdf", "PDF"], ["docx", "Word (DOCX)"], ["png", "PNG picture"]].map(([k, label]) => (
+          <button key={k} style={btn(k === "pdf")} onClick={() => download(k)} disabled={!!busy}>{busy === k ? "Making…" : label}</button>
+        ))}
+        <button style={btn(false)} onClick={() => window.print()}>Print</button>
         <button style={btn(false)} onClick={() => setKeyOn(!keyOn)}>{keyOn ? "Hide answer key" : "Show answer key"}</button>
         <button style={btn(false, C.RED)} onClick={del}>Delete</button>
       </div>
       <div className="qb-noprint">
         <Msg m={msg} />
-        <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Use ↻ on a question to replace it. In the print window choose paper size <b>A3</b> (or A4 with “Fit to page”), scale 100%, and turn <b>Headers and footers</b> off.</p>
+        <p style={{ color: C.MUTED, fontSize: 13, marginTop: 0 }}>Use ↻ on a question to replace it. <b>Download</b> works on phones and computers: PDF and PNG look exactly like the paper; Word can be edited. The answer key is included when it is showing. For Print: in the print window choose paper size <b>A3</b> (or A4 with “Fit to page”), scale 100%, and turn <b>Headers and footers</b> off.</p>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      <div style={{ overflowX: "auto" }} ref={sheetRef}>
         <div className="qb-zoomwrap" style={{ zoom, width: "fit-content", margin: "0 auto", border: "1px solid #ccc", background: "#fff" }}>
           <SbaSheet doc={p.body} keyOn={keyOn} onSwap={swap} />
         </div>

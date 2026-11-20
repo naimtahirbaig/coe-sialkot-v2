@@ -6,7 +6,7 @@ import {
   QTYPES, DIFFICULTIES, PER_PAGE, MAX_IMPORT_ROWS, QbError, fmtNum,
   parseQuestion, parseImportRow, parsePaperSpec, chooseIds, cleanImage, parseClassNum, signToken, verifyToken, safeEqual,
 } from "@/lib/questionBank";
-import { PART_QTYPES, PART_TYPES, SCHOOL_LINE, LOGO } from "@/lib/qbFormats";
+import { PART_QTYPES, PART_TYPES, SCHOOL_LINE, LOGO, SCHOOL_LOGO } from "@/lib/qbFormats";
 
 const must = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
 const chunk = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
@@ -281,6 +281,9 @@ export async function generatePaper(sb, user, body) {
   // Teachers make class tests (no PECTAA logo, no QR). The admin can make either kind.
   const isTest = user.role !== "admin" || body.kind === "test";
   if (isTest) form.qr = "";
+  // Logo on a class test: the school logo or none; only the admin may put the PECTAA logo on a test.
+  const want = String(body.logo || "");
+  const logo = !isTest ? LOGO : want === "school" ? SCHOOL_LOGO : want === "pectaa" && user.role === "admin" ? LOGO : "";
   const owner = { id: user.role === "admin" ? "admin" : user.id, name: user.name };
   const fail = (list) => { throw new QbError(400, list.join(" ")); };
   if (errors.length) fail(errors);
@@ -352,7 +355,7 @@ export async function generatePaper(sb, user, body) {
     const doc = {
       header: {
         title: form.title, gradeLabel: `GRADE-${form.classNum}`, subjectTitle: form.subjectTitle,
-        school: form.school || SCHOOL_LINE, lang: form.lang, qr: isTest ? "" : form.qr, logo: isTest ? "" : LOGO, version: letter, kind: isTest ? "test" : "sba",
+        school: form.school || SCHOOL_LINE, lang: form.lang, qr: isTest ? "" : form.qr, logo, version: letter, kind: isTest ? "test" : "sba",
       },
       partA: { count: partA.count, marksEach: Number(partA.marks), plain: plainIds.map((id) => snapshot(rowById[id], partA.marks)), passage },
       partB: partB.map((blk, i) => ({

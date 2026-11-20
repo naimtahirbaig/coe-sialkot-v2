@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { C, DIFF, CLASSES, card, inp, lbl, btn, small, grid, Msg, api, fmt } from "./ui";
-import { SBA_TITLE, SCHOOL_LINE, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject, sortChapters } from "@/lib/qbFormats";
+import { SBA_TITLE, SCHOOL_LINE, LOGO, SCHOOL_LOGO, PART_TYPES, SUBJECTS, formatFor, sectionsFor, normSubject, sortChapters } from "@/lib/qbFormats";
 
 const uid = () => Math.random().toString(36).slice(2);
 const big = (on, color = C.NAVY) => ({ padding: "12px 20px", minHeight: 50, fontSize: 16, fontWeight: 800, borderRadius: 12, border: `3px solid ${color}`, background: on ? color : "#fff", color: on ? "#fff" : color, cursor: "pointer", boxShadow: on ? "0 3px 0 rgba(0,0,0,.25)" : "0 2px 0 rgba(0,0,0,.08)", textAlign: "left", lineHeight: 1.25 });
@@ -21,7 +21,7 @@ export default function GenerateTab({ meta, user, onGenerated }) {
   const admin = user?.role === "admin";
   const [kind, setKind] = useState(admin ? "sba" : "test"); // teachers only make class tests (no PECTAA logo)
   const isTest = kind === "test";
-  const [f, setF] = useState({ classNum: "", subject: "", title: admin ? SBA_TITLE : TEST_TITLE, school: SCHOOL_LINE, subjectTitle: "", lang: "en", qr: "", difficulty: "", chapters: [], totalMarks: "" });
+  const [f, setF] = useState({ classNum: "", subject: "", title: admin ? SBA_TITLE : TEST_TITLE, school: SCHOOL_LINE, subjectTitle: "", lang: "en", qr: "", logo: "school", difficulty: "", chapters: [], totalMarks: "" });
   const [partA, setPartA] = useState({ count: "10", marks: "1.5", passageSize: "0" });
   const [partB, setPartB] = useState(mkBlocks([{ parts: [{ marks: 5, qtype: "crq" }, { marks: 5, qtype: "crq" }] }]));
   const [totalTouched, setTotalTouched] = useState(false);
@@ -153,7 +153,7 @@ export default function GenerateTab({ meta, user, onGenerated }) {
           <button type="button" style={big(isTest, "#B07A00")} onClick={() => chooseKind("test")}>Class test<div style={{ fontSize: 12, fontWeight: 600 }}>no PECTAA logo</div></button>
         </div>
       )}
-      {isTest && !admin && <p style={{ color: C.MUTED, marginTop: 0 }}>Pick the class, subject and chapters, then the questions are chosen for you. The test has the school name but no PECTAA logo.</p>}
+      {isTest && !admin && <p style={{ color: C.MUTED, marginTop: 0 }}>Pick the class, subject and chapters, then the questions are chosen for you. Choose whether the test shows the school logo.</p>}
       <Msg m={msg} />
       <div style={grid()}>
         <div><label style={lbl}>Class</label>
@@ -166,6 +166,19 @@ export default function GenerateTab({ meta, user, onGenerated }) {
         <div><label style={lbl}>Paper language</label>
           <select style={inp} value={f.lang} onChange={(e) => set("lang", e.target.value)}><option value="en">English (left to right)</option><option value="ur">اردو (right to left)</option></select></div>
       </div>
+      {isTest && (
+        <div style={{ margin: "14px 0 4px" }}>
+          <label style={lbl}>Logo on the test</label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "stretch" }}>
+            {[["school", "School logo", SCHOOL_LOGO], ["none", "No logo", ""], ...(admin ? [["pectaa", "PECTAA logo", LOGO]] : [])].map(([k, label, src]) => (
+              <button key={k} type="button" style={{ ...big(f.logo === k, C.NAVY), display: "flex", alignItems: "center", gap: 10 }} onClick={() => set("logo", k)} aria-pressed={f.logo === k}>
+                {src ? <img src={src} alt="" style={{ width: 34, height: 34, objectFit: "contain", background: "#fff", borderRadius: 6 }} /> : <span style={{ width: 34, height: 34, border: "2px dashed currentColor", borderRadius: 6, display: "inline-block" }} />}
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div style={{ ...grid(300), marginTop: 12 }}>
         <div><label style={lbl}>{isTest ? "Test title" : "Assessment title"}</label><input style={inp} value={f.title} onChange={(e) => set("title", e.target.value)} required /></div>
         <div><label style={lbl}>School name line</label><input style={inp} value={f.school} onChange={(e) => set("school", e.target.value)} /></div>
