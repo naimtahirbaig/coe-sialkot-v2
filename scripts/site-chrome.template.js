@@ -73,6 +73,8 @@
     '<div class="sc-foot-right"><div class="sc-foot-logos">' + D.AUTHORITIES.map(function (a) { return '<img src="' + a.src + '" alt="' + esc(a.name) + '" width="52" height="52">'; }).join('') + '</div>' +
     '<p>Punjab Daanish Schools &amp; Centres of Excellence Authority, Government of the Punjab</p><p class="sc-foot-ur" lang="ur" dir="rtl">سینٹر آف ایکسیلینس سیالکوٹ (بوائز)</p></div></div>' +
     '<nav class="sc-foot-links" aria-label="Footer">' + D.FOOT_LINKS.map(function (l) { return '<a href="' + l.href + '">' + esc(l.label) + '</a>'; }).join('') + '</nav>' +
+    '<div class="ls-strip" aria-label="Website numbers"><span class="ls-live"><i aria-hidden="true"></i>Live</span>' +
+      [['visitors', 'visitors'], ['downloads', 'downloads'], ['testsTaken', 'tests taken'], ['papers', 'papers generated']].map(function (x) { return '<span><b data-ls="' + x[0] + '">…</b> ' + x[1] + '</span>'; }).join('') + '</div>' +
     '<p class="sc-foot-credit">Designed and developed by <b>Dr Naim Tahir Baig</b>. © ' + year + ' Centre of Excellence Sialkot (Boys)</p></div></footer>';
 
   function mount() {
@@ -85,6 +87,7 @@
     }
     if (opt.footer !== '0') b.insertAdjacentHTML('beforeend', foot);
     wire();
+    counting();
   }
 
   function wire() {
@@ -124,6 +127,31 @@
       }, { rootMargin: '-30% 0px -60% 0px' });
       toc.forEach(function (a) { var el = document.getElementById(a.getAttribute('href').slice(1)); if (el) io.observe(el); });
     }
+  }
+
+  // Live numbers: count this visit and any file downloads, then show the totals in the footer
+  function counting() {
+    var send = function (k) {
+      var body = JSON.stringify({ k: k });
+      try { if (navigator.sendBeacon && navigator.sendBeacon('/api/stats/hit', new Blob([body], { type: 'application/json' }))) return; } catch (e) {}
+      try { fetch('/api/stats/hit', { method: 'POST', body: body, headers: { 'Content-Type': 'application/json' }, keepalive: true }); } catch (e) {}
+    };
+    var get = function (k) { try { return localStorage.getItem(k); } catch (e) { return '1'; } };
+    var put = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+    var day = new Date(Date.now() + 5 * 3600e3).toISOString().slice(0, 10);
+    if (!get('coe_v')) { put('coe_v', '1'); send('visitor'); }
+    if (get('coe_d') !== day) { put('coe_d', day); send('day'); }
+    send('view');
+    document.addEventListener('click', function (e) {
+      var a = e.target && e.target.closest && e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href') || '';
+      if (a.hasAttribute('download') || (/\.(pdf|docx?|xlsx?|pptx?|zip|png|jpe?g)(\?|#|$)/i.test(href) && !/\/home\/|\/og\/|logo/i.test(href))) send('download');
+    }, true);
+    fetch('/api/stats', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      if (!d) return;
+      [].forEach.call(document.querySelectorAll('[data-ls]'), function (el) { el.textContent = Number(d[el.getAttribute('data-ls')] || 0).toLocaleString('en-US'); });
+    }).catch(function () {});
   }
 
   if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);

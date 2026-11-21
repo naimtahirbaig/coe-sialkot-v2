@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import LiveStats from '@/components/site/LiveStats';
 
 // ── Home page ───────────────────────────────────────────────
 // Header over the slideshow: big school badge, quick links row, main menu with full-width panels.
@@ -403,6 +404,9 @@ export default function HomePage() {
 
 
       <main>
+        {/* ── Live numbers: visitors, downloads, tests taken, papers generated ── */}
+        <LiveStats />
+
         {/* ── Upcoming examination ── */}
         <section className="ex" aria-labelledby="ex-h">
           <div className="ex-in">

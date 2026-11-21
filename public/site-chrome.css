@@ -330,3 +330,24 @@ html{scroll-padding-top:calc(var(--sc-h) + 16px)}
   .ip .ip-sub a{white-space:nowrap;font-size:15px}
   .ip .ip-sec{font-size:24px}
 }
+
+/* ══ Live numbers ══ */
+.ls-live{display:inline-flex;align-items:center;gap:7px;font:700 13px/1 'Source Sans 3',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:#C8364A;border-radius:999px;padding:6px 12px 5px}
+.ls-live i{width:8px;height:8px;border-radius:50%;background:#fff;animation:lsPulse 1.4s ease-in-out infinite}
+@keyframes lsPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.ls-band{background:#16154F;color:#fff;padding:54px 0 58px;position:relative;overflow:hidden;border-bottom:6px solid #E39C24}
+.ls-band::after{content:"";position:absolute;right:-90px;top:-90px;width:240px;height:240px;border-radius:50%;background:#1F2A86;opacity:.9}
+.ls-in{max-width:1320px;margin:0 auto;padding:0 4%;position:relative;z-index:1}
+.ls-band h2{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 30px;font:400 clamp(26px,3vw,38px)/1.2 'Josefin Sans',sans-serif !important;color:#fff !important}
+.ls-band ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.ls-band li{background:rgba(255,255,255,.06);border:1px solid rgba(246,199,102,.35);border-radius:18px;padding:22px 22px 20px;display:flex;flex-direction:column;gap:4px}
+.ls-band li:first-child{border-radius:18px 18px 18px 60px}
+.ls-i{color:#F6C766;margin-bottom:6px}
+.ls-band b{font:700 clamp(40px,5vw,66px)/1 'Josefin Sans',sans-serif;color:#F6C766;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ls-l{font:700 19px/1.2 'Source Sans 3',sans-serif;color:#fff;margin-top:6px}
+.ls-n{font-size:15px;color:#B9BCE0;min-height:1.3em}
+@media (max-width:900px){.ls-band ul{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:420px){.ls-band{padding:40px 0}.ls-band li{padding:16px}.ls-band b{font-size:36px}}
+@media (prefers-reduced-motion:reduce){.ls-live i{animation:none}}
+.ls-strip{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 26px;margin:22px 0 6px;padding:14px 18px;border-radius:14px;background:#16154F;border-bottom:4px solid #E39C24;color:#D7D9F2;font:400 16px 'Source Sans 3',sans-serif}
+.ls-strip b{color:#F6C766;font:700 22px 'Josefin Sans',sans-serif;font-variant-numeric:tabular-nums}

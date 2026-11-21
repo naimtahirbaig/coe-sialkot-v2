@@ -543,6 +543,8 @@ var res={};
 function finish(){
   clearInterval(tick);stopFaceWatch();
   window.removeEventListener("beforeunload",guard);
+  /* count finished practice tests for the website's Live numbers */
+  if(PRACTICE){try{navigator.sendBeacon("/api/stats/hit",new Blob([JSON.stringify({k:"practice"})],{type:"application/json"}));}catch(e){}}
   if(stream)snap("Final");
 
   var correct=0,wrong=0,skip=0,rows=[];

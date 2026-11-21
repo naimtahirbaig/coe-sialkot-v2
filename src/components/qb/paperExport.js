@@ -283,7 +283,11 @@ export async function paperDocx(doc, keyOn, base) {
 export async function deliver(files, zipName) {
   const phone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   if (phone && navigator.canShare && navigator.canShare({ files })) {
-    try { await navigator.share({ files, title: files[0].name }); return "shared"; }
+    try {
+      await navigator.share({ files, title: files[0].name });
+      try { navigator.sendBeacon("/api/stats/hit", new Blob([JSON.stringify({ k: "download" })], { type: "application/json" })); } catch { /* not counted */ }
+      return "shared";
+    }
     catch (e) { if (e && e.name === "AbortError") return "cancelled"; }
   }
   let blob = files[0], name = files[0].name;

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { MENU, QUICK, AUTHORITIES, FOOT_LINKS, pageFor } from './siteData';
 import { PageHead } from './InnerPage';
+import LiveStats, { track, watchDownloads } from './LiveStats';
 
 export function Icon({ name, size = 22 }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
@@ -55,6 +56,10 @@ export default function SiteChrome({ children }) {
     check(); const id = requestAnimationFrame(check);
     return () => cancelAnimationFrame(id);
   }, [path, home, framed]);
+
+  // count visitors, page views and downloads (shown in the Live numbers)
+  useEffect(() => { track(path); }, [path]);
+  useEffect(() => watchDownloads(track()), []);
 
   const solid = scrolled || !overPhoto;
 
@@ -145,6 +150,7 @@ export default function SiteChrome({ children }) {
           <nav className="sc-foot-links" aria-label="Footer">
             {FOOT_LINKS.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}
           </nav>
+          <LiveStats variant="strip" />
           <p className="sc-foot-credit">Designed and developed by <b>Dr Naim Tahir Baig</b>. © {new Date().getFullYear()} Centre of Excellence Sialkot (Boys)</p>
         </div>
       </footer>
