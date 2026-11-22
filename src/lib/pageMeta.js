@@ -34,6 +34,8 @@ export const PAGE_META = {
     desc: 'Free chapter-wise MCQ practice for Classes 6, 7 and 8 in every subject. Same questions and timer as the real tests; no camera, nothing saved.' },
   'online-tests-2026': { path: '/online-tests-2026.html', section: 'Tests & Results', title: 'Online', light: 'Tests 2026', photo: 'classroom-english',
     desc: 'Chapter-wise MCQ tests for Classes 6, 7 and 8 on the dates teachers announce. Password from your class teacher; camera needed.' },
+  'textbooks-2026': { path: '/textbooks-2026.html', section: 'Students', title: 'Textbooks &', light: 'Model Papers', photo: 'library-2',
+    desc: 'Official Punjab textbooks (e-books), model papers, pairing schemes and smart syllabus for Classes 6, 7, 8, 9 and 10. Read online or download, free.' },
   'notes-2026': { path: '/notes-2026.html', section: 'Notes & Exams', title: 'Notes &', light: 'Expected Questions', photo: 'library-1',
     desc: 'Chapter-wise MCQs and subjective questions for Classes 6, 7 and 8 in every subject, PECTAA style. 51 files to read or download.' },
   'mid-term-2026-27': { path: '/mid-term-2026-27.html', section: 'Notes & Exams', title: 'Mid-Term', light: 'SBA 2026-27', photo: 'exam-hall',
