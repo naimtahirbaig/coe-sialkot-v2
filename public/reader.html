@@ -149,7 +149,14 @@ body.toc-closed .view{left:0}
   var DPR = Math.min(window.devicePixelRatio || 1, 2);
   var key = 'coe-reader:' + file;
 
-  pdfjsLib.getDocument({ url: file, disableAutoFetch: false }).promise.then(function (doc) {
+  // Load the book. Some phones and networks break the fast "piece by piece" download,
+  // so on failure try again as one plain download, then as a file fetched by the page itself.
+  function openBook() {
+    return pdfjsLib.getDocument({ url: file }).promise
+      .catch(function () { return pdfjsLib.getDocument({ url: file, disableRange: true, disableStream: true }).promise; })
+      .catch(function () { return fetch(file).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (buf) { return pdfjsLib.getDocument({ data: buf }).promise; }); });
+  }
+  openBook().then(function (doc) {
     pdf = doc; n = doc.numPages; $('pageCount').textContent = n;
     // page sizes (all pages of these books are the same size: read the first, then fix any that differ when drawn)
     return doc.getPage(1).then(function (p1) {
