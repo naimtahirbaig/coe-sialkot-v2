@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Reader — COE Sialkot (Boys)</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#16154F;--deep:#0C0C3C;--royal:#1F2A86;--gold:#E39C24;--gold2:#F6C766;--paper:#F6F5FA;--ink:#15142E;--moss:#4E4C6B;--line:#DEDCEA;--bar:60px;--side:320px}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:16px/1.45 'Source Sans 3',system-ui,sans-serif;color:var(--ink);background:#E9E8F1;overflow:hidden}
+button,a,input{font:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* top bar */
+.bar{position:fixed;inset:0 0 auto 0;height:var(--bar);background:var(--navy);color:#fff;display:flex;align-items:center;gap:10px;padding:0 12px;z-index:30;border-bottom:4px solid var(--gold)}
+.bar .home{display:flex;align-items:center;flex:none}
+.bar .home img{width:38px;height:38px;border-radius:50%;background:#fff}
+.ib{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;min-width:38px;padding:0 10px;border:0;border-radius:10px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;text-decoration:none;font-weight:700;font-size:14.5px;white-space:nowrap}
+.ib:hover{background:rgba(255,255,255,.2)}
+.ib svg{width:20px;height:20px}
+.ib.dl{background:var(--gold);color:var(--deep)}
+.ib.dl:hover{background:var(--gold2)}
+.ttl{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}
+.ttl b{font:700 17px 'Josefin Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-top:3px}
+.ttl span{font-size:13px;color:#C9CBE8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pg{flex:none;display:flex;align-items:center;gap:6px;font-size:14px;color:#C9CBE8}
+.pg input{width:52px;height:34px;border:0;border-radius:8px;text-align:center;font-weight:700;color:var(--navy)}
+.zoom{display:flex;gap:4px;flex:none}
+
+/* contents */
+.side{position:fixed;top:var(--bar);bottom:0;left:0;width:var(--side);background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:20;transition:transform .25s ease}
+.side h2{margin:0;padding:16px 18px 12px;font:700 13px 'Source Sans 3',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--deep);background:var(--gold);display:flex;justify-content:space-between;align-items:center}
+.side h2 button{border:0;background:none;font-size:24px;line-height:1;cursor:pointer;color:var(--deep);display:none}
+.toc{list-style:none;margin:0;padding:6px 0 30px;overflow:auto;flex:1}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc a{display:flex;gap:10px;justify-content:space-between;align-items:baseline;padding:9px 18px;color:var(--ink);text-decoration:none;border-left:4px solid transparent;font-size:15.5px}
+.toc ul a{padding-left:34px;font-size:14.5px;color:var(--moss)}
+.toc a small{color:#8C8AA6;font-size:12.5px;flex:none}
+.toc a:hover{background:var(--paper)}
+.toc a.on{border-left-color:var(--gold);background:#FFF7E6;color:var(--navy);font-weight:700}
+.toc .empty{padding:14px 18px;color:var(--moss)}
+.toc .rtl a{direction:rtl;text-align:right}
+
+/* pages */
+.view{position:fixed;top:var(--bar);bottom:0;left:var(--side);right:0;overflow:auto;-webkit-overflow-scrolling:touch;scroll-behavior:auto}
+.pages{padding:22px 16px 60px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.page{position:relative;background:#fff;box-shadow:0 2px 14px rgba(22,21,79,.16);border-radius:2px;flex:none}
+.page canvas{display:block;width:100%;height:100%}
+.page .no{position:absolute;right:-2px;bottom:-22px;font-size:12px;color:var(--moss)}
+.page.loading::after{content:"";position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--gold);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.msg{max-width:520px;margin:80px auto;background:#fff;border-radius:16px;padding:28px;text-align:center}
+.msg b{display:block;font:700 22px 'Josefin Sans',sans-serif;color:var(--navy);margin-bottom:8px}
+.resume{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--navy);color:#fff;border-radius:999px;padding:8px 8px 8px 18px;display:flex;gap:10px;align-items:center;z-index:25;box-shadow:0 6px 20px rgba(0,0,0,.25);font-size:15px}
+.resume button{border:0;border-radius:999px;padding:7px 14px;font-weight:700;cursor:pointer}
+.resume .go{background:var(--gold);color:var(--deep)}
+.resume .x{background:rgba(255,255,255,.15);color:#fff}
+.scrim{display:none}
+
+body.toc-closed .side{transform:translateX(-100%)}
+body.toc-closed .view{left:0}
+
+/* phones and small tablets: contents slides over the page */
+@media (max-width:860px){
+  :root{--side:min(86vw,340px)}
+  .view{left:0}
+  .side{box-shadow:6px 0 24px rgba(0,0,0,.2)}
+  .side h2 button{display:block}
+  body:not(.toc-open) .side{transform:translateX(-100%)}
+  body.toc-open .scrim{display:block;position:fixed;inset:var(--bar) 0 0 0;background:rgba(12,12,60,.45);z-index:15}
+  .ttl span,.zoom,.hide-s{display:none}
+  .pg input{width:44px}
+  .pages{padding:12px 8px 60px;gap:10px}
+}
+@media (max-width:420px){.bar{gap:6px;padding:0 8px}.ib .lbl{display:none}}
+@media print{.bar,.side,.resume{display:none}.view{position:static;overflow:visible}body{overflow:visible;background:#fff}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="home" href="/" aria-label="Centre of Excellence Sialkot (Boys), home"><img src="/logo.png" alt=""></a>
+  <a class="ib" id="back" href="/notes-2026.html" aria-label="Back to notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg><span class="lbl hide-s">Notes</span></a>
+  <button class="ib" id="tocBtn" type="button" aria-controls="side" aria-expanded="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span class="lbl">Contents</span></button>
+  <div class="ttl"><b id="title">Loading…</b><span id="sub"></span></div>
+  <div class="pg"><input id="pageIn" inputmode="numeric" aria-label="Page number" value="1"><span>/ <span id="pageCount">…</span></span></div>
+  <div class="zoom"><button class="ib" id="zOut" type="button" aria-label="Zoom out">−</button><button class="ib" id="zFit" type="button" aria-label="Fit to width">Fit</button><button class="ib" id="zIn" type="button" aria-label="Zoom in">+</button></div>
+  <a class="ib dl" id="dl" href="#" download><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span class="lbl">Download</span></a>
+</header>
+<aside class="side" id="side" aria-label="Contents"><h2>Contents <button type="button" id="tocClose" aria-label="Close contents">×</button></h2><ul class="toc" id="toc"><li class="empty">Loading the contents…</li></ul></aside>
+<div class="scrim" id="scrim"></div>
+<main class="view" id="view" tabindex="-1"><div class="pages" id="pages" aria-live="polite"></div></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var params = new URLSearchParams(location.search);
+  var file = params.get('f') || '';
+  var view = $('view'), pagesEl = $('pages');
+  // only the school's own files can be opened here
+  if (!/^\/(notes|sba-2026-27|lesson-plans|timetables)\/[\w\-./]+\.pdf$/i.test(file) || file.indexOf('..') >= 0) {
+    $('title').textContent = 'File not found';
+    pagesEl.innerHTML = '<div class="msg"><b>This file cannot be opened</b>Open a book from the <a href="/notes-2026.html">Notes &amp; expected questions</a> page.</div>';
+    $('toc').innerHTML = ''; return;
+  }
+  $('dl').href = file;
+  $('dl').setAttribute('download', file.split('/').pop());
+
+  // title, class and back link from the notes list
+  var cls = (file.match(/class-(\d+)/) || [])[1];
+  if (cls) $('back').href = '/notes-2026.html?class=' + cls;
+  fetch('/notes/notes.json').then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+    var d = (list || []).filter(function (x) { return x.file === file; })[0];
+    var t = d ? d.subject + ': ' + d.label : file.split('/').pop().replace(/\.pdf$/, '').replace(/-/g, ' ');
+    $('title').textContent = t;
+    $('sub').textContent = (d ? 'Class ' + d.cls + ' · ' : '') + 'Notes & expected questions';
+    document.title = t + (d ? ' — Class ' + d.cls : '') + ' — COE Sialkot (Boys)';
+  }).catch(function () {});
+
+  // count this as a page view on the website's Live numbers
+  try { navigator.sendBeacon('/api/stats/hit', new Blob([JSON.stringify({ k: 'view' })], { type: 'application/json' })); } catch (e) {}
+  $('dl').addEventListener('click', function () { /* the download itself is counted by the shared rule for [download] links when present; count here as the reader has no site header */
+    try { navigator.sendBeacon('/api/stats/hit', new Blob([JSON.stringify({ k: 'download' })], { type: 'application/json' })); } catch (e) {}
+  });
+
+  // ── contents panel open / closed ──
+  var small = window.matchMedia('(max-width:860px)');
+  function setToc(open) {
+    if (small.matches) { document.body.classList.toggle('toc-open', open); document.body.classList.remove('toc-closed'); }
+    else { document.body.classList.toggle('toc-closed', !open); document.body.classList.remove('toc-open'); }
+    $('tocBtn').setAttribute('aria-expanded', open);
+    setTimeout(fitWidthIfAuto, 280);
+  }
+  var tocOpen = function () { return small.matches ? document.body.classList.contains('toc-open') : !document.body.classList.contains('toc-closed'); };
+  $('tocBtn').addEventListener('click', function () { setToc(!tocOpen()); });
+  $('tocClose').addEventListener('click', function () { setToc(false); });
+  $('scrim').addEventListener('click', function () { setToc(false); });
+  setToc(!small.matches);
+
+  if (!window.pdfjsLib) { pagesEl.innerHTML = '<div class="msg"><b>The reader could not load</b>Check your internet connection, or <a href="' + file + '">open the PDF directly</a>.</div>'; return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  var pdf, n = 0, sizes = [], slots = [], scale = 1, autoFit = true, rendered = {}, current = 1, tocLinks = [];
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var key = 'coe-reader:' + file;
+
+  pdfjsLib.getDocument({ url: file, disableAutoFetch: false }).promise.then(function (doc) {
+    pdf = doc; n = doc.numPages; $('pageCount').textContent = n;
+    // page sizes (all pages of these books are the same size: read the first, then fix any that differ when drawn)
+    return doc.getPage(1).then(function (p1) {
+      var v = p1.getViewport({ scale: 1 });
+      for (var i = 0; i < n; i++) sizes.push([v.width, v.height]);
+      buildSlots(); fitWidth(); observe(); buildToc(); resumeOffer();
+    });
+  }).catch(function (e) {
+    $('toc').innerHTML = '';
+    pagesEl.innerHTML = '<div class="msg"><b>This book could not be opened</b>' + (e && e.message ? e.message.replace(/</g, '&lt;') : '') + '<br><br><a href="' + file + '">Open the PDF directly</a></div>';
+  });
+
+  function buildSlots() {
+    var f = document.createDocumentFragment();
+    for (var i = 1; i <= n; i++) {
+      var s = document.createElement('div'); s.className = 'page loading'; s.dataset.p = i; s.id = 'p' + i;
+      s.setAttribute('aria-label', 'Page ' + i);
+      s.innerHTML = '<span class="no">' + i + '</span>';
+      slots.push(s); f.appendChild(s);
+    }
+    pagesEl.appendChild(f);
+  }
+  function layout() {
+    for (var i = 0; i < n; i++) { slots[i].style.width = Math.round(sizes[i][0] * scale) + 'px'; slots[i].style.height = Math.round(sizes[i][1] * scale) + 'px'; }
+  }
+  function fitWidth() {
+    var w = view.clientWidth - (small.matches ? 16 : 32);
+    scale = Math.max(0.3, Math.min(2.5, w / sizes[0][0]));
+    if (!small.matches) scale = Math.min(scale, 1.6);
+    autoFit = true; relayout();
+  }
+  function fitWidthIfAuto() { if (autoFit && n) fitWidth(); }
+  function relayout() {
+    var keep = current;
+    layout();
+    Object.keys(rendered).forEach(function (p) { unrender(+p); });
+    goTo(keep, true); renderVisible();
+  }
+  $('zIn').addEventListener('click', function () { scale = Math.min(3, scale * 1.2); autoFit = false; relayout(); });
+  $('zOut').addEventListener('click', function () { scale = Math.max(0.3, scale / 1.2); autoFit = false; relayout(); });
+  $('zFit').addEventListener('click', fitWidth);
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (!small.matches && document.body.classList.contains('toc-open')) setToc(true); fitWidthIfAuto(); }, 200); });
+
+  // draw pages near the screen, free the far ones (keeps phones fast)
+  function render(p) {
+    if (rendered[p]) return; rendered[p] = 'busy';
+    pdf.getPage(p).then(function (page) {
+      if (!rendered[p]) return;
+      var v = page.getViewport({ scale: scale * DPR });
+      var c = document.createElement('canvas'); c.width = Math.floor(v.width); c.height = Math.floor(v.height);
+      var slot = slots[p - 1];
+      return page.render({ canvasContext: c.getContext('2d'), viewport: v }).promise.then(function () {
+        if (!rendered[p]) return;
+        var old = slot.querySelector('canvas'); if (old) old.remove();
+        slot.insertBefore(c, slot.firstChild); slot.classList.remove('loading'); rendered[p] = c;
+      });
+    }).catch(function () { delete rendered[p]; });
+  }
+  function unrender(p) { var c = slots[p - 1] && slots[p - 1].querySelector('canvas'); if (c) { c.width = c.height = 0; c.remove(); } slots[p - 1] && slots[p - 1].classList.add('loading'); delete rendered[p]; }
+  function renderVisible() {
+    var top = view.scrollTop, bottom = top + view.clientHeight, first = 0, last = 0;
+    for (var i = 0; i < n; i++) { var s = slots[i]; var y = s.offsetTop, h = s.offsetHeight; if (y + h >= top - 200 && y <= bottom + 600) { if (!first) first = i + 1; last = i + 1; } }
+    if (!first) return;
+    for (var p = first; p <= last; p++) render(p);
+    Object.keys(rendered).forEach(function (k) { k = +k; if (k < first - 4 || k > last + 4) unrender(k); });
+  }
+  function currentPage() {
+    var mid = view.scrollTop + view.clientHeight * 0.35;
+    for (var i = 0; i < n; i++) { var s = slots[i]; if (s.offsetTop + s.offsetHeight > mid) return i + 1; }
+    return n;
+  }
+  var raf = 0, saveT;
+  function onScroll() {
+    if (raf) return;
+    raf = requestAnimationFrame(function () {
+      raf = 0; renderVisible();
+      var p = currentPage();
+      if (p !== current) { current = p; if (document.activeElement !== $('pageIn')) $('pageIn').value = p; markToc(); }
+      clearTimeout(saveT); saveT = setTimeout(function () { try { localStorage.setItem(key, String(current)); } catch (e) {} }, 400);
+    });
+  }
+  function observe() { view.addEventListener('scroll', onScroll, { passive: true }); renderVisible(); }
+  function goTo(p, instant) {
+    p = Math.max(1, Math.min(n, p | 0)); current = p; $('pageIn').value = p;
+    var s = slots[p - 1]; if (!s) return;
+    view.scrollTo({ top: s.offsetTop - (small.matches ? 6 : 12), behavior: instant ? 'auto' : 'smooth' });
+    markToc(); setTimeout(renderVisible, 60);
+  }
+  $('pageIn').addEventListener('change', function () { goTo(+this.value); this.blur(); });
+  $('pageIn').addEventListener('focus', function () { this.select(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight' || e.key === 'PageDown') { goTo(current + 1); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { goTo(current - 1); e.preventDefault(); }
+    else if (e.key === 'Home') { goTo(1); e.preventDefault(); }
+    else if (e.key === 'End') { goTo(n); e.preventDefault(); }
+    else if (e.key === 'Escape' && small.matches) setToc(false);
+  });
+
+  // ── contents from the book's own bookmarks ──
+  function pageOf(dest) {
+    var d = typeof dest === 'string' ? pdf.getDestination(dest) : Promise.resolve(dest);
+    return d.then(function (arr) { if (!arr) return null; return typeof arr[0] === 'number' ? arr[0] + 1 : pdf.getPageIndex(arr[0]).then(function (i) { return i + 1; }); }).catch(function () { return null; });
+  }
+  function buildToc() {
+    pdf.getOutline().then(function (outline) {
+      var toc = $('toc');
+      if (!outline || !outline.length) { toc.innerHTML = '<li class="empty">This book has no contents list. Use the page number box to jump.</li>'; return; }
+      var flat = [];
+      (function walk(items, depth, into) { items.forEach(function (it) { var e = { title: it.title, dest: it.dest, depth: depth, kids: [] }; into.push(e); flat.push(e); if (it.items && it.items.length && depth < 2) walk(it.items, depth + 1, e.kids); }); })(outline, 0, []);
+      return Promise.all(flat.map(function (e) { return pageOf(e.dest).then(function (p) { e.page = p; }); })).then(function () {
+        var html = '';
+        var draw = function (list) { return list.map(function (e) {
+          var rtl = /[؀-ۿ]/.test(e.title);
+          return '<li' + (rtl ? ' class="rtl"' : '') + '><a href="#p' + (e.page || 1) + '" data-p="' + (e.page || 1) + '"><span>' + e.title.replace(/[<>&]/g, function (c) { return { '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]; }) + '</span><small>p. ' + (e.page || '–') + '</small></a>' + (e.kids.length ? '<ul>' + draw(e.kids) + '</ul>' : '') + '</li>';
+        }).join(''); };
+        var top = []; flat.forEach(function (e) { if (e.depth === 0) top.push(e); });
+        toc.innerHTML = draw(top);
+        tocLinks = [].slice.call(toc.querySelectorAll('a[data-p]')).sort(function (a, b) { return a.dataset.p - b.dataset.p; });
+        toc.addEventListener('click', function (ev) {
+          var a = ev.target.closest('a[data-p]'); if (!a) return; ev.preventDefault();
+          goTo(+a.dataset.p, true); if (small.matches) setToc(false);
+        });
+        markToc();
+      });
+    }).catch(function () { $('toc').innerHTML = '<li class="empty">Contents could not be read.</li>'; });
+  }
+  function markToc() {
+    var on = null;
+    tocLinks.forEach(function (a) { if (+a.dataset.p <= current) on = a; });
+    tocLinks.forEach(function (a) { a.classList.toggle('on', a === on); });
+    if (on && tocOpen()) { var box = $('toc'), r = on.getBoundingClientRect(), b = box.getBoundingClientRect(); if (r.top < b.top || r.bottom > b.bottom) on.scrollIntoView({ block: 'center' }); }
+  }
+
+  // ── carry on where the reader stopped last time ──
+  function resumeOffer() {
+    var start = +(params.get('p') || 0);
+    if (start) { goTo(start, true); return; }
+    var last = 0; try { last = +localStorage.getItem(key) || 0; } catch (e) {}
+    if (last > 1 && last <= n) {
+      var r = document.createElement('div'); r.className = 'resume';
+      r.innerHTML = '<span>Continue from page ' + last + '?</span><button class="go" type="button">Continue</button><button class="x" type="button" aria-label="Start from the beginning">×</button>';
+      document.body.appendChild(r);
+      r.querySelector('.go').onclick = function () { goTo(last, true); r.remove(); };
+      r.querySelector('.x').onclick = function () { r.remove(); };
+      setTimeout(function () { if (r.parentNode) r.remove(); }, 12000);
+    }
+  }
+})();
+</script>
+</body>
+</html>

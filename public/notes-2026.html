@@ -153,12 +153,12 @@ function draw(){
       var card=el("article","subj");var hh=el("div","subj-h");var ic=el("span","ic",ABBR[s]);ic.setAttribute("aria-hidden","true");
       hh.appendChild(ic);hh.appendChild(el("h3","",s));hh.appendChild(el("span","",docs.length+(docs.length>1?" files":" file")));card.appendChild(hh);
       docs.forEach(function(d){
-        var r=el("div","doc");var im=el("img");im.src=d.cover;im.alt="";im.loading="lazy";im.width=74;im.onclick=function(){window.open(d.file,"_blank");};
+        var r=el("div","doc");var im=el("img");im.src=d.cover;im.alt="";im.loading="lazy";im.width=74;im.onclick=function(){location.href="/reader.html?f="+d.file;};
         var info=el("div");var t=typeOf(d);
         var tag=el("span","tag "+(/updated/.test(d.kind)?"upd":t),/updated/.test(d.kind)?"Updated":t==="mcq"?"MCQs":"Subjective");
         var b=el("b");b.appendChild(tag);b.appendChild(document.createTextNode(d.label));info.appendChild(b);
         info.appendChild(el("div","meta",d.pages+" pages · "+d.mb+" MB"+(d.note?" · "+d.note:"")));
-        var a=el("div","acts");var v=el("a","vw","Read online");v.href=d.file;v.target="_blank";v.rel="noopener";
+        var a=el("div","acts");var v=el("a","vw","Read online");v.href="/reader.html?f="+d.file;
         var dl=el("a","dl","Download");dl.href=d.file;dl.setAttribute("download","COE_Class"+c+"_"+s.replace(/[^A-Za-z]+/g,"_")+"_"+d.kind+".pdf");
         a.appendChild(dl);a.appendChild(v);info.appendChild(a);r.appendChild(im);r.appendChild(info);card.appendChild(r);shown++;
       });
@@ -184,7 +184,7 @@ function run(){clearInterval(timer);if(!paused&&!still)timer=setInterval(functio
 function buildShow(){
   var show=document.getElementById("show");
   var pick=items.filter(function(i){return i.kind==="mcqs";});
-  pick.forEach(function(i){var a=el("a");a.href=i.file;a.target="_blank";a.rel="noopener";a.dataset.cls=i.cls;a.dataset.subj=i.subject;
+  pick.forEach(function(i){var a=el("a");a.href="/reader.html?f="+i.file;a.dataset.cls=i.cls;a.dataset.subj=i.subject;
     var im=el("img");im.src=i.cover;im.alt="Expected Questions: "+i.subject+", Class "+i.cls;a.appendChild(im);show.insertBefore(a,show.firstChild);cards.push(a);});
   cards.reverse();place();run();
   document.getElementById("prev").onclick=function(){go(-1);run();};
